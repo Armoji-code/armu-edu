@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Homework</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);--shadow-accent:0 4px 24px rgba(61,214,140,0.15);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);--shadow-accent:0 4px 24px rgba(61,214,140,0.2);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition);}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;margin-bottom:8px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}.nav-icon svg{width:16px;height:16px;}
+  .nav-badge{margin-left:auto;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;min-width:20px;text-align:center;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-class{font-size:11px;color:var(--text3);}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:16px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  .content{flex:1;overflow-y:auto;padding:28px;}
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-track{background:transparent;}
+  .content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .section-title{font-size:15px;font-weight:600;letter-spacing:-0.2px;}
+  .mode-btn{padding:6px 16px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all var(--transition);font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:5px;}
+  .mode-btn.active{background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));border-color:var(--border-accent);color:var(--text);}
+  .assignment-list{display:flex;flex-direction:column;gap:8px;}
+  .assignment-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border);cursor:pointer;transition:all var(--transition);}
+  .assignment-item:hover{border-color:var(--border-accent);background:var(--bg4);}
+  .assignment-item.done-item{opacity:0.55;}
+  .assignment-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--border-accent);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all var(--transition);cursor:pointer;}
+  .assignment-check.done{background:var(--gradient);border-color:transparent;}
+  .assignment-check.done::after{content:'✓';color:white;font-size:11px;font-weight:700;}
+  .assignment-info{flex:1;min-width:0;}
+  .assignment-subject{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:2px;}
+  .assignment-title{font-size:14px;font-weight:400;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .assignment-desc{font-size:12px;color:var(--text2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .priority-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .priority-high{background:#f87171;box-shadow:0 0 6px rgba(248,113,113,0.5);}
+  .priority-med{background:#fbbf24;box-shadow:0 0 6px rgba(251,191,36,0.4);}
+  .priority-low{background:var(--g1);box-shadow:0 0 6px rgba(61,214,140,0.4);}
+  .due-date{font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;white-space:nowrap;}
+  .due-urgent{color:#f87171;}
+  .due-soon{color:#fbbf24;}
+  .empty{padding:48px;text-align:center;color:var(--text3);font-size:14px;}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .content{animation:slideIn 0.25s ease;}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="ic-homework" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="ic-tests" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M8 12h8M8 16h5"/></symbol>
+    <symbol id="ic-schedule" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M3 15h6"/></symbol>
+    <symbol id="ic-activities" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7z"/></symbol>
+    <symbol id="ic-grades" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></symbol>
+    <symbol id="ic-conduct" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v5c0 4.42 3.42 8.56 8 9.54C17.58 20.56 21 16.42 21 12V7z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="ic-leaderboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></symbol>
+    <symbol id="ic-tutor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="m5.64 5.64 2.12 2.12M16.24 16.24l2.12 2.12M5.64 18.36l2.12-2.12M16.24 7.76l2.12-2.12"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="ic-whiteboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+    <symbol id="ic-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="ic-groups" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+    <symbol id="ic-messages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+    <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></symbol>
+    <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  </defs>
+</svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">your learning assistant</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="/dashboard"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Dashboard</span></a>
+    <a class="nav-item" href="/calendar"><span class="nav-icon"><svg class="icon"><use href="#ic-calendar"/></svg></span><span>Calendar</span></a>
+    <a class="nav-item active" href="/homework"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Homework</span><span class="nav-badge" id="hwBadge" style="display:none"></span></a>
+    <a class="nav-item" href="/tests"><span class="nav-icon"><svg class="icon"><use href="#ic-tests"/></svg></span><span>Tests</span></a>
+    <a class="nav-item" href="/schedule"><span class="nav-icon"><svg class="icon"><use href="#ic-schedule"/></svg></span><span>Schedule</span></a>
+    <a class="nav-item" href="/activities"><span class="nav-icon"><svg class="icon"><use href="#ic-activities"/></svg></span><span>Activities</span></a>
+    <a class="nav-item" href="/grades"><span class="nav-icon"><svg class="icon"><use href="#ic-grades"/></svg></span><span>Grades</span></a>
+    <a class="nav-item" href="/conduct"><span class="nav-icon"><svg class="icon"><use href="#ic-conduct"/></svg></span><span>Conduct</span></a>
+    <a class="nav-item" href="/leaderboard"><span class="nav-icon"><svg class="icon"><use href="#ic-leaderboard"/></svg></span><span>Leaderboard</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Tools</div>
+    <a class="nav-item" href="/tutor"><span class="nav-icon"><svg class="icon"><use href="#ic-tutor"/></svg></span><span>AI Tutor</span></a>
+    <a class="nav-item" href="/whiteboard"><span class="nav-icon"><svg class="icon"><use href="#ic-whiteboard"/></svg></span><span>Whiteboard</span></a>
+    <a class="nav-item" href="/library"><span class="nav-icon"><svg class="icon"><use href="#ic-library"/></svg></span><span>Library</span></a>
+    <a class="nav-item" href="/groups"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Groups</span></a>
+    <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Other</div>
+    <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div class="user-class" id="userClass"></div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title">Homework</div>
+    <div class="topbar-right">
+      <div class="icon-btn" onclick="toggleTheme()" title="Toggle theme"><svg class="icon icon-18"><use href="#ic-moon" id="themeIcon"/></svg></div>
+      <div class="icon-btn" title="Notifications"><svg class="icon icon-18"><use href="#ic-bell"/></svg></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- AI RECOMMENDATION -->
+    <div style="background:linear-gradient(135deg,rgba(61,214,140,0.08),rgba(56,189,248,0.08));border:1px solid var(--border-accent);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start;">
+      <div style="flex-shrink:0;color:var(--g1)"><svg class="icon icon-20"><use href="#ic-tutor"/></svg></div>
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--g1);letter-spacing:0.5px;margin-bottom:5px">AI RECOMMENDATION</div>
+        <div style="font-size:13px;color:var(--text);line-height:1.5" id="aiRec">Analysing your assignments…</div>
+      </div>
+    </div>
+
+    <!-- HEADER + FILTERS -->
+    <div class="section-header" style="margin-bottom:14px">
+      <div>
+        <div class="section-title">All Homework</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px" id="countLabel"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="mode-btn active" id="f-all"        onclick="setFilter('all')">All</button>
+        <button class="mode-btn"        id="f-incomplete" onclick="setFilter('incomplete')">Incomplete</button>
+        <button class="mode-btn"        id="f-done"       onclick="setFilter('done')">Done</button>
+      </div>
+    </div>
+
+    <div class="assignment-list" id="hwList">
+      <div class="empty">Loading…</div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+let allHw = [];
+let filter = 'all';
+// Track checked state client-side (persisted to localStorage)
+let checkedIds = new Set(JSON.parse(localStorage.getItem('hw_checked') || '[]'));
+
+async function boot() {
+  const me = await api('/api/auth/me');
+  if (!me) { window.location.href = '/login'; return; }
+  setUser(me);
+  const saved = localStorage.getItem('theme');
+  if (saved) setTheme(saved);
+
+  const hw = await api('/api/homework');
+  if (hw) {
+    allHw = hw;
+    render();
+    renderAiRec();
+    const pending = hw.filter(a => !isDone(a)).length;
+    const badge = document.getElementById('hwBadge');
+    if (pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+  } else {
+    document.getElementById('hwList').innerHTML = '<div class="empty">No homework found.</div>';
+    document.getElementById('aiRec').textContent = 'No assignments to analyse.';
+  }
+}
+
+function isDone(a) {
+  return a.completed || checkedIds.has(a.id);
+}
+
+function setFilter(f) {
+  filter = f;
+  ['all','incomplete','done'].forEach(x =>
+    document.getElementById('f-' + x).classList.toggle('active', x === f)
+  );
+  render();
+}
+
+function render() {
+  let items = allHw;
+  if (filter === 'incomplete') items = items.filter(a => !isDone(a));
+  if (filter === 'done')       items = items.filter(a => isDone(a));
+
+  const label = document.getElementById('countLabel');
+  label.textContent = `${items.length} assignment${items.length !== 1 ? 's' : ''}`;
+
+  if (!items.length) {
+    document.getElementById('hwList').innerHTML =
+      `<div class="empty">${filter === 'done' ? 'Nothing completed yet.' : 'All caught up!'}</div>`;
+    return;
+  }
+
+  document.getElementById('hwList').innerHTML = items.map(a => {
+    const done = isDone(a);
+    const days = daysUntil(a.due_date);
+    const priority = done ? 'priority-low' : days <= 1 ? 'priority-high' : days <= 3 ? 'priority-med' : 'priority-low';
+    const dueClass = done ? '' : days <= 1 ? 'due-urgent' : days <= 3 ? 'due-soon' : '';
+    const dueText  = done ? 'Done ✓' : relDue(a.due_date);
+    const dateStr  = new Date(a.due_date).toLocaleDateString('en-US', { month:'2-digit', day:'2-digit', year:'numeric' });
+
+    return `<div class="assignment-item${done ? ' done-item' : ''}" id="item-${a.id}">
+      <div class="assignment-check${done ? ' done' : ''}" onclick="toggleDone(${a.id}, event)"></div>
+      <div class="assignment-info">
+        <div class="assignment-subject">${esc(a.subject_name || '')}</div>
+        <div class="assignment-title" title="${esc(a.title)}">${esc(a.title)}</div>
+        ${a.description ? `<div class="assignment-desc">${esc(a.description)}</div>` : ''}
+      </div>
+      <div class="priority-dot ${priority}"></div>
+      <div class="due-date ${dueClass}" title="${dateStr}">${dueText}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAiRec() {
+  const pending = allHw.filter(a => !isDone(a));
+  if (!pending.length) {
+    document.getElementById('aiRec').textContent = 'You\'re all caught up! No pending assignments.';
+    return;
+  }
+  pending.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+  const first = pending[0];
+  const second = pending[1];
+  let text = `<strong>Start with ${esc(first.subject_name || 'your first assignment')}: ${esc(first.title)}</strong> — due ${relDue(first.due_date)}.`;
+  if (second) text += ` Then move on to ${esc(second.subject_name || '')}: ${esc(second.title)} (${relDue(second.due_date)}).`;
+  if (pending.length > 2) text += ` ${pending.length - 2} more assignment${pending.length > 3 ? 's' : ''} after that.`;
+  document.getElementById('aiRec').innerHTML = text;
+}
+
+function toggleDone(id, e) {
+  e.stopPropagation();
+  if (checkedIds.has(id)) checkedIds.delete(id);
+  else checkedIds.add(id);
+  localStorage.setItem('hw_checked', JSON.stringify([...checkedIds]));
+  render();
+  renderAiRec();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function daysUntil(iso) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const d = new Date(iso); d.setHours(0,0,0,0);
+  return Math.round((d - now) / 86400000);
+}
+function relDue(iso) {
+  const d = daysUntil(iso);
+  if (d < 0)  return 'Overdue';
+  if (d === 0) return 'Today';
+  if (d === 1) return 'Tomorrow';
+  return `In ${d}d.`;
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function setUser(u) {
+  const initials = u.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('userAvatar').textContent = initials;
+  document.getElementById('userName').textContent   = u.name;
+  document.getElementById('userClass').textContent  = u.email;
+}
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.getElementById('themeIcon').setAttribute('href', t === 'dark' ? '#ic-moon' : '#ic-sun');
+  localStorage.setItem('theme', t);
+}
+function toggleTheme() { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); }
+async function api(url) {
+  try {
+    const r = await fetch(url, { credentials:'include' });
+    if (r.status === 401) return null;
+    return r.ok ? r.json() : null;
+  } catch { return null; }
+}
+
+boot();
+</script>
+</body>
+</html>

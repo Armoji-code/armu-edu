@@ -36,6 +36,14 @@ def create_app(config=Config):
     def calendar_page():
         return send_from_directory(FRONTEND_DIR, "calendar.html")
 
+    @app.route("/homework")
+    def homework_page():
+        return send_from_directory(FRONTEND_DIR, "homework.html")
+
+    @app.route("/tests")
+    def tests_page():
+        return send_from_directory(FRONTEND_DIR, "tests.html")
+
     return app
 
 if __name__ == "__main__":
