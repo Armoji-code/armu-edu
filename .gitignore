@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+mokyai.db
+frontend/dist/
+.venv/
+venv/
+migrations/
+*.egg-info/

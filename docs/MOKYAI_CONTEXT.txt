@@ -1,0 +1,279 @@
+PROJECT CONTEXT: MokyAI
+=======================
+
+WHAT IT IS
+----------
+MokyAI is a free, open source, self-hosted school platform. The core idea is to replace the fragmented mess of school software (diary systems, Google Classroom, messaging, grades, library, etc.) with a single unified platform that schools own and run themselves. It is licensed under AGPL-3.0, meaning anyone can use it, modify it, and self-host it for free, but if they distribute or offer it as a service they must release their source code too. Nobody can close-source it.
+
+The project was designed with two goals simultaneously: be genuinely useful to students right now, and be scalable enough that one day entire school districts or countries could adopt it. The name MokyAI is a codename — "Moky" comes from "mokytis," the Lithuanian word for "to learn."
+
+
+WHERE IT CAME FROM
+------------------
+The original idea was to build a tool that connects to TAMO dienynas, the Lithuanian national school diary system, and use AI to sort and prioritize assignments for students. During development the scope expanded significantly. We investigated TAMO's API situation and found there is no public OAuth — the only viable approach is an unofficial scraper (github.com/justinas2314/Tamo-API). However, as the vision expanded to global adoption, the dependency on TAMO became a limitation. The final architecture is that MokyAI IS the diary — teachers post directly into it, students read it, and it works anywhere in the world without needing to scrape anything.
+
+The comparison that best describes what MokyAI is trying to be: Slack meets Google Classroom meets Notion, but fully open source, self-hosted, and with AI built in from the ground up. The closest existing product is Moodle, but Moodle is old, complex, ugly, and has no AI. MokyAI is what Moodle should have been in 2025.
+
+
+WHO USES IT
+-----------
+There are multiple user roles, though only the student side has been prototyped so far:
+
+STUDENTS — the primary users. They see their homework, tests, schedule, grades, conduct record, library status, activities, and community service hours. They can chat with classmates and groups, use a shared whiteboard, get AI tutoring help, and track their progress across everything.
+
+TEACHERS — post assignments, tests, grades, and conduct points. They manage their classes. The conduct system gives teachers the ability to award +3 (excellent), +1 (good), -1 (issue/missed work unfixed), or 0 (excused) points per student per lesson.
+
+LIBRARIANS — manage the school library catalog. The planned feature (not yet built) is that a librarian takes a photo of a book cover or spine, AI identifies it, finds the cover image online, writes a description, pulls the ISBN/author/pages automatically, and creates the catalog entry. No manual data entry needed.
+
+ADMINS — manage the entire school: users, classes, permissions, settings. This is the same dashboard used by all school staff including librarians and teachers.
+
+PARENTS — read-only view of their child's progress, grades, conduct, attendance.
+
+
+TECHNICAL ARCHITECTURE
+-----------------------
+The target stack is:
+
+Backend: Python + Flask
+- Serves the frontend as a single-page app
+- Exposes a REST API for all data
+- Handles authentication and session management
+- Manages the database
+
+Database: SQLite for small deployments, PostgreSQL for larger ones
+
+AI: Ollama running locally on the server (no cloud API costs)
+- Three AI roles:
+  1. Tracker/Reminders: OpenEuroLLM-Lithuanian (lightweight, always on, handles scheduling logic and smart reminders)
+  2. Standard Tutor: OpenEuroLLM-Lithuanian (handles grades 1-8, general questions, responds in the school's language)
+  3. Advanced Tutor: User-swappable larger model (Gemma 3 27B or Llama 3.1 70B quantized) for grades 9-10 heavy STEM
+- The model for each role is configurable in settings per school
+- OpenEuroLLM-Lithuanian is based on Gemma 3 and is specifically fine-tuned for Lithuanian language quality
+- The hybrid approach exists because small models handle Lithuanian well but may struggle with complex STEM reasoning
+
+Real-time features: Flask-SocketIO for WebSockets
+- Used for the collaborative whiteboard (multiple people drawing simultaneously)
+- Used for the live messaging system
+- Used for the group AI tutoring sessions
+
+Frontend: Currently a single HTML/CSS/JS prototype file (no framework). The production version should use a proper frontend framework, but the prototype demonstrates all UI and UX decisions.
+
+Hosting model:
+- Stage 1: Single server per school (could be a physical server at the school)
+- Stage 2: Schools self-host their own instance by cloning the repo
+- Stage 3: Cloud hosting via Hetzner (EU-based, GDPR compliant) if needed
+
+The developer's current hardware for development: CachyOS Linux (dual booted alongside Windows), AMD Ryzen 9800X3D, AMD RX 9070 XT (16GB VRAM), 32GB DDR5. The RX 9070 XT is RDNA4 architecture — ROCm support on CachyOS/Arch is actively maintained. Ollama with ROCm acceleration works on this setup and can comfortably run Llama 3.1 8B or OpenEuroLLM at high speed.
+
+
+PRIVACY AND GDPR
+-----------------
+Privacy is a core design principle, not an afterthought. All student data stays on the school's own server. There are no third-party analytics, no telemetry, no ads, no external API calls for core features. AI runs locally via Ollama. Sessions expire to match standard school software behavior. Credentials are never stored beyond the current session. This matters because Lithuanian and EU schools must comply with GDPR, and a self-hosted platform where the school controls all data is far easier to comply with than a cloud service.
+
+
+WHAT THE PROTOTYPE COVERS (STUDENT SIDE)
+-----------------------------------------
+The HTML prototype (mokyai-prototype.html) is a complete visual mockup of the student experience. It is a single HTML file with all CSS and JavaScript inline. There is no backend — all data is hardcoded as JavaScript arrays. It demonstrates:
+
+DASHBOARD
+- AI Priority Alert banner — shows the most urgent upcoming items
+- 4 stat cards: Due Today, This Week, Streak, GPA
+- Two tabs: Overview (priority assignments + upcoming tests) and Calendar (inline monthly calendar)
+
+UNIFIED CALENDAR
+- Full monthly/weekly/list view
+- All event types in one place: homework, tests, grades received, activities, service hours, personal events, group events, and vacations
+- Color-coded filter chips to show/hide each category
+- Vacation support: school breaks (set by admin), missed/sick days, and family vacations registered by parents — each shown as a background tint on the calendar days
+- Day detail panel on click
+- Add Event modal for personal and group entries
+- Events can be deleted
+
+HOMEWORK PAGE
+- Full list of assignments with priority dots (red/yellow/green)
+- Filter by All / Incomplete / Done
+- AI Recommendation banner at the top suggesting what to do first and in what order
+
+TESTS PAGE  
+- All upcoming assessments with scope and format
+- AI Recommendation banner explaining study priority and strategy
+
+SCHEDULE
+- Full weekly timetable (Mon-Fri, 8 periods + lunch)
+- Today's column highlighted
+- Live progress bar at the top filling from 8:00 AM to 3:30 PM in real time
+- Current period highlighted with a "NOW" indicator
+- Updates every 30 seconds, resets at midnight
+
+GRADES
+- Three tabs: All Grades, Grade History, Calculator
+- All Grades: table showing Q1-Q4 letter grades and percentage average per subject, overall GPA
+- Grade History: calendar view showing which days grades were received and from which assignments
+- Calculator: pick a subject, add hypothetical test scores with sliders, see projected GPA impact in real time
+
+CONDUCT
+- Points system: +3 (excellent), +1 (good), -1 (issue), 0 (excused/sick)
+- Assigned by teachers per lesson
+- Overview banner showing total points, positive/negative split, class rank
+- Table by subject: participation, behaviour, assignments, absences, total
+- Recent events log with icons, reasons, dates
+
+LEADERBOARD
+- Four category tabs: Streaks (days in a row completing homework), On-time (assignments submitted before deadline), Helpful (group participation), Conduct (points total)
+- Your position highlighted in the list
+
+ACTIVITIES
+- Two tabs: After School and Community Service
+- After School: enrolled clubs/sports/teams with upcoming events per activity (competitions, performances, practice sessions, meets)
+- Community Service: goal progress bar (40 hours to graduate), stats, full service log table with date/org/description/hours
+
+LIBRARY
+- Four tabs: Checked Out, History, Catalog, Permissions
+- Checked Out: current books with due date, overdue warnings (color coded), click for full book detail modal
+- History: returned books with star ratings
+- Catalog: searchable/filterable grid of all school library books with availability status
+- Permissions: borrowing limit, loan period, renewal count, library pass status, outstanding fines, digital library pass QR code
+- Book detail modal shows cover, author, genre, pages, ISBN, description, checkout status, Request Checkout / Renew buttons
+
+GROUPS
+- Tracker page showing which groups you are in
+- Quick shortcut buttons per group to open that group's chat, whiteboard, or AI session
+
+MESSAGES
+- Three tabs: Personal, Group, Files
+- Personal: DM list with search, conversation view, send/attach
+- Group: group picker, member sidebar with online indicators, quick links to group whiteboard and AI, chat area
+- Files: all files ever shared in any chat, grouped by type (PDF, Document, Image, Spreadsheet, Presentation)
+  - Search and filter by type or source (DMs vs group)
+  - Per-file: jump-to-message button and download button
+  - Download all files or all files of a type
+  - Expiry warning banner: all files deleted before summer vacation, with Download All button
+
+AI TUTOR
+- Two tabs in the sidebar: Personal and Group
+- Sidebar shows full chat history grouped by Today / Yesterday / This Week
+- Group tab shows collapsible group sections with their own chat histories
+- New Chat button
+- Mode toggle: Standard (OpenEuroLLM) vs Advanced (larger STEM model)
+- Full conversation UI
+
+WHITEBOARD
+- Two tabs: Personal and Group
+- Group tab shows group picker and live collaborator avatars
+- Drawing tools: pen, eraser, line, rectangle, text
+- Color palette, brush size slider
+- Clear canvas button
+- Canvas background matches theme (dark mode = black canvas, light mode = white canvas)
+- When theme switches, canvas background redraws automatically
+
+SETTINGS
+- Appearance: dark/light mode toggle, accent color swatches
+- AI Model: separate model selectors for Standard Tutor, Advanced Tutor, Reminder Model
+- Notifications: toggles for homework reminders, test reminders, streak reminders
+- TAMO: account info, sync status, sync button, sign out
+
+PROFILE
+- Opened by clicking the user card in the bottom-left of the sidebar
+- Shows avatar, name, grade, school, student ID, status
+- Quick stats: GPA, streak, conduct points, service hours
+- Personal info grid: full name, DOB, email, homeroom, counselor, enrollment status
+- Extracurriculars summary
+- Quick links to Grades, Conduct, Activities, Library
+
+
+DESIGN SYSTEM
+--------------
+The prototype establishes a complete design language:
+
+Colors:
+- Dark mode: pure monochrome backgrounds (#111111, #1a1a1a, #222222, #2c2c2c) — no blue tint
+- Light mode: whites and light greys
+- Accent: green-to-blue-to-mint gradient (#3dd68c → #38bdf8 → #6ee7b7)
+- Priority: red (#f87171) for high/overdue, yellow (#fbbf24) for medium/soon, green (#3dd68c) for low/fine
+- Grade colors: green ≥90%, blue ≥80%, yellow ≥70%, red below
+
+Typography: DM Sans (UI text) + DM Mono (numbers, times, codes)
+
+Icons: Custom SVG sprite sheet with ~40 symbols. All icons are stroke-based vectors at 1.8px weight, responsive to currentColor, scale perfectly at any size. No emoji used anywhere in the UI (emoji remain only in hardcoded message content which will be real data in production).
+
+Radius: 14px for cards, 8px for smaller elements
+
+The overall aesthetic is clean and minimal — inspired by Notion but with a darker, more focused feel. Professional enough for school use, modern enough that students actually want to use it.
+
+
+WHAT IS NOT BUILT YET (KNOWN GAPS)
+------------------------------------
+Everything listed above is prototype/frontend only. The following does not exist yet:
+
+1. Backend — no server, no database, no API. All data is hardcoded JS arrays.
+2. Authentication — no login screen, no session management, no user accounts
+3. Teacher view — teachers need a completely different dashboard to post assignments, grades, conduct points, manage classes
+4. Admin view — school-wide management, user management, class setup, permissions
+5. Parent view — read-only child progress view
+6. Librarian AI feature — photo → auto-generated book catalog entry
+7. Real-time features — WebSocket server for collaborative whiteboard and live messaging
+8. TAMO integration — the scraper exists (justinas2314/Tamo-API on GitHub) but is not integrated. This is now optional since MokyAI can be the primary diary, but it would be useful for schools already using TAMO to migrate their data
+9. File storage — actual file upload/download for the messenger
+10. Notification system — the reminder AI logic
+11. Mobile — the prototype had a mobile layout that was removed. Mobile should be rebuilt from scratch as a proper responsive design, not patches on top of desktop
+12. Internationalization — the UI is in English for the prototype but the platform needs to support Lithuanian and other languages. The i18n architecture was removed for simplicity; it needs to be rebuilt properly
+13. School onboarding — how a new school sets up their instance
+14. The teacher-facing side of the conduct, grades, and schedule systems
+15. Any actual AI integration — the tutor chatbot shows a UI but has no Ollama connection
+
+
+GITHUB STRUCTURE (PLANNED)
+----------------------------
+The repository should be organized roughly as:
+
+mokyai/
+├── backend/
+│   ├── app.py              (Flask entry point)
+│   ├── api/                (REST API routes)
+│   ├── models/             (database models)
+│   ├── ai/                 (Ollama integration, prompt management)
+│   ├── websocket/          (SocketIO real-time handlers)
+│   └── config.py
+├── frontend/
+│   ├── src/
+│   │   ├── pages/          (one file per page/section)
+│   │   ├── components/     (reusable UI components)
+│   │   ├── icons/          (SVG sprite)
+│   │   └── styles/         (CSS variables, base styles)
+│   └── dist/               (built output)
+├── prototype/
+│   └── mokyai-prototype.html   (the complete design reference)
+├── docs/
+│   └── index.html          (GitHub Pages site)
+├── requirements.txt
+├── README.md
+└── LICENSE                 (AGPL-3.0)
+
+
+IMPORTANT DECISIONS ALREADY MADE
+----------------------------------
+- License: AGPL-3.0 (free for everyone, cannot be closed-sourced)
+- AI: Ollama local inference, no cloud APIs required
+- Default AI model: OpenEuroLLM-Lithuanian (Lithuanian-specific fine-tune of Gemma 3)
+- Real-time: Flask-SocketIO
+- No React or heavy framework for frontend (vanilla JS preferred for contributor accessibility, though this can be revisited)
+- Self-hosted by default — no central server, schools run their own instance
+- GDPR compliant by design — all data on school's own hardware
+- The prototype HTML file is the authoritative design reference for the entire student UI
+
+
+CONTEXT FOR FIRST DEVELOPMENT TASKS
+--------------------------------------
+The logical first tasks for Claude Code would be:
+
+1. Set up the project repository structure
+2. Create the Flask backend skeleton with basic routing
+3. Implement SQLite database models (users, classes, subjects, assignments, grades, conduct, etc.)
+4. Build the authentication system (login, sessions, role-based access)
+5. Connect the frontend prototype pages to real API endpoints one by one, starting with Dashboard and Homework
+6. Set up Ollama connection and wire up the AI tutor chat
+7. Implement WebSocket server for messaging
+8. Build the teacher-facing assignment and grade posting UI
+9. Build the admin school management UI
+
+The prototype HTML file should be treated as a pixel-perfect spec. Every page, every component, every interaction in it represents a design decision that was deliberately made. When building the real frontend, match it as closely as possible unless there is a good technical reason not to.

@@ -1,0 +1,11 @@
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
+
+from models.user import User
+from models.school import School, Class, Subject
+from models.academic import Assignment, Grade, SchedulePeriod
+from models.conduct import ConductEvent
+from models.library import Book, BookCheckout
+from models.social import Group, group_members, Message, Activity, ActivityEnrollment, ActivityEvent, CommunityService
+from models.ai_session import AISession, AIMessage
