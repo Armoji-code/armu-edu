@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Leaderboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition);}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;margin-bottom:8px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}.nav-icon svg{width:16px;height:16px;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-class{font-size:11px;color:var(--text3);}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:16px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  .content{flex:1;overflow-y:auto;padding:28px;}
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-track{background:transparent;}
+  .content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .section-title{font-size:15px;font-weight:600;letter-spacing:-0.2px;}
+  .mode-btn{padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--transition);display:inline-flex;align-items:center;gap:6px;}
+  .mode-btn:hover{background:var(--bg4);color:var(--text);}
+  .mode-btn.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .lb-item{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border);margin-bottom:8px;transition:all var(--transition);}
+  .lb-item:hover{border-color:var(--border-accent);}
+  .lb-item.me{border-color:var(--border-accent);background:linear-gradient(135deg,rgba(61,214,140,0.06),rgba(56,189,248,0.06));}
+  .rank{font-size:13px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text3);width:24px;text-align:center;}
+  .rank.gold{color:#fbbf24;}
+  .rank.silver{color:#94a3b8;}
+  .rank.bronze{color:#b45309;}
+  .lb-score{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .lb-score.negative{background:none;-webkit-text-fill-color:#f87171;color:#f87171;}
+  .podium{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:28px;}
+  .podium-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 16px;text-align:center;position:relative;}
+  .podium-card.first{border-color:rgba(251,191,36,0.35);background:linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.02));}
+  .podium-card.second{border-color:rgba(148,163,184,0.3);background:linear-gradient(135deg,rgba(148,163,184,0.07),rgba(148,163,184,0.01));}
+  .podium-card.third{border-color:rgba(180,83,9,0.3);background:linear-gradient(135deg,rgba(180,83,9,0.08),rgba(180,83,9,0.01));}
+  .podium-medal{font-size:28px;margin-bottom:8px;}
+  .podium-avatar{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;margin:0 auto 10px;}
+  .podium-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;}
+  .podium-score{font-size:20px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .content{animation:slideIn 0.25s ease;}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="ic-homework" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="ic-tests" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M8 12h8M8 16h5"/></symbol>
+    <symbol id="ic-schedule" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M3 15h6"/></symbol>
+    <symbol id="ic-activities" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7z"/></symbol>
+    <symbol id="ic-grades" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></symbol>
+    <symbol id="ic-conduct" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v5c0 4.42 3.42 8.56 8 9.54C17.58 20.56 21 16.42 21 12V7z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="ic-leaderboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></symbol>
+    <symbol id="ic-tutor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="m5.64 5.64 2.12 2.12M16.24 16.24l2.12 2.12M5.64 18.36l2.12-2.12M16.24 7.76l2.12-2.12"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="ic-whiteboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+    <symbol id="ic-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="ic-groups" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+    <symbol id="ic-messages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+    <symbol id="ic-streak" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  </defs>
+</svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">your learning assistant</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="/dashboard"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Dashboard</span></a>
+    <a class="nav-item" href="/calendar"><span class="nav-icon"><svg class="icon"><use href="#ic-calendar"/></svg></span><span>Calendar</span></a>
+    <a class="nav-item" href="/homework"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Homework</span></a>
+    <a class="nav-item" href="/tests"><span class="nav-icon"><svg class="icon"><use href="#ic-tests"/></svg></span><span>Tests</span></a>
+    <a class="nav-item" href="/schedule"><span class="nav-icon"><svg class="icon"><use href="#ic-schedule"/></svg></span><span>Schedule</span></a>
+    <a class="nav-item" href="/activities"><span class="nav-icon"><svg class="icon"><use href="#ic-activities"/></svg></span><span>Activities</span></a>
+    <a class="nav-item" href="/grades"><span class="nav-icon"><svg class="icon"><use href="#ic-grades"/></svg></span><span>Grades</span></a>
+    <a class="nav-item" href="/conduct"><span class="nav-icon"><svg class="icon"><use href="#ic-conduct"/></svg></span><span>Conduct</span></a>
+    <a class="nav-item active" href="/leaderboard"><span class="nav-icon"><svg class="icon"><use href="#ic-leaderboard"/></svg></span><span>Leaderboard</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Tools</div>
+    <a class="nav-item" href="/tutor"><span class="nav-icon"><svg class="icon"><use href="#ic-tutor"/></svg></span><span>AI Tutor</span></a>
+    <a class="nav-item" href="/whiteboard"><span class="nav-icon"><svg class="icon"><use href="#ic-whiteboard"/></svg></span><span>Whiteboard</span></a>
+    <a class="nav-item" href="/library"><span class="nav-icon"><svg class="icon"><use href="#ic-library"/></svg></span><span>Library</span></a>
+    <a class="nav-item" href="/groups"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Groups</span></a>
+    <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Other</div>
+    <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div class="user-class" id="userClass"></div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-leaderboard"/></svg>
+    <span class="topbar-title">Leaderboard 🔥</span>
+    <div class="topbar-right">
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+        <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Header -->
+    <div class="section-header" style="margin-bottom:6px;">
+      <div class="section-title" id="lb-subtitle">Class — Current Semester</div>
+    </div>
+    <div style="height:2px;background:var(--gradient);border-radius:2px;margin-bottom:20px;"></div>
+
+    <!-- Tab bar -->
+    <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;flex-wrap:wrap;">
+      <button class="mode-btn active" id="tab-btn-streaks"  onclick="switchTab('streaks')"><svg class="icon icon-14"><use href="#ic-streak"/></svg> Streaks</button>
+      <button class="mode-btn"        id="tab-btn-ontime"   onclick="switchTab('ontime')"><svg class="icon icon-14"><use href="#ic-check"/></svg> On-time</button>
+      <button class="mode-btn"        id="tab-btn-helpful"  onclick="switchTab('helpful')"><svg class="icon icon-14"><use href="#ic-messages"/></svg> Helpful</button>
+      <button class="mode-btn"        id="tab-btn-conduct"  onclick="switchTab('conduct')"><svg class="icon icon-14"><use href="#ic-conduct"/></svg> Conduct</button>
+    </div>
+
+    <!-- Podium (top 3) -->
+    <div class="podium" id="lb-podium"></div>
+
+    <!-- Full ranked list -->
+    <div id="lb-list"></div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+// Leaderboard data keyed by tab.
+// "me" marks the logged-in user's entry (matched by name after boot).
+// Real data will come from the API once a /api/leaderboard endpoint is added.
+const LB_DATA = {
+  streaks: [
+    { name:'Emma Davis',    initials:'ED', avatarBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', score:31, hint:'Never misses a deadline' },
+    { name:'Tyler Brooks',  initials:'TB', avatarBg:'linear-gradient(135deg,#64748b,#475569)', score:28, hint:'Great consistency' },
+    { name:'Sofia Martinez',initials:'SM', avatarBg:'linear-gradient(135deg,#b45309,#92400e)', score:22, hint:'Strong week!' },
+    { name:'YOU',           initials:'',   avatarBg:'var(--gradient)',                         score:14, hint:'8 more days to reach 3rd!', me:true },
+    { name:'Hannah Lee',    initials:'HL', avatarBg:'linear-gradient(135deg,#8b5cf6,#7c3aed)', score:11 },
+    { name:'Jake Wilson',   initials:'JW', avatarBg:'linear-gradient(135deg,#ec4899,#db2777)', score:9 },
+  ],
+  ontime: [
+    { name:'Emma Davis',    initials:'ED', avatarBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', score:98, hint:'98% on-time submissions', suffix:'%' },
+    { name:'Sofia Martinez',initials:'SM', avatarBg:'linear-gradient(135deg,#b45309,#92400e)', score:95, hint:'Very reliable', suffix:'%' },
+    { name:'Tyler Brooks',  initials:'TB', avatarBg:'linear-gradient(135deg,#64748b,#475569)', score:92, suffix:'%' },
+    { name:'YOU',           initials:'',   avatarBg:'var(--gradient)',                         score:88, hint:'3 late submissions this term', me:true, suffix:'%' },
+    { name:'Hannah Lee',    initials:'HL', avatarBg:'linear-gradient(135deg,#8b5cf6,#7c3aed)', score:84, suffix:'%' },
+    { name:'Jake Wilson',   initials:'JW', avatarBg:'linear-gradient(135deg,#ec4899,#db2777)', score:76, suffix:'%' },
+  ],
+  helpful: [
+    { name:'Tyler Brooks',  initials:'TB', avatarBg:'linear-gradient(135deg,#64748b,#475569)', score:47, hint:'Top helper in group chats' },
+    { name:'Emma Davis',    initials:'ED', avatarBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', score:38 },
+    { name:'Hannah Lee',    initials:'HL', avatarBg:'linear-gradient(135deg,#8b5cf6,#7c3aed)', score:29, hint:'Active study group member' },
+    { name:'YOU',           initials:'',   avatarBg:'var(--gradient)',                         score:17, hint:'Try helping more classmates!', me:true },
+    { name:'Sofia Martinez',initials:'SM', avatarBg:'linear-gradient(135deg,#b45309,#92400e)', score:14 },
+    { name:'Jake Wilson',   initials:'JW', avatarBg:'linear-gradient(135deg,#ec4899,#db2777)', score:8 },
+  ],
+  conduct: [
+    { name:'Emma Davis',    initials:'ED', avatarBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', score:31, hint:'Perfect participation record', prefix:'+' },
+    { name:'Tyler Brooks',  initials:'TB', avatarBg:'linear-gradient(135deg,#64748b,#475569)', score:24, hint:'Consistently excellent', prefix:'+' },
+    { name:'YOU',           initials:'',   avatarBg:'var(--gradient)',                         score:18, hint:'2 more points to reach 2nd!', me:true, prefix:'+' },
+    { name:'Sofia Martinez',initials:'SM', avatarBg:'linear-gradient(135deg,#b45309,#92400e)', score:14, hint:'Good effort this month', prefix:'+' },
+    { name:'Hannah Lee',    initials:'HL', avatarBg:'linear-gradient(135deg,#8b5cf6,#7c3aed)', score:9, prefix:'+' },
+    { name:'Jake Wilson',   initials:'JW', avatarBg:'linear-gradient(135deg,#f59e42,#ef4444)', score:-2, negative:true },
+  ],
+};
+
+const TAB_ICON = {
+  streaks: '#ic-streak', ontime: '#ic-check', helpful: '#ic-messages', conduct: '#ic-conduct'
+};
+const TAB_LABEL = {
+  streaks: 'day streak', ontime: 'on-time', helpful: 'helps', conduct: 'points'
+};
+
+const RANK_CLASS = ['gold','silver','bronze'];
+const MEDAL = ['🥇','🥈','🥉'];
+const PODIUM_STYLE = [
+  'linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.02));border-color:rgba(251,191,36,0.35)',
+  'linear-gradient(135deg,rgba(148,163,184,0.07),rgba(148,163,184,0.01));border-color:rgba(148,163,184,0.3)',
+  'linear-gradient(135deg,rgba(180,83,9,0.08),rgba(180,83,9,0.01));border-color:rgba(180,83,9,0.3)',
+];
+
+let currentTab = 'streaks';
+let myName = '';
+
+function switchTab(tab) {
+  currentTab = tab;
+  ['streaks','ontime','helpful','conduct'].forEach(t => {
+    document.getElementById('tab-btn-' + t).classList.toggle('active', t === tab);
+  });
+  renderTab();
+}
+
+function scoreStr(entry) {
+  const pre  = entry.prefix  || '';
+  const suf  = entry.suffix  || '';
+  const val  = entry.negative ? entry.score : Math.abs(entry.score);
+  return `${pre}${val}${suf}`;
+}
+
+function renderTab() {
+  const data   = LB_DATA[currentTab];
+  const icon   = TAB_ICON[currentTab];
+  const sublbl = TAB_LABEL[currentTab];
+
+  // Substitute real name into the "me" entry
+  data.forEach(e => {
+    if (e.me) {
+      e.initials = myName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
+      if (myName) e.name = myName + ' ← You';
+    }
+  });
+
+  // Podium (top 3)
+  const podiumEl = document.getElementById('lb-podium');
+  podiumEl.innerHTML = data.slice(0,3).map((e, i) => `
+    <div class="podium-card ${['first','second','third'][i]}" style="background:${PODIUM_STYLE[i].split(';border-color:')[0]};border-color:${PODIUM_STYLE[i].split(';border-color:')[1]};">
+      <div class="podium-medal">${MEDAL[i]}</div>
+      <div class="podium-avatar" style="background:${e.avatarBg};">${e.initials}</div>
+      <div class="podium-name">${e.name.replace(' ← You','')}</div>
+      <div class="podium-score">${scoreStr(e)}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px;">${sublbl}</div>
+    </div>
+  `).join('');
+
+  // Full list (rank 4+, and include top 3 as compact rows too)
+  const listEl = document.getElementById('lb-list');
+  listEl.innerHTML = data.map((e, i) => {
+    const rankNum = i + 1;
+    const rankCls = RANK_CLASS[i] || '';
+    const isMe    = !!e.me;
+    const neg     = !!e.negative;
+    const sc      = scoreStr(e);
+
+    return `<div class="lb-item${isMe ? ' me' : ''}">
+      <div class="rank ${rankCls}">${rankNum}</div>
+      <div class="avatar" style="background:${e.avatarBg};font-size:12px;">${e.initials}</div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:500;color:var(--text);">${e.name}</div>
+        ${e.hint ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${e.hint}</div>` : ''}
+      </div>
+      <div class="lb-score${neg ? ' negative' : ''}">
+        <svg class="icon icon-14"><use href="${icon}"/></svg>
+        <span>${sc}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  myName = me.name || me.email;
+  document.getElementById('userName').textContent = myName;
+  const initials = myName.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('userAvatar').textContent = initials;
+
+  const classInfo = me.class_name ? me.class_name + (me.school_name ? ' · ' + me.school_name : '') : '';
+  if (classInfo) {
+    document.getElementById('userClass').textContent = classInfo;
+    document.getElementById('lb-subtitle').textContent = classInfo + ' · ' + new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+  }
+
+  renderTab();
+}
+
+boot();
+</script>
+</body>
+</html>

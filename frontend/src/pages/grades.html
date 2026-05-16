@@ -44,16 +44,8 @@
   .mode-btn{padding:7px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--transition);display:flex;align-items:center;gap:6px;}
   .mode-btn:hover{background:var(--bg4);color:var(--text);}
   .mode-btn.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
-  /* Calendar grid shared with dashboard */
-  .cal-day{min-height:42px;border-radius:var(--radius-sm);padding:4px;cursor:pointer;transition:background var(--transition);position:relative;background:var(--bg3);border:1px solid var(--border);}
-  .cal-day:hover{background:var(--bg4);}
-  .cal-day.today{border-color:var(--border-accent);}
-  .cal-day.selected{border-color:var(--g1);background:rgba(61,214,140,0.06);}
-  .cal-day.empty{background:transparent;border-color:transparent;cursor:default;}
-  .cal-day-num{font-size:11px;color:var(--text3);margin-bottom:3px;}
-  .cal-day.today .cal-day-num{font-weight:700;color:var(--g1);}
-  .cal-dot{display:flex;align-items:center;gap:3px;font-size:10px;font-weight:700;border-radius:3px;padding:1px 3px;margin-bottom:2px;}
-  .cal-dot-indicator{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+  .cal-cell{min-height:70px;border-radius:var(--radius-sm);border:1px solid var(--border);padding:5px;cursor:pointer;transition:border-color var(--transition);background:var(--bg2);overflow:hidden;}
+  .cal-cell:hover{border-color:var(--border-accent);}
   svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
   .icon-14{width:14px;height:14px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
   @keyframes slideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
@@ -188,7 +180,7 @@
         <div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">Sat</div>
         <div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">Sun</div>
       </div>
-      <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:16px;"></div>
+      <div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin-bottom:16px;"></div>
 
       <div id="cal-detail" style="display:none;">
         <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:10px;" id="cal-detail-title"></div>
@@ -379,7 +371,7 @@ function renderCal() {
 
   for (let i = 0; i < startOffset; i++) {
     const e = document.createElement('div');
-    e.className = 'cal-day empty';
+    e.style.minHeight = '70px';
     grid.appendChild(e);
   }
 
@@ -387,23 +379,27 @@ function renderCal() {
     const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday = today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===d;
     const isSelected = calSelected === dateStr;
-
-    // Find grades on this day
     const dayGrades = allGrades.filter(g => g.created_at && g.created_at.startsWith(dateStr));
 
-    const el = document.createElement('div');
-    el.className = 'cal-day' + (isToday?' today':'') + (isSelected?' selected':'');
-    el.innerHTML = `<div class="cal-day-num">${d}</div>`;
+    const borderC = isSelected ? 'var(--g1)' : isToday ? 'var(--g2)' : 'var(--border)';
+    const baseBg  = isSelected ? 'rgba(61,214,140,0.07)' : isToday ? 'rgba(56,189,248,0.04)' : 'var(--bg2)';
+    const extra   = dayGrades.length > 2 ? dayGrades.length - 2 : 0;
 
-    dayGrades.forEach(g => {
+    const pills = dayGrades.slice(0, 2).map(g => {
       const col = gradeColor(g.score);
-      const dot = document.createElement('div');
-      dot.className = 'cal-dot';
-      dot.style.cssText = `background:${col}22;color:${col};`;
-      dot.innerHTML = `<div class="cal-dot-indicator" style="background:${col};"></div>${pctToLetter(g.score)}`;
-      el.appendChild(dot);
-    });
+      const label = (g.subject_name || '') + (g.assignment_title ? ': ' + g.assignment_title : '');
+      return `<div style="display:flex;align-items:center;gap:3px;padding:1px 3px;border-radius:4px;background:${col}18;margin-bottom:2px;overflow:hidden;">
+        <div style="width:5px;height:5px;border-radius:50%;background:${col};flex-shrink:0;"></div>
+        <div style="font-size:9px;color:${col};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pctToLetter(g.score)} ${label}</div>
+      </div>`;
+    }).join('');
 
+    const el = document.createElement('div');
+    el.className = 'cal-cell';
+    el.style.cssText = `background:${baseBg};border-color:${borderC};`;
+    el.innerHTML = `<div style="font-size:11px;font-weight:${isToday?700:500};color:${isToday?'var(--g2)':isSelected?'var(--g1)':'var(--text3)'};margin-bottom:3px;">${d}</div>${pills}${extra > 0 ? `<div style="font-size:9px;color:var(--text3);padding:0 2px;">+${extra}</div>` : ''}`;
+    el.onmouseover = () => { el.style.borderColor = 'var(--border-accent)'; };
+    el.onmouseout  = () => { el.style.borderColor = borderC; };
     el.onclick = () => { calSelected = dateStr; renderCal(); showCalDetail(dateStr); };
     grid.appendChild(el);
   }

@@ -52,6 +52,10 @@ def create_app(config=Config):
     def grades_page():
         return send_from_directory(FRONTEND_DIR, "grades.html")
 
+    @app.route("/leaderboard")
+    def leaderboard_page():
+        return send_from_directory(FRONTEND_DIR, "leaderboard.html")
+
     return app
 
 if __name__ == "__main__":
