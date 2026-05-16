@@ -28,6 +28,10 @@ def create_app(config=Config):
     def login_page():
         return send_from_directory(FRONTEND_DIR, "login.html")
 
+    @app.route("/dashboard")
+    def dashboard_page():
+        return send_from_directory(FRONTEND_DIR, "dashboard.html")
+
     return app
 
 if __name__ == "__main__":
