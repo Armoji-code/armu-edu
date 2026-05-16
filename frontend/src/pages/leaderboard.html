@@ -181,141 +181,113 @@ function toggleTheme() {
   document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
 }
 
-// Leaderboard data keyed by tab.
-// "me" marks the logged-in user's entry (matched by name after boot).
-// Real data will come from the API once a /api/leaderboard endpoint is added.
-const LB_DATA = {
-  streaks: [
-    { name:'Emma Davis',    initials:'ED', avatarBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', score:31, hint:'Never misses a deadline' },
-    { name:'Tyler Brooks',  initials:'TB', avatarBg:'linear-gradient(135deg,#64748b,#475569)', score:28, hint:'Great consistency' },
-    { name:'Sofia Martinez',initials:'SM', avatarBg:'linear-gradient(135deg,#b45309,#92400e)', score:22, hint:'Strong week!' },
-    { name:'YOU',           initials:'',   avatarBg:'var(--gradient)',                         score:14, hint:'8 more days to reach 3rd!', me:true },
-    { name:'Hannah Lee',    initials:'HL', avatarBg:'linear-gradient(135deg,#8b5cf6,#7c3aed)', score:11 },
-    { name:'Jake Wilson',   initials:'JW', avatarBg:'linear-gradient(135deg,#ec4899,#db2777)', score:9 },
-  ],
-  ontime: [
-    { name:'Emma Davis',    initials:'ED', avatarBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', score:98, hint:'98% on-time submissions', suffix:'%' },
-    { name:'Sofia Martinez',initials:'SM', avatarBg:'linear-gradient(135deg,#b45309,#92400e)', score:95, hint:'Very reliable', suffix:'%' },
-    { name:'Tyler Brooks',  initials:'TB', avatarBg:'linear-gradient(135deg,#64748b,#475569)', score:92, suffix:'%' },
-    { name:'YOU',           initials:'',   avatarBg:'var(--gradient)',                         score:88, hint:'3 late submissions this term', me:true, suffix:'%' },
-    { name:'Hannah Lee',    initials:'HL', avatarBg:'linear-gradient(135deg,#8b5cf6,#7c3aed)', score:84, suffix:'%' },
-    { name:'Jake Wilson',   initials:'JW', avatarBg:'linear-gradient(135deg,#ec4899,#db2777)', score:76, suffix:'%' },
-  ],
-  helpful: [
-    { name:'Tyler Brooks',  initials:'TB', avatarBg:'linear-gradient(135deg,#64748b,#475569)', score:47, hint:'Top helper in group chats' },
-    { name:'Emma Davis',    initials:'ED', avatarBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', score:38 },
-    { name:'Hannah Lee',    initials:'HL', avatarBg:'linear-gradient(135deg,#8b5cf6,#7c3aed)', score:29, hint:'Active study group member' },
-    { name:'YOU',           initials:'',   avatarBg:'var(--gradient)',                         score:17, hint:'Try helping more classmates!', me:true },
-    { name:'Sofia Martinez',initials:'SM', avatarBg:'linear-gradient(135deg,#b45309,#92400e)', score:14 },
-    { name:'Jake Wilson',   initials:'JW', avatarBg:'linear-gradient(135deg,#ec4899,#db2777)', score:8 },
-  ],
-  conduct: [
-    { name:'Emma Davis',    initials:'ED', avatarBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', score:31, hint:'Perfect participation record', prefix:'+' },
-    { name:'Tyler Brooks',  initials:'TB', avatarBg:'linear-gradient(135deg,#64748b,#475569)', score:24, hint:'Consistently excellent', prefix:'+' },
-    { name:'YOU',           initials:'',   avatarBg:'var(--gradient)',                         score:18, hint:'2 more points to reach 2nd!', me:true, prefix:'+' },
-    { name:'Sofia Martinez',initials:'SM', avatarBg:'linear-gradient(135deg,#b45309,#92400e)', score:14, hint:'Good effort this month', prefix:'+' },
-    { name:'Hannah Lee',    initials:'HL', avatarBg:'linear-gradient(135deg,#8b5cf6,#7c3aed)', score:9, prefix:'+' },
-    { name:'Jake Wilson',   initials:'JW', avatarBg:'linear-gradient(135deg,#f59e42,#ef4444)', score:-2, negative:true },
-  ],
-};
-
-const TAB_ICON = {
-  streaks: '#ic-streak', ontime: '#ic-check', helpful: '#ic-messages', conduct: '#ic-conduct'
-};
-const TAB_LABEL = {
-  streaks: 'day streak', ontime: 'on-time', helpful: 'helps', conduct: 'points'
-};
-
-const RANK_CLASS = ['gold','silver','bronze'];
-const MEDAL = ['🥇','🥈','🥉'];
-const PODIUM_STYLE = [
-  'linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.02));border-color:rgba(251,191,36,0.35)',
-  'linear-gradient(135deg,rgba(148,163,184,0.07),rgba(148,163,184,0.01));border-color:rgba(148,163,184,0.3)',
-  'linear-gradient(135deg,rgba(180,83,9,0.08),rgba(180,83,9,0.01));border-color:rgba(180,83,9,0.3)',
+const TAB_ICON  = { streaks:'#ic-streak', ontime:'#ic-check', helpful:'#ic-messages', conduct:'#ic-conduct' };
+const TAB_LABEL = { streaks:'grades submitted', ontime:'avg score', helpful:'messages sent', conduct:'conduct pts' };
+const RANK_CLASS  = ['gold','silver','bronze'];
+const MEDAL       = ['🥇','🥈','🥉'];
+const PODIUM_BG   = [
+  ['rgba(251,191,36,0.08)','rgba(251,191,36,0.35)'],
+  ['rgba(148,163,184,0.07)','rgba(148,163,184,0.3)'],
+  ['rgba(180,83,9,0.08)','rgba(180,83,9,0.3)'],
 ];
 
+// Avatar gradient palette — cycles for each student by index
+const AVATAR_GRADIENTS = [
+  'var(--gradient)',
+  'linear-gradient(135deg,#8b5cf6,#7c3aed)',
+  'linear-gradient(135deg,#ec4899,#db2777)',
+  'linear-gradient(135deg,#fb923c,#f59e0b)',
+  'linear-gradient(135deg,#34d399,#0ea5e9)',
+  'linear-gradient(135deg,#64748b,#475569)',
+];
+
+let lbData = { streaks:[], ontime:[], helpful:[], conduct:[] };
 let currentTab = 'streaks';
-let myName = '';
+
+function avatarGrad(id) {
+  return AVATAR_GRADIENTS[id % AVATAR_GRADIENTS.length];
+}
+
+function scoreStr(e) {
+  return `${e.prefix || ''}${Math.abs(e.score)}${e.suffix || ''}`;
+}
 
 function switchTab(tab) {
   currentTab = tab;
-  ['streaks','ontime','helpful','conduct'].forEach(t => {
-    document.getElementById('tab-btn-' + t).classList.toggle('active', t === tab);
-  });
+  ['streaks','ontime','helpful','conduct'].forEach(t =>
+    document.getElementById('tab-btn-' + t).classList.toggle('active', t === tab)
+  );
   renderTab();
 }
 
-function scoreStr(entry) {
-  const pre  = entry.prefix  || '';
-  const suf  = entry.suffix  || '';
-  const val  = entry.negative ? entry.score : Math.abs(entry.score);
-  return `${pre}${val}${suf}`;
-}
-
 function renderTab() {
-  const data   = LB_DATA[currentTab];
+  const data   = lbData[currentTab] || [];
   const icon   = TAB_ICON[currentTab];
   const sublbl = TAB_LABEL[currentTab];
 
-  // Substitute real name into the "me" entry
-  data.forEach(e => {
-    if (e.me) {
-      e.initials = myName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?';
-      if (myName) e.name = myName + ' ← You';
-    }
-  });
+  if (!data.length) {
+    document.getElementById('lb-podium').innerHTML = '';
+    document.getElementById('lb-list').innerHTML =
+      `<div style="text-align:center;padding:48px;color:var(--text3);font-size:14px;">No classmates yet — add more students to your class to see the leaderboard.</div>`;
+    return;
+  }
 
-  // Podium (top 3)
+  // Podium
   const podiumEl = document.getElementById('lb-podium');
-  podiumEl.innerHTML = data.slice(0,3).map((e, i) => `
-    <div class="podium-card ${['first','second','third'][i]}" style="background:${PODIUM_STYLE[i].split(';border-color:')[0]};border-color:${PODIUM_STYLE[i].split(';border-color:')[1]};">
-      <div class="podium-medal">${MEDAL[i]}</div>
-      <div class="podium-avatar" style="background:${e.avatarBg};">${e.initials}</div>
-      <div class="podium-name">${e.name.replace(' ← You','')}</div>
-      <div class="podium-score">${scoreStr(e)}</div>
-      <div style="font-size:11px;color:var(--text3);margin-top:2px;">${sublbl}</div>
-    </div>
-  `).join('');
+  podiumEl.style.display = data.length >= 3 ? 'grid' : 'none';
+  if (data.length >= 3) {
+    podiumEl.innerHTML = data.slice(0,3).map((e, i) => `
+      <div class="podium-card ${['first','second','third'][i]}"
+        style="background:${PODIUM_BG[i][0]};border-color:${PODIUM_BG[i][1]};">
+        <div class="podium-medal">${MEDAL[i]}</div>
+        <div class="podium-avatar" style="background:${avatarGrad(e.id)};">${e.initials}</div>
+        <div class="podium-name">${e.name}</div>
+        <div class="podium-score">${scoreStr(e)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${sublbl}</div>
+      </div>`).join('');
+  }
 
-  // Full list (rank 4+, and include top 3 as compact rows too)
-  const listEl = document.getElementById('lb-list');
-  listEl.innerHTML = data.map((e, i) => {
-    const rankNum = i + 1;
-    const rankCls = RANK_CLASS[i] || '';
-    const isMe    = !!e.me;
-    const neg     = !!e.negative;
-    const sc      = scoreStr(e);
-
-    return `<div class="lb-item${isMe ? ' me' : ''}">
-      <div class="rank ${rankCls}">${rankNum}</div>
-      <div class="avatar" style="background:${e.avatarBg};font-size:12px;">${e.initials}</div>
+  // Full ranked list
+  document.getElementById('lb-list').innerHTML = data.map((e, i) => {
+    const neg = !!e.negative;
+    return `<div class="lb-item${e.me ? ' me' : ''}">
+      <div class="rank ${RANK_CLASS[i] || ''}">${i + 1}</div>
+      <div class="avatar" style="background:${avatarGrad(e.id)};font-size:12px;">${e.initials}</div>
       <div style="flex:1;">
-        <div style="font-size:14px;font-weight:500;color:var(--text);">${e.name}</div>
-        ${e.hint ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${e.hint}</div>` : ''}
+        <div style="font-size:14px;font-weight:500;color:var(--text);">
+          ${e.name}${e.me ? ' <span style="font-size:11px;color:var(--g2);">← You</span>' : ''}
+        </div>
       </div>
       <div class="lb-score${neg ? ' negative' : ''}">
         <svg class="icon icon-14"><use href="${icon}"/></svg>
-        <span>${sc}</span>
+        <span>${scoreStr(e)}</span>
       </div>
     </div>`;
   }).join('');
 }
 
 async function boot() {
-  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  const [me, lb] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    fetch('/api/leaderboard').then(r => r.json()).catch(() => null),
+  ]);
+
   if (!me || me.error) { location.href = '/login'; return; }
 
-  myName = me.name || me.email;
-  document.getElementById('userName').textContent = myName;
-  const initials = myName.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
-  document.getElementById('userAvatar').textContent = initials;
+  document.getElementById('userName').textContent = me.name || me.email;
+  document.getElementById('userAvatar').textContent =
+    (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
 
-  const classInfo = me.class_name ? me.class_name + (me.school_name ? ' · ' + me.school_name : '') : '';
+  const classInfo = me.class_name
+    ? me.class_name + (me.school_name ? ' · ' + me.school_name : '')
+    : '';
   if (classInfo) {
     document.getElementById('userClass').textContent = classInfo;
-    document.getElementById('lb-subtitle').textContent = classInfo + ' · ' + new Date().toLocaleDateString('en-US',{month:'long',year:'numeric'});
+    document.getElementById('lb-subtitle').textContent =
+      classInfo + ' · ' + new Date().toLocaleDateString('en-US', {month:'long', year:'numeric'});
   }
 
+  if (lb) lbData = lb;
   renderTab();
 }
 
