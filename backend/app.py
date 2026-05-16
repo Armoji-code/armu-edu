@@ -32,6 +32,10 @@ def create_app(config=Config):
     def dashboard_page():
         return send_from_directory(FRONTEND_DIR, "dashboard.html")
 
+    @app.route("/calendar")
+    def calendar_page():
+        return send_from_directory(FRONTEND_DIR, "calendar.html")
+
     return app
 
 if __name__ == "__main__":
