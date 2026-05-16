@@ -44,6 +44,14 @@ def create_app(config=Config):
     def tests_page():
         return send_from_directory(FRONTEND_DIR, "tests.html")
 
+    @app.route("/schedule")
+    def schedule_page():
+        return send_from_directory(FRONTEND_DIR, "schedule.html")
+
+    @app.route("/grades")
+    def grades_page():
+        return send_from_directory(FRONTEND_DIR, "grades.html")
+
     return app
 
 if __name__ == "__main__":

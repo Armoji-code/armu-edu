@@ -52,6 +52,8 @@ class Grade(db.Model):
         return {
             "id": self.id,
             "assignment_id": self.assignment_id,
+            "assignment_title": self.assignment.title if self.assignment else None,
+            "subject_name": self.assignment.subject.name if self.assignment and self.assignment.subject else None,
             "score": self.score,
             "letter": self.letter,
             "quarter": self.quarter,
