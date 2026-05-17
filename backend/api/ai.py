@@ -4,10 +4,13 @@ from auth import login_required
 from models import db
 from models.ai_session import AISession, AIMessage
 from models.social import Group
+from models.daily_digest import DailyDigest
+from models.academic import Assignment, Grade
 import ai as ollama
 import json
 import io
 import threading
+from datetime import date, datetime, timezone
 
 
 TUTOR_SYSTEM_PROMPT = """\
@@ -265,6 +268,111 @@ def group_ai_session(user, group_id):
         db.session.commit()
 
     return jsonify(session.to_dict())
+
+
+@blueprint.route("/ai/daily-digest", methods=["GET"])
+@login_required()
+def daily_digest(user):
+    today = date.today()
+    force = request.args.get("force") == "1"
+
+    if not force:
+        cached = DailyDigest.query.filter_by(user_id=user.id, date=today).first()
+        if cached:
+            return jsonify(cached.to_dict())
+
+    # Build context from upcoming assignments and recent grades
+    from models.school import Class
+    from sqlalchemy import and_
+    klass = Class.query.get(user.class_id) if user.class_id else None
+    subject_ids = [s.id for s in klass.subjects] if klass else []
+
+    now = datetime.now(timezone.utc)
+    week_out = datetime(now.year, now.month, now.day + 7 if now.day + 7 <= 28 else 28,
+                        tzinfo=timezone.utc)
+
+    assignments = (
+        Assignment.query
+        .filter(
+            Assignment.subject_id.in_(subject_ids),
+            Assignment.due_date >= now,
+        )
+        .order_by(Assignment.due_date)
+        .limit(10)
+        .all()
+    ) if subject_ids else []
+
+    grades = (
+        Grade.query
+        .filter_by(student_id=user.id)
+        .order_by(Grade.created_at.desc())
+        .limit(10)
+        .all()
+    )
+
+    def fmt_assignment(a):
+        days = (a.due_date.replace(tzinfo=timezone.utc) - now).days
+        due = "today" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
+        return f"- {a.title} ({a.type}, due {due})"
+
+    def fmt_grade(g):
+        a = Assignment.query.get(g.assignment_id)
+        subj = a.subject.name if a and a.subject else "unknown"
+        return f"- {subj}: {g.score}/10"
+
+    hw_lines = "\n".join(fmt_assignment(a) for a in assignments) or "No upcoming assignments."
+    grade_lines = "\n".join(fmt_grade(g) for g in grades) or "No recent grades."
+
+    prompt = (
+        f"You are a school advisor. Write a short, personal, encouraging message (2-3 sentences) "
+        f"for {user.name} based on their upcoming work and recent grades. "
+        f"Tell them what to focus on most urgently today and why. Be specific, use the assignment names. "
+        f"Do not use bullet points or headers. Plain prose only.\n\n"
+        f"Upcoming assignments:\n{hw_lines}\n\n"
+        f"Recent grades:\n{grade_lines}"
+    )
+
+    model = current_app.config["OLLAMA_TRACKER_MODEL"]
+    app = current_app._get_current_object()
+
+    def generate():
+        full = []
+        try:
+            resp = ollama.chat(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                stream=True,
+            )
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                try:
+                    chunk = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                token = chunk.get("message", {}).get("content", "")
+                if token:
+                    full.append(token)
+                    yield token
+                if chunk.get("done"):
+                    break
+        except Exception as e:
+            yield f"[Error: {e}]"
+        finally:
+            content = "".join(full).strip()
+            if content:
+                with app.app_context():
+                    existing = DailyDigest.query.filter_by(user_id=user.id, date=today).first()
+                    if existing:
+                        existing.content = content
+                        existing.generated_at = datetime.now(timezone.utc)
+                    else:
+                        db.session.add(DailyDigest(
+                            user_id=user.id, date=today, content=content
+                        ))
+                    db.session.commit()
+
+    return Response(stream_with_context(generate()), content_type="text/plain")
 
 
 def _auto_title(app, session_id, model, user_msg, ai_msg):

@@ -83,8 +83,17 @@
   .section-title { font-size:15px; font-weight:600; letter-spacing:-0.2px; }
   .section-link { font-size:12px; color:var(--g2); cursor:pointer; font-weight:500; text-decoration:none; }
 
-  /* AI BANNER */
-  .ai-banner { background:linear-gradient(135deg,rgba(61,214,140,0.08),rgba(56,189,248,0.08)); border:1px solid var(--border-accent); border-radius:var(--radius); padding:16px 20px; margin-bottom:20px; display:flex; align-items:flex-start; gap:14px; }
+  /* AI CARD */
+  .ai-card { background:linear-gradient(135deg,rgba(61,214,140,0.07),rgba(56,189,248,0.07)); border:1px solid var(--border-accent); border-radius:var(--radius); padding:18px 20px; margin-bottom:20px; }
+  .ai-card-header { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .ai-card-label { font-size:11px; font-weight:700; color:var(--g1); letter-spacing:0.8px; text-transform:uppercase; flex:1; }
+  .ai-card-time { font-size:11px; color:var(--text3); }
+  .ai-card-refresh { width:26px; height:26px; border-radius:6px; border:1px solid var(--border); background:none; color:var(--text3); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all var(--transition); }
+  .ai-card-refresh:hover { color:var(--g1); border-color:var(--border-accent); }
+  .ai-card-refresh:disabled { opacity:0.4; cursor:default; }
+  .ai-card-body { font-size:14px; line-height:1.6; color:var(--text); min-height:22px; }
+  .ai-card-body.streaming::after { content:'▌'; animation:blink 1s step-end infinite; color:var(--g1); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
   /* ASSIGNMENTS */
   .assignment-list { display:flex; flex-direction:column; gap:8px; }
@@ -225,14 +234,17 @@
   </div>
 
   <div class="content">
-    <!-- AI PRIORITY BANNER -->
-    <div class="ai-banner" id="aiBanner">
-      <div style="flex-shrink:0;color:var(--g1)"><svg class="icon icon-22"><use href="#ic-tutor"/></svg></div>
-      <div style="flex:1">
-        <div style="font-size:12px;font-weight:600;color:var(--g1);letter-spacing:0.5px;margin-bottom:6px">AI PRIORITY ALERT</div>
-        <div style="font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px" id="aiBannerMain">Loading your schedule…</div>
-        <div style="font-size:12px;color:var(--text2)" id="aiBannerSub"></div>
+    <!-- AI DAILY DIGEST CARD -->
+    <div class="ai-card" id="aiCard">
+      <div class="ai-card-header">
+        <svg class="icon icon-14" style="color:var(--g1)"><use href="#ic-tutor"/></svg>
+        <span class="ai-card-label">AI Study Advisor</span>
+        <span class="ai-card-time" id="aiCardTime"></span>
+        <button class="ai-card-refresh" id="aiCardRefresh" onclick="loadDigest(true)" title="Regenerate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
       </div>
+      <div class="ai-card-body" id="aiCardBody">Loading your personalised study plan…</div>
     </div>
 
     <!-- STAT CARDS -->
@@ -328,8 +340,8 @@
     if (dash) renderStats(dash);
     if (hw)   { hwData = hw; renderHw(hw); updateHwBadge(hw); }
     if (tests) { testData = tests; renderTests(tests); }
-    if (dash || hw || tests) renderAiBanner(dash, hw, tests);
     renderCalendar();
+    loadDigest(false);
   }
 
   async function api(url) {
@@ -357,28 +369,49 @@
     document.getElementById('streakNum').textContent  = 0;
   }
 
-  // ── AI Banner ────────────────────────────────────────────────────────────────
-  function renderAiBanner(dash, hw, tests) {
-    const urgent = hw ? hw.filter(a => !a.completed && daysUntil(a.due_date) <= 2) : [];
-    const upcoming = tests ? tests.filter(t => daysUntil(t.due_date) <= 3) : [];
-    let main = '', sub = '';
+  // ── AI Daily Digest ──────────────────────────────────────────────────────────
+  async function loadDigest(force) {
+    const body = document.getElementById('aiCardBody');
+    const timeEl = document.getElementById('aiCardTime');
+    const refreshBtn = document.getElementById('aiCardRefresh');
+    if (!body) return;
 
-    if (urgent.length === 0 && upcoming.length === 0) {
-      main = 'You\'re all caught up! No urgent items right now.';
-      sub = 'Check back later for new assignments.';
-    } else if (urgent.length > 0 && upcoming.length > 0) {
-      main = `<strong>${urgent[0].title}</strong> is due ${relDue(urgent[0].due_date)} and you have a <strong>${upcoming[0].title}</strong> test soon. Focus on these first.`;
-      sub = `${urgent.length + upcoming.length - 2} more items this week`;
-    } else if (urgent.length > 0) {
-      main = `<strong>${urgent[0].title}</strong> is due ${relDue(urgent[0].due_date)}. Get this done first.`;
-      sub = urgent.length > 1 ? `${urgent.length - 1} other urgent assignment${urgent.length > 2 ? 's' : ''}` : '';
-    } else {
-      main = `You have a <strong>${upcoming[0].title}</strong> test coming up. Start reviewing now.`;
-      sub = upcoming.length > 1 ? `${upcoming.length - 1} more test${upcoming.length > 2 ? 's' : ''} this week` : '';
+    refreshBtn.disabled = true;
+    body.textContent = force ? 'Regenerating…' : 'Loading your personalised study plan…';
+    body.classList.add('streaming');
+
+    const url = '/api/ai/daily-digest' + (force ? '?force=1' : '');
+    try {
+      const resp = await fetch(url, { credentials: 'include' });
+      if (!resp.ok) { body.textContent = 'Could not load study plan.'; body.classList.remove('streaming'); return; }
+
+      const ct = resp.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        // Cached — display instantly
+        const data = await resp.json();
+        body.textContent = data.content;
+        if (data.generated_at) {
+          const d = new Date(data.generated_at);
+          timeEl.textContent = 'Today · ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        }
+      } else {
+        // Streaming — show text as it arrives
+        body.textContent = '';
+        timeEl.textContent = '';
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          body.textContent += decoder.decode(value, { stream: true });
+        }
+        timeEl.textContent = 'Just now';
+      }
+    } catch (e) {
+      body.textContent = 'Could not load study plan.';
     }
-
-    document.getElementById('aiBannerMain').innerHTML = main;
-    document.getElementById('aiBannerSub').textContent = sub;
+    body.classList.remove('streaming');
+    refreshBtn.disabled = false;
   }
 
   // ── Homework list ────────────────────────────────────────────────────────────
