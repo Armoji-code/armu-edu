@@ -5,6 +5,8 @@ from flask_migrate import Migrate
 from config import Config
 from models import db
 
+STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
+
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'src', 'pages')
 
 socketio = SocketIO()
@@ -91,6 +93,10 @@ def create_app(config=Config):
     @app.route("/settings")
     def settings_page():
         return send_from_directory(FRONTEND_DIR, "settings.html")
+
+    @app.route("/static/<path:filename>")
+    def serve_static(filename):
+        return send_from_directory(STATIC_DIR, filename)
 
     return app
 

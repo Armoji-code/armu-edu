@@ -13,6 +13,13 @@ def on_connect():
 def on_disconnect():
     pass
 
+@socketio.on("user_join")
+def on_user_join(data):
+    """Client sends their user_id so we can push notifications to them."""
+    uid = data.get("user_id")
+    if uid:
+        join_room(f"user_{uid}")
+
 @socketio.on("wb_join")
 def on_wb_join(data):
     room = data.get("room", "global")
