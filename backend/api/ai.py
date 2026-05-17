@@ -133,73 +133,34 @@ def chat(user, session_id):
         return jsonify({"error": "message required"}), 400
 
     is_group = ai_session.group_id is not None
+    core = user_content or "(image)"
+    stored_content = f"[{user.name}]: {core}" if is_group else core
 
-    # Save the user message immediately with placeholder content;
-    # if an image was attached we update it after stage-1 description.
-    core_placeholder = user_content or "(image)"
-    stored_placeholder = f"[{user.name}]: {core_placeholder}" if is_group else core_placeholder
     user_msg = AIMessage(
         session_id=session_id,
         role="user",
-        content=stored_placeholder,
+        content=stored_content,
         sender_id=user.id,
     )
     db.session.add(user_msg)
     db.session.commit()
-    user_msg_id = user_msg.id  # capture before session closes
 
     if ai_session.model_tier == "advanced":
-        text_model = current_app.config["OLLAMA_ADVANCED_MODEL"]
+        model = current_app.config["OLLAMA_ADVANCED_MODEL"]
     else:
-        text_model = current_app.config["OLLAMA_TEXT_MODEL"]
-    vision_model = current_app.config["OLLAMA_VISION_MODEL"]
+        model = current_app.config["OLLAMA_TUTOR_MODEL"]
+
     system_prompt = TUTOR_SYSTEM_PROMPT_GROUP if is_group else TUTOR_SYSTEM_PROMPT
+    all_msgs = AIMessage.query.filter_by(session_id=session_id).order_by(AIMessage.created_at).all()
+    history = [{"role": "system", "content": system_prompt}] + \
+              [{"role": m.role, "content": m.content} for m in all_msgs]
+    images = [image_b64] if image_b64 else None
     app = current_app._get_current_object()
 
     def generate():
         full_response = []
         try:
-            # ── Stage 1: describe image (runs inside generator so we can stream status) ──
-            if image_b64:
-                yield "_Analyzing image…_\n\n"
-                try:
-                    desc_resp = ollama.chat(
-                        model=vision_model,
-                        messages=[{"role": "user", "content": (
-                            "Look at this image and respond as follows:\n"
-                            "- If the image is mostly text, equations, or a math problem: "
-                            "transcribe it exactly as written, nothing else.\n"
-                            "- If the image contains a graph, chart, diagram, or drawing: "
-                            "describe what it shows in detail (axes, values, trends, labels).\n"
-                            "- If it is a mix: transcribe the text parts and describe the visual parts.\n"
-                            "Be concise. Do not add commentary or explanations."
-                        )}],
-                        stream=False,
-                        images=[image_b64],
-                    )
-                    description = desc_resp.json().get("message", {}).get("content", "").strip()
-                except Exception as e:
-                    description = f"(image could not be processed: {e})"
-
-                yield f"_Image read as:_ {description}\n\n---\n\n"
-
-                core = f"[Image: {description}]"
-                if user_content:
-                    core = f"{core}\n\n{user_content}"
-                stored_content = f"[{user.name}]: {core}" if is_group else core
-                with app.app_context():
-                    msg = AIMessage.query.get(user_msg_id)
-                    if msg:
-                        msg.content = stored_content
-                        db.session.commit()
-
-            # ── Stage 2: build history and stream from text model ──────────────────────
-            with app.app_context():
-                all_msgs = AIMessage.query.filter_by(session_id=session_id).order_by(AIMessage.created_at).all()
-                history = [{"role": "system", "content": system_prompt}] + \
-                          [{"role": m.role, "content": m.content} for m in all_msgs]
-
-            resp = ollama.chat(model=text_model, messages=history, stream=True)
+            resp = ollama.chat(model=model, messages=history, stream=True, images=images)
             for line in resp.iter_lines():
                 if not line:
                     continue
