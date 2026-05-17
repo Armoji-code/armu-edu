@@ -133,62 +133,65 @@ def chat(user, session_id):
 
     is_group = ai_session.group_id is not None
 
-    # ── Stage 1: if an image was attached, describe it with the vision model ──
-    # The description is stored as part of the user message so future turns
-    # in the same conversation retain full context without needing the image again.
-    image_description = None
-    if image_b64:
-        vision_model = current_app.config["OLLAMA_VISION_MODEL"]
-        try:
-            desc_resp = ollama.chat(
-                model=vision_model,
-                messages=[{"role": "user", "content": (
-                    "Describe this image in full detail. "
-                    "If it contains text, equations, math problems, diagrams, or charts, "
-                    "transcribe and explain them exactly."
-                )}],
-                stream=False,
-                images=[image_b64],
-            )
-            image_description = desc_resp.json().get("message", {}).get("content", "").strip()
-        except Exception as e:
-            image_description = f"(image could not be processed: {e})"
-
-    # ── Build stored message content ───────────────────────────────────────────
-    if image_description:
-        # Embed description; text model will reason over this instead of the raw image
-        core = f"[Image description: {image_description}]"
-        if user_content:
-            core = f"{core}\n\n{user_content}"
-    else:
-        core = user_content or "(image)"
-
-    stored_content = f"[{user.name}]: {core}" if is_group else core
-
+    # Save the user message immediately with placeholder content;
+    # if an image was attached we update it after stage-1 description.
+    core_placeholder = user_content or "(image)"
+    stored_placeholder = f"[{user.name}]: {core_placeholder}" if is_group else core_placeholder
     user_msg = AIMessage(
         session_id=session_id,
         role="user",
-        content=stored_content,
+        content=stored_placeholder,
         sender_id=user.id,
     )
     db.session.add(user_msg)
     db.session.commit()
 
-    # ── Stage 2: reason with the text model ───────────────────────────────────
     if ai_session.model_tier == "advanced":
-        model = current_app.config["OLLAMA_ADVANCED_MODEL"]
+        text_model = current_app.config["OLLAMA_ADVANCED_MODEL"]
     else:
-        model = current_app.config["OLLAMA_TEXT_MODEL"]
-
+        text_model = current_app.config["OLLAMA_TEXT_MODEL"]
+    vision_model = current_app.config["OLLAMA_VISION_MODEL"]
     system_prompt = TUTOR_SYSTEM_PROMPT_GROUP if is_group else TUTOR_SYSTEM_PROMPT
-    all_msgs = AIMessage.query.filter_by(session_id=session_id).order_by(AIMessage.created_at).all()
-    history = [{"role": "system", "content": system_prompt}] + \
-              [{"role": m.role, "content": m.content} for m in all_msgs]
+    app = current_app._get_current_object()
 
     def generate():
         full_response = []
         try:
-            resp = ollama.chat(model=model, messages=history, stream=True)
+            # ── Stage 1: describe image (runs inside generator so we can stream status) ──
+            if image_b64:
+                yield "_Analyzing image…_\n\n"
+                try:
+                    desc_resp = ollama.chat(
+                        model=vision_model,
+                        messages=[{"role": "user", "content": (
+                            "Describe this image in full detail. "
+                            "If it contains text, equations, math problems, diagrams, or charts, "
+                            "transcribe and explain them exactly."
+                        )}],
+                        stream=False,
+                        images=[image_b64],
+                    )
+                    description = desc_resp.json().get("message", {}).get("content", "").strip()
+                except Exception as e:
+                    description = f"(image could not be processed: {e})"
+
+                core = f"[Image description: {description}]"
+                if user_content:
+                    core = f"{core}\n\n{user_content}"
+                stored_content = f"[{user.name}]: {core}" if is_group else core
+                with app.app_context():
+                    msg = AIMessage.query.get(user_msg.id)
+                    if msg:
+                        msg.content = stored_content
+                        db.session.commit()
+
+            # ── Stage 2: build history and stream from text model ──────────────────────
+            with app.app_context():
+                all_msgs = AIMessage.query.filter_by(session_id=session_id).order_by(AIMessage.created_at).all()
+                history = [{"role": "system", "content": system_prompt}] + \
+                          [{"role": m.role, "content": m.content} for m in all_msgs]
+
+            resp = ollama.chat(model=text_model, messages=history, stream=True)
             for line in resp.iter_lines():
                 if not line:
                     continue
@@ -206,27 +209,27 @@ def chat(user, session_id):
             yield f"\n\n[Error: {e}]"
         finally:
             if full_response:
-                assistant_msg = AIMessage(
-                    session_id=session_id,
-                    role="assistant",
-                    content="".join(full_response),
-                )
-                db.session.add(assistant_msg)
-                db.session.commit()
+                with app.app_context():
+                    assistant_msg = AIMessage(
+                        session_id=session_id,
+                        role="assistant",
+                        content="".join(full_response),
+                    )
+                    db.session.add(assistant_msg)
+                    db.session.commit()
 
-                if not is_group:
-                    msg_count = AIMessage.query.filter_by(session_id=session_id).count()
-                    if msg_count == 2:
-                        app = current_app._get_current_object()
-                        t = threading.Thread(
-                            target=_auto_title,
-                            args=(app, session_id,
-                                  current_app.config["OLLAMA_TRACKER_MODEL"],
-                                  user_content or "image",
-                                  "".join(full_response)),
-                            daemon=True,
-                        )
-                        t.start()
+                    if not is_group:
+                        msg_count = AIMessage.query.filter_by(session_id=session_id).count()
+                        if msg_count == 2:
+                            t = threading.Thread(
+                                target=_auto_title,
+                                args=(app, session_id,
+                                      app.config["OLLAMA_TRACKER_MODEL"],
+                                      user_content or "image",
+                                      "".join(full_response)),
+                                daemon=True,
+                            )
+                            t.start()
 
     return Response(stream_with_context(generate()), content_type="text/plain")
 
