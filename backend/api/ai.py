@@ -108,12 +108,32 @@ def create_session(user):
     db.session.commit()
     return jsonify(session.to_dict()), 201
 
+@blueprint.route("/ai/models", methods=["GET"])
+@login_required()
+def get_models(user):
+    return jsonify({
+        "standard": current_app.config["OLLAMA_TUTOR_MODEL"],
+        "advanced": current_app.config["OLLAMA_ADVANCED_MODEL"],
+    })
+
 @blueprint.route("/ai/sessions/<int:session_id>", methods=["GET"])
 @login_required()
 def get_session(user, session_id):
     ai_session = AISession.query.get_or_404(session_id)
     if not _can_access(user, ai_session):
         return jsonify({"error": "forbidden"}), 403
+    return jsonify(ai_session.to_dict())
+
+@blueprint.route("/ai/sessions/<int:session_id>", methods=["PATCH"])
+@login_required()
+def update_session(user, session_id):
+    ai_session = AISession.query.get_or_404(session_id)
+    if ai_session.user_id != user.id:
+        return jsonify({"error": "forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    if "model_tier" in data and data["model_tier"] in ("standard", "advanced"):
+        ai_session.model_tier = data["model_tier"]
+    db.session.commit()
     return jsonify(ai_session.to_dict())
 
 @blueprint.route("/ai/sessions/<int:session_id>", methods=["DELETE"])
