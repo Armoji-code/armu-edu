@@ -98,6 +98,12 @@ def create_app(config=Config):
     def serve_static(filename):
         return send_from_directory(STATIC_DIR, filename)
 
+    import os
+    # Only start scheduler in the main process (not the Werkzeug reloader child)
+    if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        from scheduler import init_scheduler
+        init_scheduler(app, socketio)
+
     return app
 
 if __name__ == "__main__":

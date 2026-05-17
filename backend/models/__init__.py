@@ -11,3 +11,4 @@ from models.social import Group, group_members, Message, Activity, ActivityEnrol
 from models.ai_session import AISession, AIMessage
 from models.notification import Notification
 from models.daily_digest import DailyDigest
+from models.sent_reminder import SentReminder
