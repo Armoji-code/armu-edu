@@ -435,13 +435,14 @@ function renderSessions() {
   if (pinned.length) {
     html += '<div class="sess-group-label">Pinned</div>';
     html += pinned.map(personalItemHtml).join('');
-    if (unpinned.length) html += '<div class="sess-group-label">Chats</div>';
   }
-  html += unpinned.map(personalItemHtml).join('');
-
   if (visibleGroups.length) {
     html += '<div class="sess-group-label">Group Chats</div>';
     html += visibleGroups.map(groupItemHtml).join('');
+  }
+  if (unpinned.length) {
+    if (pinned.length || visibleGroups.length) html += '<div class="sess-group-label">Chats</div>';
+    html += unpinned.map(personalItemHtml).join('');
   }
 
   el.innerHTML = html;
