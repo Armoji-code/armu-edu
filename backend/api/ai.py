@@ -270,6 +270,75 @@ def group_ai_session(user, group_id):
     return jsonify(session.to_dict())
 
 
+@blueprint.route("/ai/tutor-nudge", methods=["GET"])
+@login_required()
+def tutor_nudge(user):
+    from models.school import Class
+    from datetime import timedelta
+
+    klass = Class.query.get(user.class_id) if user.class_id else None
+    subject_ids = [s.id for s in klass.subjects] if klass else []
+    now = datetime.now(timezone.utc)
+
+    upcoming = (
+        Assignment.query
+        .filter(
+            Assignment.subject_id.in_(subject_ids),
+            Assignment.due_date >= now,
+            Assignment.due_date <= now + timedelta(days=7),
+        )
+        .order_by(Assignment.due_date)
+        .limit(5)
+        .all()
+    ) if subject_ids else []
+
+    if upcoming:
+        lines = []
+        for a in upcoming:
+            days = max(0, (a.due_date.replace(tzinfo=timezone.utc) - now).days)
+            due = "today" if days == 0 else f"in {days} day{'s' if days != 1 else ''}"
+            lines.append(f"- {a.title} ({a.type}, {a.subject.name}, due {due})")
+        context = "Upcoming assignments:\n" + "\n".join(lines)
+    else:
+        context = "No upcoming assignments found."
+
+    prompt = (
+        f"You are generating study suggestions for {user.name}, a school student.\n"
+        f"{context}\n\n"
+        f"Return a JSON array of exactly 3 study suggestions. "
+        f"Each item must have: \"label\" (3-5 words, the chip text shown to the student) "
+        f"and \"message\" (one sentence the student will send to the AI tutor to start studying). "
+        f"Base suggestions on the actual assignments above. "
+        f"Example format: "
+        f'[{{"label":"Review quadratic equations","message":"Can you help me review quadratic equations for my math test tomorrow?"}}]'
+        f"\nReturn only the JSON array, nothing else."
+    )
+
+    try:
+        resp = ollama.chat(
+            model=current_app.config["OLLAMA_TRACKER_MODEL"],
+            messages=[{"role": "user", "content": prompt}],
+            stream=False,
+        )
+        raw = resp.json().get("message", {}).get("content", "").strip()
+        # Extract JSON array from response
+        start = raw.find("[")
+        end = raw.rfind("]") + 1
+        nudges = json.loads(raw[start:end]) if start != -1 else []
+        # Validate structure
+        nudges = [n for n in nudges if isinstance(n, dict) and "label" in n and "message" in n][:3]
+    except Exception:
+        nudges = []
+
+    if not nudges:
+        nudges = [
+            {"label": "Explain a concept", "message": "Can you explain a concept I'm struggling with?"},
+            {"label": "Quiz me on anything", "message": "Can you quiz me on something from my recent schoolwork?"},
+        ]
+
+    return jsonify({"nudges": nudges})
+
+
 @blueprint.route("/ai/daily-digest", methods=["GET"])
 @login_required()
 def daily_digest(user):

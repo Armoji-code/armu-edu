@@ -125,6 +125,10 @@
   .chat-welcome-icon{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));display:flex;align-items:center;justify-content:center;color:#fff;}
   .chat-welcome-title{font-size:18px;font-weight:600;letter-spacing:-0.3px;}
   .chat-welcome-sub{font-size:13px;color:var(--text3);text-align:center;max-width:320px;line-height:1.5;}
+  .nudge-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-width:480px;margin-top:4px;}
+  .nudge-chip{padding:7px 14px;border-radius:20px;border:1px solid var(--border-accent);background:linear-gradient(135deg,rgba(61,214,140,0.07),rgba(56,189,248,0.07));font-size:12px;font-weight:500;color:var(--text);cursor:pointer;transition:all var(--transition);}
+  .nudge-chip:hover{background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));box-shadow:var(--shadow-accent);}
+  .nudge-label{font-size:11px;color:var(--text3);margin-top:4px;}
 
   /* Compose */
   .chat-compose{padding:12px 32px 20px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
@@ -262,6 +266,8 @@
         <div class="chat-welcome-title">AI Tutor</div>
         <div class="chat-welcome-sub">Ask me anything about your schoolwork. I can help explain concepts, solve problems, and review your work.</div>
         <button class="new-chat-btn" style="margin-top:8px;padding:8px 20px;font-size:13px;" onclick="newSession()">Start a new chat</button>
+        <div class="nudge-label" id="nudgeLabel" style="display:none">Suggested for you</div>
+        <div class="nudge-row" id="nudgeRow"></div>
       </div>
     </div>
 
@@ -297,6 +303,7 @@ let pinnedIds = new Set(JSON.parse(localStorage.getItem('mokyai_pinned') || '[]'
 let groupPollTimer = null;
 let currentTier = 'standard';
 let modelNames = {standard: 'Standard', advanced: 'Advanced'};
+let cachedNudges = null;
 
 function renderContent(el, text) {
   // Extract math blocks before markdown processing so delimiters aren't mangled
@@ -479,7 +486,10 @@ async function deleteSession(e, id) {
         <div class="chat-welcome-title">AI Tutor</div>
         <div class="chat-welcome-sub">Ask me anything about your schoolwork.</div>
         <button class="new-chat-btn" style="margin-top:8px;padding:8px 20px;font-size:13px;" onclick="newSession()">Start a new chat</button>
+        <div class="nudge-label" id="nudgeLabel" style="display:none">Suggested for you</div>
+        <div class="nudge-row" id="nudgeRow"></div>
       </div>`;
+    renderNudges();
   }
   renderSessions();
 }
@@ -806,6 +816,46 @@ async function sendMessage() {
   ta.focus();
 }
 
+// ── Proactive nudges ──────────────────────────────────────────────────────────
+async function loadNudges() {
+  const todayKey = new Date().toISOString().split('T')[0];
+  const stored = JSON.parse(localStorage.getItem('mokyai_nudges') || '{}');
+  if (stored.date === todayKey && Array.isArray(stored.nudges)) {
+    cachedNudges = stored.nudges;
+  } else {
+    try {
+      const data = await fetch('/api/ai/tutor-nudge').then(r => r.ok ? r.json() : null);
+      cachedNudges = data?.nudges || [];
+      localStorage.setItem('mokyai_nudges', JSON.stringify({date: todayKey, nudges: cachedNudges}));
+    } catch { cachedNudges = []; }
+  }
+  renderNudges();
+}
+
+function renderNudges() {
+  const row = document.getElementById('nudgeRow');
+  const label = document.getElementById('nudgeLabel');
+  if (!row || !cachedNudges?.length) return;
+  label.style.display = '';
+  row.innerHTML = cachedNudges.map((n, i) =>
+    `<button class="nudge-chip" onclick="startNudge(${i})">${n.label}</button>`
+  ).join('');
+}
+
+async function startNudge(index) {
+  const nudge = cachedNudges?.[index];
+  if (!nudge) return;
+  await newSession();
+  // Wait for the session to open and compose box to be ready, then send
+  await new Promise(r => setTimeout(r, 120));
+  const ta = document.getElementById('composeTA');
+  if (ta) {
+    ta.value = nudge.message;
+    ta.dispatchEvent(new Event('input'));
+  }
+  sendMessage();
+}
+
 async function boot() {
   const [me, sessData, groupData, modelsData] = await Promise.all([
     fetch('/api/auth/me').then(r => r.json()).catch(() => null),
@@ -828,7 +878,12 @@ async function boot() {
   groups = Array.isArray(groupData) ? groupData : [];
   renderSessions();
 
-  if (sessions.length) openSession(sessions[0].id, null);
+  if (sessions.length) {
+    openSession(sessions[0].id, null);
+  } else {
+    // No sessions — show welcome with nudges
+    loadNudges();
+  }
 }
 
 boot();
