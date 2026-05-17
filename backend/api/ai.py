@@ -132,9 +132,38 @@ def chat(user, session_id):
         return jsonify({"error": "message required"}), 400
 
     is_group = ai_session.group_id is not None
-    raw_content = user_content or "(image)"
-    # Prefix with sender name in group sessions so the AI has context
-    stored_content = f"[{user.name}]: {raw_content}" if is_group else raw_content
+
+    # ── Stage 1: if an image was attached, describe it with the vision model ──
+    # The description is stored as part of the user message so future turns
+    # in the same conversation retain full context without needing the image again.
+    image_description = None
+    if image_b64:
+        vision_model = current_app.config["OLLAMA_VISION_MODEL"]
+        try:
+            desc_resp = ollama.chat(
+                model=vision_model,
+                messages=[{"role": "user", "content": (
+                    "Describe this image in full detail. "
+                    "If it contains text, equations, math problems, diagrams, or charts, "
+                    "transcribe and explain them exactly."
+                )}],
+                stream=False,
+                images=[image_b64],
+            )
+            image_description = desc_resp.json().get("message", {}).get("content", "").strip()
+        except Exception as e:
+            image_description = f"(image could not be processed: {e})"
+
+    # ── Build stored message content ───────────────────────────────────────────
+    if image_description:
+        # Embed description; text model will reason over this instead of the raw image
+        core = f"[Image description: {image_description}]"
+        if user_content:
+            core = f"{core}\n\n{user_content}"
+    else:
+        core = user_content or "(image)"
+
+    stored_content = f"[{user.name}]: {core}" if is_group else core
 
     user_msg = AIMessage(
         session_id=session_id,
@@ -145,20 +174,21 @@ def chat(user, session_id):
     db.session.add(user_msg)
     db.session.commit()
 
+    # ── Stage 2: reason with the text model ───────────────────────────────────
     if ai_session.model_tier == "advanced":
         model = current_app.config["OLLAMA_ADVANCED_MODEL"]
     else:
-        model = current_app.config["OLLAMA_TUTOR_MODEL"]
+        model = current_app.config["OLLAMA_TEXT_MODEL"]
 
     system_prompt = TUTOR_SYSTEM_PROMPT_GROUP if is_group else TUTOR_SYSTEM_PROMPT
+    all_msgs = AIMessage.query.filter_by(session_id=session_id).order_by(AIMessage.created_at).all()
     history = [{"role": "system", "content": system_prompt}] + \
-              [{"role": m.role, "content": m.content} for m in ai_session.messages]
-    images = [image_b64] if image_b64 else None
+              [{"role": m.role, "content": m.content} for m in all_msgs]
 
     def generate():
         full_response = []
         try:
-            resp = ollama.chat(model=model, messages=history, stream=True, images=images)
+            resp = ollama.chat(model=model, messages=history, stream=True)
             for line in resp.iter_lines():
                 if not line:
                     continue
