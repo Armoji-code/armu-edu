@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Profile</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition);}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;margin-bottom:8px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}.nav-icon svg{width:16px;height:16px;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-class{font-size:11px;color:var(--text3);}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:16px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-16{width:16px;height:16px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+
+  .content{flex:1;overflow-y:auto;padding:32px 40px;}
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+
+  /* Profile hero */
+  .profile-hero{display:flex;align-items:center;gap:28px;padding:28px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:24px;}
+  .profile-avatar{width:80px;height:80px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-1px;}
+  .profile-hero-info{flex:1;min-width:0;}
+  .profile-name-row{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+  .profile-name{font-size:22px;font-weight:600;letter-spacing:-0.4px;}
+  .edit-name-btn{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);transition:all var(--transition);flex-shrink:0;}
+  .edit-name-btn:hover{border-color:var(--border-accent);color:var(--text);}
+  .name-edit-row{display:none;align-items:center;gap:8px;margin-bottom:6px;}
+  .name-input{background:var(--bg3);border:1px solid var(--border-accent);border-radius:var(--radius-sm);padding:6px 10px;font-family:inherit;font-size:16px;font-weight:500;color:var(--text);outline:none;flex:1;}
+  .role-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:capitalize;}
+  .role-badge.student{background:rgba(61,214,140,0.1);color:var(--g1);border:1px solid rgba(61,214,140,0.2);}
+  .role-badge.teacher{background:rgba(56,189,248,0.1);color:var(--g2);border:1px solid rgba(56,189,248,0.2);}
+  .role-badge.admin{background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.2);}
+  .role-badge.librarian,.role-badge.parent{background:var(--bg4);color:var(--text2);border:1px solid var(--border);}
+  .profile-meta{font-size:13px;color:var(--text2);}
+
+  /* Cards */
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:20px;}
+  .card-title{font-size:13px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:16px;}
+  .field-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+  .field-row:last-child{border-bottom:none;padding-bottom:0;}
+  .field-row:first-of-type{padding-top:0;}
+  .field-label{font-size:13px;color:var(--text2);}
+  .field-value{font-size:13px;font-weight:500;color:var(--text);}
+  .field-muted{font-size:13px;color:var(--text3);}
+
+  /* Stats */
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;text-align:center;}
+  .stat-num{font-size:26px;font-weight:700;letter-spacing:-1px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .stat-label{font-size:11px;color:var(--text3);margin-top:2px;}
+
+  /* Password form */
+  .pw-form{display:flex;flex-direction:column;gap:12px;}
+  .pw-field{display:flex;flex-direction:column;gap:4px;}
+  .pw-label{font-size:12px;color:var(--text2);}
+  .pw-input{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-family:inherit;font-size:13px;color:var(--text);outline:none;transition:border-color var(--transition);}
+  .pw-input:focus{border-color:var(--border-accent);}
+  .pw-actions{display:flex;align-items:center;gap:10px;margin-top:4px;}
+  .btn{padding:0 16px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-family:inherit;font-size:12px;font-weight:500;cursor:pointer;transition:all var(--transition);display:inline-flex;align-items:center;gap:6px;}
+  .btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  .btn-primary{background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));border-color:var(--border-accent);color:var(--text);}
+  .btn-primary:hover{background:linear-gradient(135deg,rgba(61,214,140,0.25),rgba(56,189,248,0.25));}
+  .form-msg{font-size:12px;padding:0;}
+  .form-msg.ok{color:var(--g1);}
+  .form-msg.err{color:#f87171;}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="ic-homework" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="ic-tests" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M8 12h8M8 16h5"/></symbol>
+    <symbol id="ic-schedule" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M3 15h6"/></symbol>
+    <symbol id="ic-activities" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7z"/></symbol>
+    <symbol id="ic-grades" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></symbol>
+    <symbol id="ic-conduct" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v5c0 4.42 3.42 8.56 8 9.54C17.58 20.56 21 16.42 21 12V7z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="ic-leaderboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></symbol>
+    <symbol id="ic-tutor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="m5.64 5.64 2.12 2.12M16.24 16.24l2.12 2.12M5.64 18.36l2.12-2.12M16.24 7.76l2.12-2.12"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="ic-whiteboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+    <symbol id="ic-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="ic-groups" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+    <symbol id="ic-messages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+    <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+    <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="ic-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="ic-profile" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7"/></symbol>
+  </defs>
+</svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">your learning assistant</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="/dashboard"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Dashboard</span></a>
+    <a class="nav-item" href="/calendar"><span class="nav-icon"><svg class="icon"><use href="#ic-calendar"/></svg></span><span>Calendar</span></a>
+    <a class="nav-item" href="/homework"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Homework</span></a>
+    <a class="nav-item" href="/tests"><span class="nav-icon"><svg class="icon"><use href="#ic-tests"/></svg></span><span>Tests</span></a>
+    <a class="nav-item" href="/schedule"><span class="nav-icon"><svg class="icon"><use href="#ic-schedule"/></svg></span><span>Schedule</span></a>
+    <a class="nav-item" href="/activities"><span class="nav-icon"><svg class="icon"><use href="#ic-activities"/></svg></span><span>Activities</span></a>
+    <a class="nav-item" href="/grades"><span class="nav-icon"><svg class="icon"><use href="#ic-grades"/></svg></span><span>Grades</span></a>
+    <a class="nav-item" href="/conduct"><span class="nav-icon"><svg class="icon"><use href="#ic-conduct"/></svg></span><span>Conduct</span></a>
+    <a class="nav-item" href="/leaderboard"><span class="nav-icon"><svg class="icon"><use href="#ic-leaderboard"/></svg></span><span>Leaderboard</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Tools</div>
+    <a class="nav-item" href="/tutor"><span class="nav-icon"><svg class="icon"><use href="#ic-tutor"/></svg></span><span>AI Tutor</span></a>
+    <a class="nav-item" href="/whiteboard"><span class="nav-icon"><svg class="icon"><use href="#ic-whiteboard"/></svg></span><span>Whiteboard</span></a>
+    <a class="nav-item" href="/library"><span class="nav-icon"><svg class="icon"><use href="#ic-library"/></svg></span><span>Library</span></a>
+    <a class="nav-item" href="/groups"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Groups</span></a>
+    <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Other</div>
+    <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card active" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div class="user-class" id="userClass"></div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-profile"/></svg>
+    <span class="topbar-title">Profile</span>
+    <div class="topbar-right">
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+        <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Hero -->
+    <div class="profile-hero">
+      <div class="profile-avatar" id="bigAvatar">?</div>
+      <div class="profile-hero-info">
+        <div class="profile-name-row" id="nameRow">
+          <span class="profile-name" id="profileName">—</span>
+          <button class="edit-name-btn" onclick="startEditName()" title="Edit name">
+            <svg class="icon icon-14"><use href="#ic-edit"/></svg>
+          </button>
+        </div>
+        <div class="name-edit-row" id="nameEditRow">
+          <input class="name-input" id="nameInput" type="text" placeholder="Your name">
+          <button class="edit-name-btn" onclick="saveName()" title="Save" style="border-color:var(--border-accent);">
+            <svg class="icon icon-14"><use href="#ic-check"/></svg>
+          </button>
+          <button class="edit-name-btn" onclick="cancelEditName()" title="Cancel">
+            <svg class="icon icon-14"><use href="#ic-x"/></svg>
+          </button>
+        </div>
+        <span class="role-badge" id="roleBadge">—</span>
+        <div class="profile-meta" id="profileMeta" style="margin-top:6px;"></div>
+      </div>
+    </div>
+
+    <!-- Details -->
+    <div class="card">
+      <div class="card-title">Account Details</div>
+      <div class="field-row">
+        <span class="field-label">Email</span>
+        <span class="field-value" id="detailEmail">—</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">School</span>
+        <span class="field-value" id="detailSchool">—</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">Class</span>
+        <span class="field-value" id="detailClass">—</span>
+      </div>
+      <div class="field-row">
+        <span class="field-label">Member since</span>
+        <span class="field-muted" id="detailSince">—</span>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="card">
+      <div class="card-title">Activity</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num" id="statSessions">—</div>
+          <div class="stat-label">AI Sessions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statGroups">—</div>
+          <div class="stat-label">Groups</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="statDays">—</div>
+          <div class="stat-label">Days active</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Password -->
+    <div class="card">
+      <div class="card-title">Change Password</div>
+      <div class="pw-form">
+        <div class="pw-field">
+          <label class="pw-label">Current password</label>
+          <input class="pw-input" id="pwCurrent" type="password" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div class="pw-field">
+          <label class="pw-label">New password</label>
+          <input class="pw-input" id="pwNew" type="password" placeholder="Min 8 characters" autocomplete="new-password">
+        </div>
+        <div class="pw-field">
+          <label class="pw-label">Confirm new password</label>
+          <input class="pw-input" id="pwConfirm" type="password" placeholder="Repeat new password" autocomplete="new-password">
+        </div>
+        <div class="pw-actions">
+          <button class="btn btn-primary" onclick="changePassword()">
+            <svg class="icon icon-14"><use href="#ic-lock"/></svg> Update password
+          </button>
+          <span class="form-msg" id="pwMsg"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+let me = null;
+
+function initials(name) {
+  return (name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+function startEditName() {
+  document.getElementById('nameRow').style.display = 'none';
+  const row = document.getElementById('nameEditRow');
+  row.style.display = 'flex';
+  const inp = document.getElementById('nameInput');
+  inp.value = me.name;
+  inp.focus();
+  inp.select();
+}
+
+function cancelEditName() {
+  document.getElementById('nameEditRow').style.display = 'none';
+  document.getElementById('nameRow').style.display = 'flex';
+}
+
+async function saveName() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) return;
+  const res = await fetch('/api/auth/me', {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name}),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || res.error) return;
+  me = res;
+  renderProfile();
+  cancelEditName();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('nameEditRow').style.display === 'flex') saveName();
+  if (e.key === 'Escape') cancelEditName();
+});
+
+async function changePassword() {
+  const current = document.getElementById('pwCurrent').value;
+  const newPw = document.getElementById('pwNew').value;
+  const confirm = document.getElementById('pwConfirm').value;
+  const msg = document.getElementById('pwMsg');
+
+  if (newPw !== confirm) { msg.className = 'form-msg err'; msg.textContent = 'Passwords do not match'; return; }
+  if (newPw.length < 8) { msg.className = 'form-msg err'; msg.textContent = 'Minimum 8 characters'; return; }
+
+  const res = await fetch('/api/auth/password', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({current, new: newPw}),
+  }).then(r => r.json()).catch(() => null);
+
+  if (res && res.ok) {
+    msg.className = 'form-msg ok'; msg.textContent = 'Password updated';
+    document.getElementById('pwCurrent').value = '';
+    document.getElementById('pwNew').value = '';
+    document.getElementById('pwConfirm').value = '';
+    setTimeout(() => msg.textContent = '', 3000);
+  } else {
+    msg.className = 'form-msg err'; msg.textContent = res?.error || 'Something went wrong';
+  }
+}
+
+function renderProfile() {
+  const ini = initials(me.name);
+  document.getElementById('bigAvatar').textContent = ini;
+  document.getElementById('userAvatar').textContent = ini;
+  document.getElementById('userName').textContent = me.name;
+  document.getElementById('profileName').textContent = me.name;
+  document.getElementById('detailEmail').textContent = me.email;
+  document.getElementById('detailSchool').textContent = me.school_name || '—';
+  document.getElementById('detailClass').textContent = me.class_name || '—';
+
+  if (me.class_name) document.getElementById('userClass').textContent =
+    me.class_name + (me.school_name ? ' · ' + me.school_name : '');
+
+  const badge = document.getElementById('roleBadge');
+  badge.textContent = me.role;
+  badge.className = 'role-badge ' + me.role;
+
+  const meta = [];
+  if (me.school_name) meta.push(me.school_name);
+  if (me.class_name) meta.push(me.class_name);
+  document.getElementById('profileMeta').textContent = meta.join(' · ');
+
+  if (me.created_at) {
+    const d = new Date(me.created_at);
+    document.getElementById('detailSince').textContent = d.toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+    const days = Math.floor((Date.now() - d) / 86400000);
+    document.getElementById('statDays').textContent = days;
+  }
+}
+
+async function boot() {
+  const [meData, sessions, groups] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    fetch('/api/ai/sessions').then(r => r.json()).catch(() => []),
+    fetch('/api/groups').then(r => r.json()).catch(() => []),
+  ]);
+
+  if (!meData || meData.error) { location.href = '/login'; return; }
+  me = meData;
+  renderProfile();
+
+  document.getElementById('statSessions').textContent = Array.isArray(sessions) ? sessions.length : 0;
+  document.getElementById('statGroups').textContent = Array.isArray(groups) ? groups.length : 0;
+}
+
+boot();
+</script>
+</body>
+</html>

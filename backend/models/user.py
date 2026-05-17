@@ -32,5 +32,8 @@ class User(db.Model):
             "email": self.email,
             "role": self.role,
             "school_id": self.school_id,
+            "school_name": self.school.name if self.school else None,
             "class_id": self.class_id,
+            "class_name": self.klass.name if self.klass else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }

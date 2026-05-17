@@ -84,6 +84,14 @@ def create_app(config=Config):
     def tutor_page():
         return send_from_directory(FRONTEND_DIR, "tutor.html")
 
+    @app.route("/profile")
+    def profile_page():
+        return send_from_directory(FRONTEND_DIR, "profile.html")
+
+    @app.route("/settings")
+    def settings_page():
+        return send_from_directory(FRONTEND_DIR, "settings.html")
+
     return app
 
 if __name__ == "__main__":
