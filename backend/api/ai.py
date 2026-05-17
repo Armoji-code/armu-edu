@@ -181,7 +181,9 @@ def chat(user, session_id):
                 except Exception as e:
                     description = f"(image could not be processed: {e})"
 
-                core = f"[Image description: {description}]"
+                yield f"_Image read as:_ {description}\n\n---\n\n"
+
+                core = f"[Image: {description}]"
                 if user_content:
                     core = f"{core}\n\n{user_content}"
                 stored_content = f"[{user.name}]: {core}" if is_group else core
