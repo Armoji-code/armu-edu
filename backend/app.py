@@ -56,6 +56,34 @@ def create_app(config=Config):
     def leaderboard_page():
         return send_from_directory(FRONTEND_DIR, "leaderboard.html")
 
+    @app.route("/conduct")
+    def conduct_page():
+        return send_from_directory(FRONTEND_DIR, "conduct.html")
+
+    @app.route("/activities")
+    def activities_page():
+        return send_from_directory(FRONTEND_DIR, "activities.html")
+
+    @app.route("/whiteboard")
+    def whiteboard_page():
+        return send_from_directory(FRONTEND_DIR, "whiteboard.html")
+
+    @app.route("/groups")
+    def groups_page():
+        return send_from_directory(FRONTEND_DIR, "groups.html")
+
+    @app.route("/library")
+    def library_page():
+        return send_from_directory(FRONTEND_DIR, "library.html")
+
+    @app.route("/messages")
+    def messages_page():
+        return send_from_directory(FRONTEND_DIR, "messages.html")
+
+    @app.route("/tutor")
+    def tutor_page():
+        return send_from_directory(FRONTEND_DIR, "tutor.html")
+
     return app
 
 if __name__ == "__main__":

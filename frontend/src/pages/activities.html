@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Activities</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition);}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;margin-bottom:8px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}.nav-icon svg{width:16px;height:16px;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-class{font-size:11px;color:var(--text3);}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:16px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  .content{flex:1;overflow-y:auto;padding:28px;}
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-track{background:transparent;}
+  .content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .section-title{font-size:15px;font-weight:600;letter-spacing:-0.2px;}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .content{animation:slideIn 0.25s ease;}
+
+  /* Tabs */
+  .tab-bar{display:flex;gap:4px;margin-bottom:24px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:5px;width:fit-content;}
+  .tab-btn{padding:7px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;border:none;background:transparent;color:var(--text2);cursor:pointer;transition:all var(--transition);}
+  .tab-btn.active{background:var(--bg3);color:var(--text);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  /* Activity cards */
+  .activities-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;}
+  .activity-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;gap:12px;transition:border-color var(--transition);}
+  .activity-card:hover{border-color:var(--border-accent);}
+  .act-header{display:flex;align-items:flex-start;gap:12px;}
+  .act-icon-wrap{width:42px;height:42px;border-radius:var(--radius-sm);background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));border:1px solid var(--border-accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--g1);}
+  .act-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px;}
+  .act-type-badge{display:inline-block;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;padding:2px 7px;border-radius:20px;background:var(--bg3);color:var(--text3);}
+  .act-desc{font-size:12.5px;color:var(--text2);line-height:1.55;}
+  .act-events-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;}
+  .act-event-row{display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--bg3);border-radius:var(--radius-sm);font-size:12.5px;margin-bottom:5px;}
+  .act-event-date{font-family:'DM Mono',monospace;color:var(--text3);font-size:11px;min-width:54px;}
+  .act-event-title{flex:1;font-weight:500;color:var(--text);}
+  .act-no-events{font-size:12px;color:var(--text3);font-style:italic;}
+
+  /* Community Service */
+  .cs-progress-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:20px;}
+  .cs-progress-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;}
+  .cs-progress-title{font-size:14px;font-weight:600;}
+  .cs-hours-big{font-size:26px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .cs-hours-goal{font-size:13px;font-weight:400;color:var(--text3);}
+  .prog-bar-wrap{height:10px;background:var(--bg3);border-radius:99px;overflow:hidden;margin-bottom:8px;}
+  .prog-bar-fill{height:100%;border-radius:99px;background:var(--gradient);transition:width 0.6s ease;}
+  .cs-prog-meta{font-size:12px;color:var(--text3);}
+
+  .cs-stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+  .cs-stat{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;}
+  .cs-stat-value{font-size:22px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:4px;}
+  .cs-stat-label{font-size:11px;color:var(--text2);}
+
+  .cs-log-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .cs-log-head{padding:14px 18px;border-bottom:1px solid var(--border);font-size:14px;font-weight:600;}
+  .cs-log-row{display:grid;grid-template-columns:110px 1fr 1fr 70px;padding:11px 18px;border-bottom:1px solid var(--border);font-size:13px;align-items:center;transition:background var(--transition);}
+  .cs-log-row:hover{background:var(--bg3);}
+  .cs-log-row:last-child{border-bottom:none;}
+  .cs-log-header-row{display:grid;grid-template-columns:110px 1fr 1fr 70px;padding:8px 18px;background:var(--bg3);border-bottom:1px solid var(--border);}
+  .cs-log-th{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;}
+  .cs-hours-pill{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;font-family:'DM Mono',monospace;background:rgba(61,214,140,0.12);color:var(--g1);}
+  .empty-msg{padding:40px;text-align:center;color:var(--text3);font-size:13px;}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="ic-homework" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="ic-tests" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M8 12h8M8 16h5"/></symbol>
+    <symbol id="ic-schedule" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M3 15h6"/></symbol>
+    <symbol id="ic-activities" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7z"/></symbol>
+    <symbol id="ic-grades" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></symbol>
+    <symbol id="ic-conduct" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v5c0 4.42 3.42 8.56 8 9.54C17.58 20.56 21 16.42 21 12V7z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="ic-leaderboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></symbol>
+    <symbol id="ic-tutor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="m5.64 5.64 2.12 2.12M16.24 16.24l2.12 2.12M5.64 18.36l2.12-2.12M16.24 7.76l2.12-2.12"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="ic-whiteboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+    <symbol id="ic-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="ic-groups" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+    <symbol id="ic-messages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+    <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="ic-service" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></symbol>
+  </defs>
+</svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">your learning assistant</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="/dashboard"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Dashboard</span></a>
+    <a class="nav-item" href="/calendar"><span class="nav-icon"><svg class="icon"><use href="#ic-calendar"/></svg></span><span>Calendar</span></a>
+    <a class="nav-item" href="/homework"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Homework</span></a>
+    <a class="nav-item" href="/tests"><span class="nav-icon"><svg class="icon"><use href="#ic-tests"/></svg></span><span>Tests</span></a>
+    <a class="nav-item" href="/schedule"><span class="nav-icon"><svg class="icon"><use href="#ic-schedule"/></svg></span><span>Schedule</span></a>
+    <a class="nav-item active" href="/activities"><span class="nav-icon"><svg class="icon"><use href="#ic-activities"/></svg></span><span>Activities</span></a>
+    <a class="nav-item" href="/grades"><span class="nav-icon"><svg class="icon"><use href="#ic-grades"/></svg></span><span>Grades</span></a>
+    <a class="nav-item" href="/conduct"><span class="nav-icon"><svg class="icon"><use href="#ic-conduct"/></svg></span><span>Conduct</span></a>
+    <a class="nav-item" href="/leaderboard"><span class="nav-icon"><svg class="icon"><use href="#ic-leaderboard"/></svg></span><span>Leaderboard</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Tools</div>
+    <a class="nav-item" href="/tutor"><span class="nav-icon"><svg class="icon"><use href="#ic-tutor"/></svg></span><span>AI Tutor</span></a>
+    <a class="nav-item" href="/whiteboard"><span class="nav-icon"><svg class="icon"><use href="#ic-whiteboard"/></svg></span><span>Whiteboard</span></a>
+    <a class="nav-item" href="/library"><span class="nav-icon"><svg class="icon"><use href="#ic-library"/></svg></span><span>Library</span></a>
+    <a class="nav-item" href="/groups"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Groups</span></a>
+    <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Other</div>
+    <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div class="user-class" id="userClass"></div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-activities"/></svg>
+    <span class="topbar-title">Activities</span>
+    <div class="topbar-right">
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+        <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('afterschool',this)">After School</button>
+      <button class="tab-btn" onclick="switchTab('service',this)">Community Service</button>
+    </div>
+
+    <!-- After School -->
+    <div id="tab-afterschool" class="tab-panel active">
+      <div class="activities-grid" id="activities-grid">
+        <div class="empty-msg">Loading activities…</div>
+      </div>
+    </div>
+
+    <!-- Community Service -->
+    <div id="tab-service" class="tab-panel">
+
+      <div class="cs-progress-card">
+        <div class="cs-progress-top">
+          <span class="cs-progress-title">Graduation Requirement</span>
+          <span><span class="cs-hours-big" id="cs-hours-num">0</span><span class="cs-hours-goal"> / 40 hrs</span></span>
+        </div>
+        <div class="prog-bar-wrap">
+          <div class="prog-bar-fill" id="cs-bar" style="width:0%"></div>
+        </div>
+        <div class="cs-prog-meta" id="cs-meta">Loading…</div>
+      </div>
+
+      <div class="cs-stats-row">
+        <div class="cs-stat"><div class="cs-stat-value" id="cs-total">–</div><div class="cs-stat-label">Total Hours</div></div>
+        <div class="cs-stat"><div class="cs-stat-value" id="cs-orgs">–</div><div class="cs-stat-label">Organizations</div></div>
+        <div class="cs-stat"><div class="cs-stat-value" id="cs-month">–</div><div class="cs-stat-label">This Month</div></div>
+      </div>
+
+      <div class="cs-log-wrap">
+        <div class="cs-log-head">Service Log</div>
+        <div class="cs-log-header-row">
+          <div class="cs-log-th">Date</div>
+          <div class="cs-log-th">Organization</div>
+          <div class="cs-log-th">Description</div>
+          <div class="cs-log-th">Hours</div>
+        </div>
+        <div id="cs-log-body">
+          <div class="empty-msg">Loading…</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- .content -->
+</div><!-- .main -->
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+const TYPE_ICON = {
+  club: `<svg class="icon icon-18"><use href="#ic-groups"/></svg>`,
+  sport: `<svg class="icon icon-18"><use href="#ic-leaderboard"/></svg>`,
+  team: `<svg class="icon icon-18"><use href="#ic-conduct"/></svg>`,
+  other: `<svg class="icon icon-18"><use href="#ic-activities"/></svg>`,
+};
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+}
+
+function fmtDateFull(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+}
+
+async function loadActivities() {
+  const grid = document.getElementById('activities-grid');
+  try {
+    const res = await fetch('/api/activities', {credentials:'include'});
+    if (res.status === 401) { location.href = '/login'; return; }
+    const data = await res.json();
+
+    if (!data.length) {
+      grid.innerHTML = '<div class="empty-msg">You\'re not enrolled in any activities yet.</div>';
+      return;
+    }
+
+    grid.innerHTML = data.map(act => {
+      const icon = TYPE_ICON[act.type] || TYPE_ICON.other;
+      const desc = act.description
+        ? `<div class="act-desc">${esc(act.description)}</div>` : '';
+      const events = (act.upcoming_events || []).length
+        ? act.upcoming_events.map(ev => `
+            <div class="act-event-row">
+              <span class="act-event-date">${fmtDate(ev.date)}</span>
+              <span class="act-event-title">${esc(ev.title)}</span>
+            </div>`).join('')
+        : '<div class="act-no-events">No upcoming events</div>';
+
+      return `<div class="activity-card">
+        <div class="act-header">
+          <div class="act-icon-wrap">${icon}</div>
+          <div>
+            <div class="act-name">${esc(act.name)}</div>
+            <span class="act-type-badge">${esc(act.type)}</span>
+          </div>
+        </div>
+        ${desc}
+        <div>
+          <div class="act-events-label">Upcoming Events</div>
+          ${events}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = '<div class="empty-msg">Failed to load activities.</div>';
+  }
+}
+
+async function loadService() {
+  try {
+    const res = await fetch('/api/community-service', {credentials:'include'});
+    if (res.status === 401) { location.href = '/login'; return; }
+    const d = await res.json();
+
+    const pct = Math.min(100, Math.round((d.total_hours / d.goal_hours) * 100));
+    const remaining = Math.max(0, d.goal_hours - d.total_hours);
+
+    document.getElementById('cs-hours-num').textContent = d.total_hours;
+    document.getElementById('cs-bar').style.width = pct + '%';
+    document.getElementById('cs-meta').textContent = pct >= 100
+      ? 'Goal reached! Graduation requirement complete.'
+      : `${remaining} hours remaining`;
+
+    document.getElementById('cs-total').textContent = d.total_hours;
+    document.getElementById('cs-orgs').textContent = d.organizations;
+    document.getElementById('cs-month').textContent = d.this_month_hours;
+
+    const body = document.getElementById('cs-log-body');
+    if (!d.entries.length) {
+      body.innerHTML = '<div class="empty-msg">No service hours logged yet.</div>';
+      return;
+    }
+    body.innerHTML = d.entries.map(e => `
+      <div class="cs-log-row">
+        <div style="color:var(--text2)">${fmtDateFull(e.date)}</div>
+        <div style="font-weight:500">${esc(e.organization)}</div>
+        <div style="color:var(--text2)">${esc(e.description || '—')}</div>
+        <div><span class="cs-hours-pill">${e.hours}h</span></div>
+      </div>`).join('');
+  } catch(err) {
+    document.getElementById('cs-log-body').innerHTML =
+      '<div class="empty-msg">Failed to load service log.</div>';
+  }
+}
+
+async function boot() {
+  const [me] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    loadActivities(),
+    loadService(),
+  ]);
+
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  document.getElementById('userName').textContent = me.name || me.email;
+  document.getElementById('userAvatar').textContent =
+    (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  if (me.class_name) document.getElementById('userClass').textContent =
+    me.class_name + (me.school_name ? ' · ' + me.school_name : '');
+}
+
+boot();
+</script>
+</body>
+</html>

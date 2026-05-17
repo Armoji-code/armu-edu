@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Whiteboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);--canvas-bg:#1e1e1e;}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);--canvas-bg:#f8f9fc;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition);}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;margin-bottom:8px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}.nav-icon svg{width:16px;height:16px;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-class{font-size:11px;color:var(--text3);}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:16px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+
+  /* Whiteboard area */
+  .wb-area{flex:1;position:relative;overflow:hidden;}
+  #wb{
+    position:absolute;top:0;left:0;width:100%;height:100%;
+    background:var(--canvas-bg);
+    touch-action:none;
+  }
+
+  /* Left tool toolbar */
+  .wb-toolbar{
+    position:absolute;left:16px;top:50%;transform:translateY(-50%);
+    z-index:10;display:flex;flex-direction:column;gap:3px;
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:var(--radius);padding:7px;
+    box-shadow:var(--shadow);
+  }
+  .wb-tool{
+    width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid transparent;
+    background:transparent;color:var(--text2);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all var(--transition);
+  }
+  .wb-tool:hover{background:var(--bg3);color:var(--text);}
+  .wb-tool.active{background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));border-color:var(--border-accent);color:var(--g1);}
+  .wb-sep{height:1px;background:var(--border);margin:3px 0;}
+
+  /* Bottom options bar */
+  .wb-options{
+    position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+    z-index:10;display:flex;align-items:center;gap:6px;
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:var(--radius);padding:7px 14px;
+    box-shadow:var(--shadow);
+  }
+  .color-swatch{
+    width:20px;height:20px;border-radius:50%;cursor:pointer;
+    border:2px solid transparent;transition:transform .15s,border-color .15s;flex-shrink:0;
+  }
+  .color-swatch.active{border-color:var(--text);transform:scale(1.25);}
+  .color-more-btn{width:22px;height:22px;border-radius:50%;border:1.5px dashed var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:16px;line-height:1;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all var(--transition);}
+  .color-more-btn:hover{border-color:var(--g1);color:var(--g1);}
+  .color-popup{
+    position:absolute;bottom:calc(100% + 10px);left:50%;transform:translateX(-50%);
+    display:none;grid-template-columns:repeat(9,22px);gap:5px;
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:var(--radius);padding:10px;box-shadow:var(--shadow);z-index:100;
+    white-space:nowrap;
+  }
+  .color-popup.open{display:grid;}
+  .opts-sep{width:1px;height:22px;background:var(--border);margin:0 2px;}
+  .width-btn{
+    min-width:28px;height:28px;border-radius:var(--radius-sm);
+    border:1px solid var(--border);background:transparent;
+    color:var(--text2);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:600;font-family:'DM Sans',sans-serif;
+    transition:all var(--transition);padding:0 6px;
+  }
+  .width-btn.active{background:var(--bg3);color:var(--text);border-color:var(--border-accent);}
+  .width-btn:hover{background:var(--bg4);}
+
+  /* Top-right floating actions */
+  .wb-actions{
+    position:absolute;top:14px;right:14px;z-index:10;
+    display:flex;gap:8px;align-items:center;
+  }
+  .wb-action-btn{
+    display:flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:var(--radius-sm);
+    border:1px solid var(--border);background:var(--bg2);
+    color:var(--text2);cursor:pointer;font-size:12px;font-weight:500;
+    font-family:'DM Sans',sans-serif;transition:all var(--transition);
+    box-shadow:var(--shadow);
+  }
+  .wb-action-btn:hover{background:var(--bg3);color:var(--text);}
+  .wb-action-btn.danger:hover{border-color:rgba(248,113,113,0.4);color:#f87171;}
+  .online-indicator{
+    display:flex;align-items:center;gap:6px;
+    padding:6px 12px;border-radius:var(--radius-sm);
+    border:1px solid var(--border);background:var(--bg2);
+    font-size:12px;color:var(--text2);box-shadow:var(--shadow);
+  }
+  .online-dot{width:7px;height:7px;border-radius:50%;background:var(--g1);}
+
+  /* Room picker in topbar */
+  .room-picker{display:flex;gap:2px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;}
+  .room-btn{padding:5px 14px;border-radius:6px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:12px;font-weight:500;font-family:'DM Sans',sans-serif;transition:all var(--transition);}
+  .room-btn.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.2);}
+  .room-code-bar{display:flex;align-items:center;gap:8px;padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;}
+  .room-code-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;letter-spacing:0.1em;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  /* Text input overlay */
+  #wb-text-input{position:absolute;display:none;border:1.5px solid var(--g1);background:var(--bg2);color:var(--text);font-family:'DM Sans',sans-serif;outline:none;min-width:120px;padding:4px 8px;border-radius:var(--radius-sm);z-index:100;box-shadow:0 4px 16px rgba(0,0,0,0.3);}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="ic-homework" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="ic-tests" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M8 12h8M8 16h5"/></symbol>
+    <symbol id="ic-schedule" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18M3 15h6"/></symbol>
+    <symbol id="ic-activities" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 21 7v10l-9 5-9-5V7z"/></symbol>
+    <symbol id="ic-grades" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></symbol>
+    <symbol id="ic-conduct" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v5c0 4.42 3.42 8.56 8 9.54C17.58 20.56 21 16.42 21 12V7z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="ic-leaderboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20v-6"/></symbol>
+    <symbol id="ic-tutor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><path d="m5.64 5.64 2.12 2.12M16.24 16.24l2.12 2.12M5.64 18.36l2.12-2.12M16.24 7.76l2.12-2.12"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="ic-whiteboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+    <symbol id="ic-library" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+    <symbol id="ic-groups" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+    <symbol id="ic-messages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+    <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="ic-pen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+    <symbol id="ic-eraser" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H7L3 16l11-11 6 6-4 4"/><path d="M6.5 17.5l3-3"/></symbol>
+    <symbol id="ic-line" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19L19 5"/></symbol>
+    <symbol id="ic-rect" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></symbol>
+    <symbol id="ic-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></symbol>
+    <symbol id="ic-undo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></symbol>
+    <symbol id="ic-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+    <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></symbol>
+    <symbol id="ic-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></symbol>
+    <symbol id="ic-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  </defs>
+</svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">your learning assistant</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <a class="nav-item" href="/dashboard"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Dashboard</span></a>
+    <a class="nav-item" href="/calendar"><span class="nav-icon"><svg class="icon"><use href="#ic-calendar"/></svg></span><span>Calendar</span></a>
+    <a class="nav-item" href="/homework"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Homework</span></a>
+    <a class="nav-item" href="/tests"><span class="nav-icon"><svg class="icon"><use href="#ic-tests"/></svg></span><span>Tests</span></a>
+    <a class="nav-item" href="/schedule"><span class="nav-icon"><svg class="icon"><use href="#ic-schedule"/></svg></span><span>Schedule</span></a>
+    <a class="nav-item" href="/activities"><span class="nav-icon"><svg class="icon"><use href="#ic-activities"/></svg></span><span>Activities</span></a>
+    <a class="nav-item" href="/grades"><span class="nav-icon"><svg class="icon"><use href="#ic-grades"/></svg></span><span>Grades</span></a>
+    <a class="nav-item" href="/conduct"><span class="nav-icon"><svg class="icon"><use href="#ic-conduct"/></svg></span><span>Conduct</span></a>
+    <a class="nav-item" href="/leaderboard"><span class="nav-icon"><svg class="icon"><use href="#ic-leaderboard"/></svg></span><span>Leaderboard</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Tools</div>
+    <a class="nav-item" href="/tutor"><span class="nav-icon"><svg class="icon"><use href="#ic-tutor"/></svg></span><span>AI Tutor</span></a>
+    <a class="nav-item active" href="/whiteboard"><span class="nav-icon"><svg class="icon"><use href="#ic-whiteboard"/></svg></span><span>Whiteboard</span></a>
+    <a class="nav-item" href="/library"><span class="nav-icon"><svg class="icon"><use href="#ic-library"/></svg></span><span>Library</span></a>
+    <a class="nav-item" href="/groups"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Groups</span></a>
+    <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Other</div>
+    <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div class="user-class" id="userClass"></div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-whiteboard"/></svg>
+    <span class="topbar-title">Whiteboard</span>
+    <div class="room-picker">
+      <button class="room-btn active" id="rb-personal" onclick="switchRoomMode('personal')">My Board</button>
+      <button class="room-btn"        id="rb-group"    onclick="switchRoomMode('group')">Group</button>
+    </div>
+    <div class="room-code-bar" id="room-code-bar" style="display:none">
+      <span style="color:var(--text3)">Room:</span>
+      <span class="room-code-val" id="room-code-val">—</span>
+      <button class="wb-action-btn" style="padding:3px 10px;font-size:11px;box-shadow:none;" onclick="copyRoomLink()">
+        <svg class="icon icon-14"><use href="#ic-copy"/></svg> Copy link
+      </button>
+      <button class="wb-action-btn" style="padding:3px 10px;font-size:11px;box-shadow:none;" onclick="newGroupRoom()">
+        <svg class="icon icon-14"><use href="#ic-plus"/></svg> New room
+      </button>
+    </div>
+    <div class="topbar-right">
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+        <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="wb-area">
+    <canvas id="wb"></canvas>
+
+    <!-- Left toolbar -->
+    <div class="wb-toolbar">
+      <button class="wb-tool active" id="tool-pen"    onclick="setTool('pen')"    title="Pen (P)">    <svg class="icon icon-18"><use href="#ic-pen"/></svg></button>
+      <button class="wb-tool"        id="tool-eraser" onclick="setTool('eraser')" title="Eraser (E)"> <svg class="icon icon-18"><use href="#ic-eraser"/></svg></button>
+      <div class="wb-sep"></div>
+      <button class="wb-tool"        id="tool-line"   onclick="setTool('line')"   title="Line (L)">   <svg class="icon icon-18"><use href="#ic-line"/></svg></button>
+      <button class="wb-tool"        id="tool-rect"   onclick="setTool('rect')"   title="Rectangle (R)"><svg class="icon icon-18"><use href="#ic-rect"/></svg></button>
+      <button class="wb-tool"        id="tool-circle" onclick="setTool('circle')" title="Circle (C)"> <svg class="icon icon-18"><use href="#ic-circle"/></svg></button>
+      <div class="wb-sep"></div>
+      <button class="wb-tool"        id="tool-text"   onclick="setTool('text')"   title="Text (T)">   <svg class="icon icon-18"><use href="#ic-text"/></svg></button>
+      <div class="wb-sep"></div>
+      <button class="wb-tool"        id="tool-undo"   onclick="undoStroke()"      title="Undo (Ctrl+Z)"><svg class="icon icon-18"><use href="#ic-undo"/></svg></button>
+    </div>
+    <input id="wb-text-input" type="text" placeholder="Type…" />
+
+    <!-- Bottom options bar -->
+    <div class="wb-options">
+      <div id="color-swatches" style="display:flex;gap:5px;align-items:center;"></div>
+      <button class="color-more-btn" onclick="toggleColorPopup(event)" title="More colors">+</button>
+      <div class="color-popup" id="color-popup"></div>
+      <div class="opts-sep"></div>
+      <button class="width-btn active" id="w1" onclick="setWidth(2,'w1')">S</button>
+      <button class="width-btn"        id="w2" onclick="setWidth(4,'w2')">M</button>
+      <button class="width-btn"        id="w3" onclick="setWidth(8,'w3')">L</button>
+      <button class="width-btn"        id="w4" onclick="setWidth(16,'w4')">XL</button>
+    </div>
+
+    <!-- Top-right action buttons -->
+    <div class="wb-actions">
+      <div class="online-indicator">
+        <div class="online-dot"></div>
+        <span id="online-count">1 online</span>
+      </div>
+      <button class="wb-action-btn" onclick="exportPNG()">
+        <svg class="icon icon-14"><use href="#ic-download"/></svg> Export
+      </button>
+      <button class="wb-action-btn danger" onclick="clearBoard()">
+        <svg class="icon icon-14"><use href="#ic-trash"/></svg> Clear
+      </button>
+    </div>
+  </div><!-- .wb-area -->
+</div><!-- .main -->
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+/* ── Theme ── */
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t==='dark'?'#ic-sun':'#ic-moon');
+})();
+function toggleTheme(){
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next==='dark'?'#ic-sun':'#ic-moon');
+  renderAll();
+}
+
+/* ── Inline colour palette (no OS dialog) ── */
+const MAIN_PALETTE = ['#3dd68c','#38bdf8','#f87171','#fbbf24','#a78bfa','#f472b6','#f0f0f0','#111111'];
+const EXT_PALETTE  = [
+  '#3dd68c','#38bdf8','#6ee7b7','#f87171','#fbbf24','#a78bfa','#f472b6','#fb923c','#34d399',
+  '#1d4ed8','#0891b2','#15803d','#b91c1c','#92400e','#7c3aed','#be185d','#b45309','#0f766e',
+  '#ffffff','#e5e7eb','#9ca3af','#6b7280','#4b5563','#374151','#1f2937','#111111','#000000',
+];
+function buildPalette(){
+  const wrap = document.getElementById('color-swatches');
+  wrap.innerHTML = '';
+  MAIN_PALETTE.forEach((c,i) => {
+    const el = document.createElement('div');
+    el.className = 'color-swatch'+(i===0?' active':'');
+    el.style.background = c;
+    el.title = c;
+    el.onclick = () => setColor(c, el);
+    wrap.appendChild(el);
+  });
+  const popup = document.getElementById('color-popup');
+  popup.innerHTML = '';
+  EXT_PALETTE.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'color-swatch';
+    el.style.background = c;
+    el.title = c;
+    el.onclick = () => { setColor(c, null); closeColorPopup(); };
+    popup.appendChild(el);
+  });
+}
+function toggleColorPopup(e){
+  e.stopPropagation();
+  document.getElementById('color-popup').classList.toggle('open');
+}
+function closeColorPopup(){
+  document.getElementById('color-popup').classList.remove('open');
+}
+document.addEventListener('click', closeColorPopup);
+
+/* ── Canvas ── */
+const canvas = document.getElementById('wb');
+const ctx    = canvas.getContext('2d');
+let cssW = 1, cssH = 1, dpr = 1;
+
+let strokes       = [];
+let currentStroke = null;
+let drawing       = false;
+let activeTool    = 'pen';
+let activeColor   = '#3dd68c';
+let activeWidth   = 2;
+let myUserId      = localStorage.getItem('wb_uid') || null;
+let roomMode      = 'personal';
+let groupCode     = '';
+// Always start on personal. Only join a group if the hash looks like a shared invite
+// (i.e., it's alphanumeric and was set by someone else, not lingering from last session).
+// We track whether THIS session set the hash via localStorage.
+const _hash      = window.location.hash.slice(1);
+const _ownHash   = localStorage.getItem('wb_own_hash');
+const _isInvite  = _hash && _hash !== _ownHash;   // hash we didn't generate ourselves
+let room = (_isInvite) ? 'group_' + _hash : (myUserId ? 'personal_' + myUserId : 'personal_anon');
+
+function setColor(c, el){
+  activeColor = c;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+function setWidth(w, btnId){
+  activeWidth = w;
+  document.querySelectorAll('.width-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(btnId).classList.add('active');
+}
+function setTool(t){
+  activeTool = t;
+  document.querySelectorAll('.wb-tool').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tool-'+t);
+  if(btn) btn.classList.add('active');
+  const cursors = {pen:'crosshair',eraser:'cell',line:'crosshair',rect:'crosshair',circle:'crosshair',text:'text'};
+  canvas.style.cursor = cursors[t] || 'crosshair';
+}
+
+/* ── Resize: setTransform(dpr) so all drawing is in CSS pixels ── */
+function resize(){
+  const rect = canvas.getBoundingClientRect();
+  if(!rect.width || !rect.height){ requestAnimationFrame(resize); return; }
+  dpr   = window.devicePixelRatio || 1;
+  cssW  = rect.width;
+  cssH  = rect.height;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);  // all drawing coords now in CSS pixels
+  renderAll();
+}
+window.addEventListener('resize', resize);
+
+/* ── Draw — coords are 0-1 fractions; multiply by cssW/cssH (CSS pixels) ── */
+function drawStroke(s){
+  if(!s) return;
+  const W = cssW;   // CSS pixels — ctx.setTransform handles the DPR scaling
+  const H = cssH;
+  ctx.save();
+  ctx.lineCap   = 'round';
+  ctx.lineJoin  = 'round';
+  ctx.lineWidth = s.width;  // CSS pixels
+
+  if(s.tool === 'eraser'){
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.strokeStyle = 'rgba(0,0,0,1)';
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = s.color;
+  }
+
+  if(s.tool === 'pen' || s.tool === 'eraser'){
+    const pts = s.points;
+    if(!pts || !pts.length){ ctx.restore(); return; }
+    if(pts.length === 1){
+      ctx.beginPath();
+      ctx.arc(pts[0].x*W, pts[0].y*H, s.width/2, 0, Math.PI*2);
+      ctx.fillStyle = s.tool==='eraser' ? 'rgba(0,0,0,1)' : s.color;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x*W, pts[0].y*H);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x*W, pts[i].y*H);
+      ctx.stroke();
+    }
+  } else if(s.tool === 'line'){
+    ctx.beginPath();
+    ctx.moveTo(s.x1*W, s.y1*H);
+    ctx.lineTo(s.x2*W, s.y2*H);
+    ctx.stroke();
+  } else if(s.tool === 'rect'){
+    ctx.strokeRect(s.x1*W, s.y1*H, (s.x2-s.x1)*W, (s.y2-s.y1)*H);
+  } else if(s.tool === 'circle'){
+    const rx = Math.abs((s.x2-s.x1)*W/2);
+    const ry = Math.abs((s.y2-s.y1)*H/2);
+    ctx.beginPath();
+    ctx.ellipse((s.x1+s.x2)/2*W, (s.y1+s.y2)/2*H, Math.max(rx,1), Math.max(ry,1), 0, 0, Math.PI*2);
+    ctx.stroke();
+  } else if(s.tool === 'text'){
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.font = `${s.fontSize}px 'DM Sans', sans-serif`;  // CSS px, transform handles dpr
+    ctx.fillStyle = s.color;
+    ctx.fillText(s.text, s.x*W, s.y*H);
+  }
+  ctx.restore();
+}
+
+function renderAll(){
+  ctx.clearRect(0, 0, cssW, cssH);  // CSS pixels (transform is active)
+  for(const s of strokes) drawStroke(s);
+  if(currentStroke) drawStroke(currentStroke);
+}
+
+/* ── Input ── */
+function getPos(e){
+  const rect = canvas.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
+  return {
+    x: (src.clientX - rect.left) / rect.width,
+    y: (src.clientY - rect.top)  / rect.height,
+  };
+}
+
+function startDraw(e){
+  if(activeTool === 'text'){ startText(e); return; }
+  drawing = true;
+  const pos = getPos(e);
+  if(activeTool==='pen'||activeTool==='eraser'){
+    currentStroke = {tool:activeTool, color:activeColor, width:activeWidth, points:[pos]};
+  } else {
+    currentStroke = {tool:activeTool, color:activeColor, width:activeWidth, x1:pos.x, y1:pos.y, x2:pos.x, y2:pos.y};
+  }
+}
+function continueDraw(e){
+  if(!drawing||!currentStroke) return;
+  const pos = getPos(e);
+  if(activeTool==='pen'||activeTool==='eraser'){
+    currentStroke.points.push(pos);
+  } else {
+    currentStroke.x2 = pos.x;
+    currentStroke.y2 = pos.y;
+  }
+  renderAll();
+}
+function endDraw(){
+  if(!drawing||!currentStroke) return;
+  drawing = false;
+  strokes.push(currentStroke);
+  socket.emit('wb_stroke', {room, stroke:currentStroke});
+  currentStroke = null;
+  renderAll();
+}
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', continueDraw);
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('mouseleave', endDraw);
+canvas.addEventListener('touchstart', e=>{e.preventDefault();startDraw(e);},{passive:false});
+canvas.addEventListener('touchmove',  e=>{e.preventDefault();continueDraw(e);},{passive:false});
+canvas.addEventListener('touchend',   e=>{e.preventDefault();endDraw();},{passive:false});
+
+/* ── Text tool ── */
+const textInput = document.getElementById('wb-text-input');
+let textPos = null;
+
+function startText(e){
+  e.preventDefault();   // stop canvas stealing focus back
+  commitText();
+  const rect = canvas.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
+  const cx = src.clientX - rect.left;
+  const cy = src.clientY - rect.top;
+  textPos = {x: cx / rect.width, y: cy / rect.height};
+  const fontSize = activeWidth * 6 + 10;
+  textInput.style.left     = cx + 'px';
+  textInput.style.top      = (cy - fontSize - 8) + 'px';
+  textInput.style.fontSize = fontSize + 'px';
+  textInput.style.color    = activeColor;
+  textInput.style.display  = 'block';
+  textInput.value = '';
+  setTimeout(() => textInput.focus(), 0);  // defer so mousedown fully finishes first
+}
+
+function commitText(){
+  const val = textInput.value.trim();
+  if(val && textPos){
+    const fontSize = activeWidth * 6 + 10;
+    const s = {tool:'text', color:activeColor, fontSize, text:val, x:textPos.x, y:textPos.y};
+    strokes.push(s);
+    socket.emit('wb_stroke', {room, stroke:s});
+    renderAll();
+  }
+  textInput.style.display = 'none';
+  textInput.value = '';
+  textPos = null;
+}
+
+textInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); commitText(); }
+  if(e.key==='Escape'){ textInput.style.display='none'; textInput.value=''; textPos=null; }
+});
+textInput.addEventListener('blur', ()=>{ setTimeout(commitText, 100); });
+
+/* ── Undo ── */
+function undoStroke(){
+  if(!strokes.length) return;
+  strokes.pop();
+  renderAll();
+}
+
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='z'){ e.preventDefault(); undoStroke(); return; }
+  if(e.target.tagName==='INPUT') return;
+  const map = {p:'pen',e:'eraser',l:'line',r:'rect',c:'circle',t:'text'};
+  if(map[e.key]) setTool(map[e.key]);
+});
+
+/* ── Fix 2: Clear also resets currentStroke ── */
+function clearBoard(){
+  const label = roomMode==='personal' ? 'your personal board' : 'this group board for everyone';
+  if(!confirm('Clear '+label+'?')) return;
+  strokes = [];
+  currentStroke = null;
+  drawing = false;
+  renderAll();
+  socket.emit('wb_clear', {room});
+}
+
+/* ── Export ── */
+function exportPNG(){
+  const dpr  = window.devicePixelRatio || 1;
+  const tmp  = document.createElement('canvas');
+  tmp.width  = canvas.width;
+  tmp.height = canvas.height;
+  const tctx = tmp.getContext('2d');
+  tctx.scale(dpr, dpr);
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  tctx.fillStyle = isDark ? '#1e1e1e' : '#f8f9fc';
+  tctx.fillRect(0, 0, cssW, cssH);
+  tctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, cssW, cssH);
+  const a    = document.createElement('a');
+  a.download = 'whiteboard.png';
+  a.href     = tmp.toDataURL('image/png');
+  a.click();
+}
+
+/* ── Room management ── */
+function genCode(){
+  return Math.random().toString(36).slice(2,8).toUpperCase();
+}
+
+function switchRoomMode(mode){
+  roomMode = mode;
+  document.getElementById('rb-personal').classList.toggle('active', mode==='personal');
+  document.getElementById('rb-group').classList.toggle('active', mode==='group');
+  document.getElementById('room-code-bar').style.display = mode==='group' ? 'flex' : 'none';
+
+  if(mode === 'personal'){
+    joinRoom('personal_' + myUserId);
+  } else {
+    // Use URL hash if present, else generate a new code
+    const hash = window.location.hash.slice(1);
+    groupCode = hash || genCode();
+    joinRoom('group_' + groupCode);
+  }
+}
+
+function newGroupRoom(){
+  groupCode = genCode();
+  joinRoom('group_' + groupCode);
+}
+
+function joinRoom(newRoom){
+  room = newRoom;
+  if(roomMode === 'group'){
+    groupCode = room.replace('group_','');
+    document.getElementById('room-code-val').textContent = groupCode;
+    window.location.hash = groupCode;
+    localStorage.setItem('wb_own_hash', groupCode);  // mark as ours so reload stays on personal
+  } else {
+    history.replaceState(null, '', window.location.pathname);  // clear hash when going personal
+    localStorage.removeItem('wb_own_hash');
+  }
+  strokes = [];
+  currentStroke = null;
+  drawing = false;
+  renderAll();
+  socket.emit('wb_join', {room});
+}
+
+function copyRoomLink(){
+  const url = window.location.origin + window.location.pathname + '#' + groupCode;
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn = event.target.closest('button');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Copied!';
+    btn.style.color = 'var(--g1)';
+    setTimeout(()=>{ btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+  });
+}
+
+/* ── Socket.IO ── */
+const socket = io({transports:['websocket','polling']});
+
+socket.on('connect', ()=>{ socket.emit('wb_join', {room}); });
+
+socket.on('wb_sync', data=>{
+  strokes = data.strokes || [];
+  renderAll();
+});
+socket.on('wb_stroke', data=>{
+  strokes.push(data.stroke);
+  renderAll();
+});
+/* Fix 2 (server side): also reset currentStroke on clear */
+socket.on('wb_cleared', ()=>{
+  strokes = [];
+  currentStroke = null;
+  drawing = false;
+  renderAll();
+});
+
+/* ── Boot ── */
+async function boot(){
+  buildPalette();
+
+  const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+  if(!me||me.error){ location.href='/login'; return; }
+
+  myUserId = me.id;
+  localStorage.setItem('wb_uid', myUserId);
+  // If the cached uid was wrong (first visit), switch to correct personal room now
+  if(roomMode === 'personal' && room !== 'personal_' + myUserId){
+    room = 'personal_' + myUserId;
+    socket.emit('wb_join', {room});
+  }
+  document.getElementById('userName').textContent = me.name || me.email;
+  document.getElementById('userAvatar').textContent =
+    (me.name||me.email).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  if(me.class_name) document.getElementById('userClass').textContent =
+    me.class_name + (me.school_name ? ' · '+me.school_name : '');
+
+  // Reflect group mode in UI only if this was a genuine shared invite link
+  if(_isInvite){
+    groupCode = _hash;
+    roomMode  = 'group';
+    document.getElementById('rb-personal').classList.remove('active');
+    document.getElementById('rb-group').classList.add('active');
+    document.getElementById('room-code-bar').style.display = 'flex';
+    document.getElementById('room-code-val').textContent = groupCode;
+  }
+}
+
+resize();  // set cssW/cssH immediately — before any mouse event can fire
+boot();
+</script>
+</body>
+</html>
