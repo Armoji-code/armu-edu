@@ -146,6 +146,7 @@ def chat(user, session_id):
     )
     db.session.add(user_msg)
     db.session.commit()
+    user_msg_id = user_msg.id  # capture before session closes
 
     if ai_session.model_tier == "advanced":
         text_model = current_app.config["OLLAMA_ADVANCED_MODEL"]
@@ -181,7 +182,7 @@ def chat(user, session_id):
                     core = f"{core}\n\n{user_content}"
                 stored_content = f"[{user.name}]: {core}" if is_group else core
                 with app.app_context():
-                    msg = AIMessage.query.get(user_msg.id)
+                    msg = AIMessage.query.get(user_msg_id)
                     if msg:
                         msg.content = stored_content
                         db.session.commit()
