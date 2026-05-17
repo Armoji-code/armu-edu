@@ -166,9 +166,13 @@ def chat(user, session_id):
                     desc_resp = ollama.chat(
                         model=vision_model,
                         messages=[{"role": "user", "content": (
-                            "Describe this image in full detail. "
-                            "If it contains text, equations, math problems, diagrams, or charts, "
-                            "transcribe and explain them exactly."
+                            "Look at this image and respond as follows:\n"
+                            "- If the image is mostly text, equations, or a math problem: "
+                            "transcribe it exactly as written, nothing else.\n"
+                            "- If the image contains a graph, chart, diagram, or drawing: "
+                            "describe what it shows in detail (axes, values, trends, labels).\n"
+                            "- If it is a mix: transcribe the text parts and describe the visual parts.\n"
+                            "Be concise. Do not add commentary or explanations."
                         )}],
                         stream=False,
                         images=[image_b64],
