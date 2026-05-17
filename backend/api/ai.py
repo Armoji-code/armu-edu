@@ -3,10 +3,21 @@ from api import blueprint
 from auth import login_required
 from models import db
 from models.ai_session import AISession, AIMessage
+from models.social import Group
 import ai as ollama
 import json
 import io
 import threading
+
+
+def _can_access(user, ai_session):
+    if ai_session.user_id == user.id:
+        return True
+    if ai_session.group_id:
+        g = Group.query.get(ai_session.group_id)
+        return g is not None and user in g.members
+    return False
+
 
 @blueprint.route("/ai/extract", methods=["POST"])
 @login_required()
@@ -38,7 +49,7 @@ def extract_file(user):
 def list_sessions(user):
     sessions = (
         AISession.query
-        .filter_by(user_id=user.id)
+        .filter_by(user_id=user.id, group_id=None)
         .order_by(AISession.created_at.desc())
         .all()
     )
@@ -61,7 +72,7 @@ def create_session(user):
 @login_required()
 def get_session(user, session_id):
     ai_session = AISession.query.get_or_404(session_id)
-    if ai_session.user_id != user.id:
+    if not _can_access(user, ai_session):
         return jsonify({"error": "forbidden"}), 403
     return jsonify(ai_session.to_dict())
 
@@ -80,7 +91,7 @@ def delete_session(user, session_id):
 @login_required()
 def get_messages(user, session_id):
     ai_session = AISession.query.get_or_404(session_id)
-    if ai_session.user_id != user.id:
+    if not _can_access(user, ai_session):
         return jsonify({"error": "forbidden"}), 403
     return jsonify([m.to_dict() for m in ai_session.messages])
 
@@ -88,16 +99,26 @@ def get_messages(user, session_id):
 @login_required()
 def chat(user, session_id):
     ai_session = AISession.query.get_or_404(session_id)
-    if ai_session.user_id != user.id:
+    if not _can_access(user, ai_session):
         return jsonify({"error": "forbidden"}), 403
 
     data = request.get_json(silent=True) or {}
     user_content = data.get("message", "").strip()
-    image_b64 = data.get("image")  # optional base64 string (no data URI prefix)
+    image_b64 = data.get("image")
     if not user_content and not image_b64:
         return jsonify({"error": "message required"}), 400
 
-    user_msg = AIMessage(session_id=session_id, role="user", content=user_content or "(image)")
+    is_group = ai_session.group_id is not None
+    raw_content = user_content or "(image)"
+    # Prefix with sender name in group sessions so the AI has context
+    stored_content = f"[{user.name}]: {raw_content}" if is_group else raw_content
+
+    user_msg = AIMessage(
+        session_id=session_id,
+        role="user",
+        content=stored_content,
+        sender_id=user.id,
+    )
     db.session.add(user_msg)
     db.session.commit()
 
@@ -138,21 +159,49 @@ def chat(user, session_id):
                 db.session.add(assistant_msg)
                 db.session.commit()
 
-                # Auto-title in a background thread so the stream closes immediately
-                msg_count = AIMessage.query.filter_by(session_id=session_id).count()
-                if msg_count == 2:
-                    app = current_app._get_current_object()
-                    t = threading.Thread(
-                        target=_auto_title,
-                        args=(app, session_id,
-                              current_app.config["OLLAMA_TRACKER_MODEL"],
-                              user_content or "image",
-                              "".join(full_response)),
-                        daemon=True,
-                    )
-                    t.start()
+                if not is_group:
+                    msg_count = AIMessage.query.filter_by(session_id=session_id).count()
+                    if msg_count == 2:
+                        app = current_app._get_current_object()
+                        t = threading.Thread(
+                            target=_auto_title,
+                            args=(app, session_id,
+                                  current_app.config["OLLAMA_TRACKER_MODEL"],
+                                  user_content or "image",
+                                  "".join(full_response)),
+                            daemon=True,
+                        )
+                        t.start()
 
     return Response(stream_with_context(generate()), content_type="text/plain")
+
+
+# ── Group AI sessions ────────────────────────────────────────────────────────
+
+@blueprint.route("/groups/<int:group_id>/ai/session", methods=["GET"])
+@login_required()
+def group_ai_session(user, group_id):
+    g = Group.query.get_or_404(group_id)
+    if user not in g.members:
+        return jsonify({"error": "forbidden"}), 403
+
+    session = (
+        AISession.query
+        .filter_by(group_id=group_id)
+        .order_by(AISession.created_at.desc())
+        .first()
+    )
+    if not session:
+        session = AISession(
+            user_id=user.id,
+            group_id=group_id,
+            title=f"{g.name}",
+            model_tier="standard",
+        )
+        db.session.add(session)
+        db.session.commit()
+
+    return jsonify(session.to_dict())
 
 
 def _auto_title(app, session_id, model, user_msg, ai_msg):

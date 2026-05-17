@@ -12,6 +12,7 @@ class AISession(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     user = db.relationship("User")
+    group = db.relationship("Group", foreign_keys=[group_id])
     messages = db.relationship("AIMessage", back_populates="session", order_by="AIMessage.created_at")
 
     def to_dict(self):
@@ -21,6 +22,7 @@ class AISession(db.Model):
             "model_tier": self.model_tier,
             "created_at": self.created_at.isoformat(),
             "group_id": self.group_id,
+            "group_name": self.group.name if self.group else None,
         }
 
 
@@ -32,8 +34,10 @@ class AIMessage(db.Model):
     role = db.Column(db.Enum("user", "assistant", name="ai_role"), nullable=False)
     content = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
 
     session = db.relationship("AISession", back_populates="messages")
+    sender = db.relationship("User", foreign_keys=[sender_id])
 
     def to_dict(self):
         return {
@@ -41,4 +45,6 @@ class AIMessage(db.Model):
             "role": self.role,
             "content": self.content,
             "created_at": self.created_at.isoformat(),
+            "sender_id": self.sender_id,
+            "sender_name": self.sender.name if self.sender else None,
         }

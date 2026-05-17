@@ -70,6 +70,12 @@
   .sess-pin.pinned{display:flex;}
   .sess-item:hover .sess-pin{display:flex;}
   .sess-group-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;padding:10px 12px 4px;}
+  .sess-item.group-sess{border-left:2px solid rgba(56,189,248,0.4);}
+  .group-badge{font-size:9px;font-weight:600;color:var(--g2);background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.2);border-radius:3px;padding:1px 4px;white-space:nowrap;flex-shrink:0;}
+  /* Group chat header bar */
+  .group-chat-bar{padding:8px 32px;background:rgba(56,189,248,0.06);border-bottom:1px solid var(--border);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  /* Sender name above user bubble */
+  .msg-sender{font-size:10px;font-weight:600;color:var(--g2);margin-bottom:2px;padding:0 4px;}
   /* Search bar */
   .sess-search{padding:8px;border-bottom:1px solid var(--border);position:relative;}
   .sess-search-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;width:13px;height:13px;}
@@ -273,13 +279,17 @@ function toggleTheme() {
   document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
 }
 
-let sessions = [];
+let sessions = [];       // personal sessions
+let groups = [];         // user's groups with their AI session info
 let activeSessionId = null;
+let activeGroupId = null;  // non-null when viewing a group session
 let streaming = false;
+let myId = null;
 let myInitials = '?';
 let attachedFile = null;
 let filterText = '';
 let pinnedIds = new Set(JSON.parse(localStorage.getItem('mokyai_pinned') || '[]'));
+let groupPollTimer = null;
 
 function renderContent(el, text) {
   // Extract math blocks before markdown processing so delimiters aren't mangled
@@ -384,8 +394,9 @@ function renderSessions() {
   const el = document.getElementById('sessList');
   const q = filterText.toLowerCase().trim();
   const visible = sessions.filter(s => !q || sessionTitle(s).toLowerCase().includes(q));
+  const visibleGroups = groups.filter(g => !q || g.name.toLowerCase().includes(q));
 
-  if (!visible.length) {
+  if (!visible.length && !visibleGroups.length) {
     el.innerHTML = `<div style="padding:20px 12px;text-align:center;color:var(--text3);font-size:12px;">${q ? 'No results.' : 'No chats yet.'}</div>`;
     return;
   }
@@ -393,12 +404,12 @@ function renderSessions() {
   const pinned   = visible.filter(s =>  pinnedIds.has(s.id));
   const unpinned = visible.filter(s => !pinnedIds.has(s.id));
 
-  function itemHtml(s) {
+  function personalItemHtml(s) {
     const isPinned = pinnedIds.has(s.id);
     const titleHtml = s._titling
       ? `<div class="titling-dots"><span class="titling-dot"></span><span class="titling-dot"></span><span class="titling-dot"></span></div>`
       : `<div class="sess-title">${sessionTitle(s)}</div>`;
-    return `<div class="sess-item${s.id === activeSessionId ? ' active' : ''}" onclick="openSession(${s.id})">
+    return `<div class="sess-item${s.id === activeSessionId && !activeGroupId ? ' active' : ''}" onclick="openSession(${s.id}, null)">
       <div class="sess-item-body">${titleHtml}<div class="sess-date">${fmtDate(s.created_at)}</div></div>
       <button class="sess-pin${isPinned ? ' pinned' : ''}" onclick="togglePin(event,${s.id})" title="${isPinned ? 'Unpin' : 'Pin'} chat">
         <svg class="icon" style="width:11px;height:11px;"><use href="#ic-pin"/></svg>
@@ -409,13 +420,30 @@ function renderSessions() {
     </div>`;
   }
 
+  function groupItemHtml(g) {
+    const isActive = activeGroupId === g.id;
+    return `<div class="sess-item group-sess${isActive ? ' active' : ''}" onclick="openGroupSession(${g.id})">
+      <div class="sess-item-body">
+        <div class="sess-title">${g.name}</div>
+        <div class="sess-date">${g.member_count} members</div>
+      </div>
+      <span class="group-badge">Group</span>
+    </div>`;
+  }
+
   let html = '';
   if (pinned.length) {
     html += '<div class="sess-group-label">Pinned</div>';
-    html += pinned.map(itemHtml).join('');
+    html += pinned.map(personalItemHtml).join('');
     if (unpinned.length) html += '<div class="sess-group-label">Chats</div>';
   }
-  html += unpinned.map(itemHtml).join('');
+  html += unpinned.map(personalItemHtml).join('');
+
+  if (visibleGroups.length) {
+    html += '<div class="sess-group-label">Group Chats</div>';
+    html += visibleGroups.map(groupItemHtml).join('');
+  }
+
   el.innerHTML = html;
 }
 
@@ -435,6 +463,8 @@ async function deleteSession(e, id) {
   if (pinnedIds.has(id)) { pinnedIds.delete(id); localStorage.setItem('mokyai_pinned', JSON.stringify([...pinnedIds])); }
   if (activeSessionId === id) {
     activeSessionId = null;
+    activeGroupId = null;
+    stopGroupPoll();
     document.getElementById('chatPanel').innerHTML = `
       <div class="chat-welcome" id="chatWelcome">
         <div class="chat-welcome-icon"><svg class="icon" style="width:28px;height:28px;"><use href="#ic-tutor"/></svg></div>
@@ -531,15 +561,22 @@ async function onPaste(e) {
   // PDF/DOCX pasted as files: rare, skip for now — user can use the picker
 }
 
-function appendMsg(role, text) {
+function appendMsg(role, text, opts = {}) {
   const msgs = document.getElementById('chatMsgs');
   if (!msgs) return null;
   const isUser = role === 'user';
+  const isMe = isUser && (!opts.senderId || opts.senderId === myId);
+  const initials = isUser
+    ? (opts.senderName || myInitials).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
+    : 'AI';
   const div = document.createElement('div');
-  div.className = 'msg-row ' + (isUser ? 'user' : 'ai');
+  // Other group members' messages appear on the left like AI messages
+  const side = isMe ? 'user' : (isUser ? 'other' : 'ai');
+  div.className = `msg-row ${isMe ? 'user' : 'ai'}`;
   div.innerHTML = `
-    <div class="msg-icon ${isUser ? 'user' : 'ai'}">${isUser ? myInitials : 'AI'}</div>
+    <div class="msg-icon ${isMe ? 'user' : 'ai'}" style="${!isMe && isUser ? 'background:var(--bg4);color:var(--text2)' : ''}">${initials}</div>
     <div class="msg-content">
+      ${opts.senderName && !isMe && isUser ? `<div class="msg-sender">${opts.senderName}</div>` : ''}
       <div class="msg-text"></div>
       <div class="msg-time">${fmtDate(new Date().toISOString())}</div>
     </div>`;
@@ -563,8 +600,14 @@ function showTyping() {
   return div;
 }
 
-async function openSession(id) {
+function stopGroupPoll() {
+  if (groupPollTimer) { clearInterval(groupPollTimer); groupPollTimer = null; }
+}
+
+async function openSession(id, gid) {
+  stopGroupPoll();
   activeSessionId = id;
+  activeGroupId = gid || null;
   renderSessions();
   buildChatUI();
 
@@ -574,10 +617,47 @@ async function openSession(id) {
   const msgs = document.getElementById('chatMsgs');
   if (!msgs) return;
   msgs.innerHTML = '';
-  for (const m of messages) appendMsg(m.role, m.content);
+  for (const m of messages) {
+    appendMsg(m.role, m.content, {senderId: m.sender_id, senderName: m.sender_name});
+  }
+
+  if (activeGroupId) {
+    // Show group context bar
+    const g = groups.find(g => g.id === activeGroupId);
+    const bar = document.createElement('div');
+    bar.className = 'group-chat-bar';
+    bar.id = 'groupBar';
+    bar.innerHTML = `<svg class="icon icon-14"><use href="#ic-groups"/></svg><span>Group chat · <strong>${g ? g.name : ''}</strong> · ${g ? g.member_count : ''} members</span>`;
+    const chatPanel = document.getElementById('chatPanel');
+    const msgsEl = document.getElementById('chatMsgs');
+    chatPanel.insertBefore(bar, msgsEl);
+
+    // Poll for new messages from other members every 3 s
+    let lastCount = messages.length;
+    groupPollTimer = setInterval(async () => {
+      if (streaming) return;
+      const fresh = await fetch('/api/ai/sessions/' + activeSessionId + '/messages')
+        .then(r => r.json()).catch(() => null);
+      if (!fresh || fresh.length <= lastCount) return;
+      const newMsgs = fresh.slice(lastCount);
+      for (const m of newMsgs) {
+        appendMsg(m.role, m.content, {senderId: m.sender_id, senderName: m.sender_name});
+      }
+      lastCount = fresh.length;
+    }, 3000);
+  }
+}
+
+async function openGroupSession(groupId) {
+  stopGroupPoll();
+  const data = await fetch('/api/groups/' + groupId + '/ai/session')
+    .then(r => r.json()).catch(() => null);
+  if (!data || data.error) return;
+  await openSession(data.id, groupId);
 }
 
 async function newSession() {
+  stopGroupPoll();
   const s = await fetch('/api/ai/sessions', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -586,8 +666,9 @@ async function newSession() {
 
   if (!s || s.error) return;
   sessions.unshift(s);
+  activeGroupId = null;
   renderSessions();
-  await openSession(s.id);
+  await openSession(s.id, null);
   document.getElementById('composeTA')?.focus();
 }
 
@@ -619,7 +700,7 @@ async function sendMessage() {
   sendBtn.disabled = true;
   streaming = true;
 
-  appendMsg('user', displayText);
+  appendMsg('user', displayText, {senderId: myId});
   const typingRow = showTyping();
 
   const resp = await fetch('/api/ai/sessions/' + activeSessionId + '/chat', {
@@ -655,8 +736,8 @@ async function sendMessage() {
   // Render markdown + math in the completed AI response
   if (full) renderContent(textEl, full);
 
-  // If this was the first exchange, show titling dots and poll for the generated title
-  const justSentFirst = (() => {
+  // If this was the first exchange in a personal session, show titling dots
+  const justSentFirst = !activeGroupId && (() => {
     const s = sessions.find(s => s.id === activeSessionId);
     return s && s.title === 'New Chat';
   })();
@@ -686,13 +767,15 @@ async function sendMessage() {
 }
 
 async function boot() {
-  const [me, sessData] = await Promise.all([
+  const [me, sessData, groupData] = await Promise.all([
     fetch('/api/auth/me').then(r => r.json()).catch(() => null),
     fetch('/api/ai/sessions').then(r => r.json()).catch(() => []),
+    fetch('/api/groups').then(r => r.json()).catch(() => []),
   ]);
 
   if (!me || me.error) { location.href = '/login'; return; }
 
+  myId = me.id;
   myInitials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('userName').textContent = me.name || me.email;
   document.getElementById('userAvatar').textContent = myInitials;
@@ -700,9 +783,10 @@ async function boot() {
     me.class_name + (me.school_name ? ' · ' + me.school_name : '');
 
   sessions = Array.isArray(sessData) ? sessData : [];
+  groups = Array.isArray(groupData) ? groupData : [];
   renderSessions();
 
-  if (sessions.length) openSession(sessions[0].id);
+  if (sessions.length) openSession(sessions[0].id, null);
 }
 
 boot();
