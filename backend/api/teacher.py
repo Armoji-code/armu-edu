@@ -217,7 +217,7 @@ def assignment_grades(user, assignment_id):
     grades_map = {g.student_id: g for g in a.grades}
 
     return jsonify({
-        "assignment": {"id": a.id, "title": a.title, "type": a.type, "max": 10},
+        "assignment": {"id": a.id, "title": a.title, "type": a.type, "max": 100},
         "students": [{
             "id":    s.id,
             "name":  s.name,
@@ -242,8 +242,8 @@ def set_grade(user):
         score = float(score)
     except (TypeError, ValueError):
         return jsonify({"error": "invalid score"}), 400
-    if not (0 <= score <= 10):
-        return jsonify({"error": "score must be 0–10"}), 400
+    if not (0 <= score <= 100):
+        return jsonify({"error": "score must be 0–100"}), 400
 
     a, err = _owns_assignment(user, assignment_id)
     if err:
