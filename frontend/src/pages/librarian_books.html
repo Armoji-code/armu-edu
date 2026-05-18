@@ -79,6 +79,23 @@
   .form-textarea{resize:vertical;min-height:72px;}
   .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
   .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+
+  /* ── AI enhance button ───────────────────────────────────────────────── */
+  .enhance-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 12px;border-radius:var(--radius-sm);background:linear-gradient(135deg,rgba(61,214,140,0.06),rgba(56,189,248,0.06));border:1px solid var(--border-accent);}
+  .enhance-label{flex:1;font-size:12px;color:var(--text2);}
+  .btn-enhance{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--g1),var(--g2));color:#000;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:opacity var(--transition);}
+  .btn-enhance:disabled{opacity:0.5;cursor:not-allowed;}
+  .btn-enhance:not(:disabled):hover{opacity:0.9;}
+  .spin{display:inline-block;animation:spin 0.8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ── Cover picker ────────────────────────────────────────────────────── */
+  .cover-picker{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap;}
+  .cover-opt{width:72px;height:100px;border-radius:var(--radius-sm);border:2px solid var(--border);cursor:pointer;overflow:hidden;transition:border-color var(--transition);flex-shrink:0;background:var(--bg4);display:flex;align-items:center;justify-content:center;}
+  .cover-opt img{width:100%;height:100%;object-fit:cover;display:block;}
+  .cover-opt.selected{border-color:var(--g1);}
+  .cover-opt:hover{border-color:var(--g2);}
+  .cover-loading{font-size:11px;color:var(--text3);}
 </style>
 </head>
 <body>
@@ -134,15 +151,28 @@
 <div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-title" id="modalTitle">Add Book</div>
+
     <div class="grid-2">
       <div class="form-row" style="grid-column:1/-1">
         <label class="form-label">Title *</label>
-        <input class="form-input" id="fTitle" placeholder="Book title">
+        <input class="form-input" id="fTitle" placeholder="Book title" oninput="onTitleAuthorChange()">
       </div>
       <div class="form-row" style="grid-column:1/-1">
         <label class="form-label">Author *</label>
-        <input class="form-input" id="fAuthor" placeholder="Author name">
+        <input class="form-input" id="fAuthor" placeholder="Author name" oninput="onTitleAuthorChange()">
       </div>
+    </div>
+
+    <!-- AI enhance row (only shown in add mode) -->
+    <div class="enhance-row" id="enhanceRow" style="display:none">
+      <span class="enhance-label">✨ Auto-fill description &amp; find cover images from Open Library</span>
+      <button class="btn-enhance" id="enhanceBtn" onclick="enhance()">
+        <svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Enhance
+      </button>
+    </div>
+
+    <div class="grid-2">
       <div class="form-row">
         <label class="form-label">ISBN</label>
         <input class="form-input" id="fIsbn" placeholder="978-…">
@@ -159,15 +189,20 @@
         <label class="form-label">Copies</label>
         <input class="form-input" id="fCopies" type="number" min="1" value="1">
       </div>
+
+      <!-- Cover picker -->
       <div class="form-row" style="grid-column:1/-1">
-        <label class="form-label">Cover URL</label>
-        <input class="form-input" id="fCover" placeholder="https://…">
+        <label class="form-label">Cover</label>
+        <input class="form-input" id="fCover" placeholder="https://… or pick below">
+        <div class="cover-picker" id="coverPicker"></div>
       </div>
+
       <div class="form-row" style="grid-column:1/-1">
         <label class="form-label">Description</label>
         <textarea class="form-input form-textarea" id="fDesc" placeholder="Short synopsis…"></textarea>
       </div>
     </div>
+
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveBook()">Save</button>
@@ -227,6 +262,14 @@ function onSearch() {
   searchTimer = setTimeout(() => loadBooks(document.getElementById('searchInput').value.trim()), 300);
 }
 
+let enhanceDebounce = null;
+
+function onTitleAuthorChange() {
+  if (editId) return; // only for new books
+  const title = document.getElementById('fTitle').value.trim();
+  document.getElementById('enhanceRow').style.display = title ? '' : 'none';
+}
+
 function openModal(book) {
   editId = book ? book.id : null;
   document.getElementById('modalTitle').textContent = book ? 'Edit Book' : 'Add Book';
@@ -238,12 +281,77 @@ function openModal(book) {
   document.getElementById('fCopies').value = book?.total_copies || 1;
   document.getElementById('fCover').value  = book?.cover_url || '';
   document.getElementById('fDesc').value   = book?.description || '';
+  document.getElementById('coverPicker').innerHTML = '';
+  document.getElementById('enhanceRow').style.display = (!book && document.getElementById('fTitle').value) ? '' : 'none';
   document.getElementById('modalOverlay').classList.add('open');
 }
 
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   editId = null;
+}
+
+async function enhance() {
+  const title  = document.getElementById('fTitle').value.trim();
+  const author = document.getElementById('fAuthor').value.trim();
+  if (!title) return;
+
+  const btn = document.getElementById('enhanceBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">⟳</span> Working…';
+
+  // Run covers and description fetch in parallel
+  const [coverResult] = await Promise.all([
+    fetch(`/api/librarian/book-covers?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}`)
+      .then(r => r.json()).catch(() => ({ covers: [] })),
+    streamDescription(title, author),
+  ]);
+
+  renderCovers(coverResult.covers || []);
+  btn.disabled = false;
+  btn.innerHTML = '<svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Enhance again';
+}
+
+async function streamDescription(title, author) {
+  const desc = document.getElementById('fDesc');
+  desc.value = '';
+  desc.placeholder = 'Generating…';
+  try {
+    const resp = await fetch(
+      `/api/librarian/book-description?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}`
+    );
+    if (!resp.ok) { desc.placeholder = 'Short synopsis…'; return; }
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      desc.value += decoder.decode(value, { stream: true });
+    }
+  } catch (_) {}
+  desc.placeholder = 'Short synopsis…';
+}
+
+function renderCovers(urls) {
+  const picker = document.getElementById('coverPicker');
+  if (!urls.length) {
+    picker.innerHTML = '<span class="cover-loading">No covers found on Open Library</span>';
+    return;
+  }
+  picker.innerHTML = urls.map((url, i) =>
+    `<div class="cover-opt" id="copt-${i}" onclick="selectCover('${url}',${i})">
+       <img src="${url}" alt="Cover option ${i+1}" onerror="this.parentElement.style.display='none'">
+     </div>`
+  ).join('');
+  // Pre-select first one
+  selectCover(urls[0], 0);
+}
+
+function selectCover(url, idx) {
+  document.getElementById('fCover').value = url;
+  document.querySelectorAll('.cover-opt').forEach((el, i) =>
+    el.classList.toggle('selected', i === idx)
+  );
 }
 
 async function saveBook() {

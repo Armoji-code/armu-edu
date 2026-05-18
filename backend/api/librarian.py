@@ -1,11 +1,14 @@
 from datetime import datetime, timezone, timedelta
-from flask import request, jsonify
+from flask import request, jsonify, Response, stream_with_context, current_app
 from api import blueprint
 from auth import login_required
 from models import db
 from models.library import Book, BookCheckout
 from models.user import User
 from models.school import School
+import requests as _req
+import ai as ollama
+import json
 
 
 def _school_id(user):
@@ -175,6 +178,72 @@ def librarian_return(user, loan_id):
     c.returned_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
     return jsonify(_loan_dict(c))
+
+
+# ── Book lookup helpers ───────────────────────────────────────────────────────
+
+@blueprint.route("/librarian/book-covers", methods=["GET"])
+@login_required(roles=["librarian"])
+def librarian_book_covers(user):
+    title  = request.args.get("title", "").strip()
+    author = request.args.get("author", "").strip()
+    if not title:
+        return jsonify({"error": "title required"}), 400
+
+    try:
+        params = {"limit": 20, "fields": "cover_i,title,author_name"}
+        if title:  params["title"]  = title
+        if author: params["author"] = author
+        resp = _req.get("https://openlibrary.org/search.json", params=params, timeout=6)
+        docs = resp.json().get("docs", [])
+        # Collect up to 3 distinct cover IDs
+        seen, urls = set(), []
+        for d in docs:
+            cid = d.get("cover_i")
+            if cid and cid not in seen:
+                seen.add(cid)
+                urls.append(f"https://covers.openlibrary.org/b/id/{cid}-L.jpg")
+            if len(urls) == 3:
+                break
+        return jsonify({"covers": urls})
+    except Exception as e:
+        return jsonify({"covers": [], "error": str(e)})
+
+
+@blueprint.route("/librarian/book-description", methods=["GET"])
+@login_required(roles=["librarian"])
+def librarian_book_description(user):
+    title  = request.args.get("title", "").strip()
+    author = request.args.get("author", "").strip()
+    if not title:
+        return jsonify({"error": "title required"}), 400
+
+    model = current_app.config.get("OLLAMA_TRACKER_MODEL", "llama3.2:3b")
+    prompt = (
+        f'Write a concise 2-3 sentence library catalog description for the book '
+        f'"{title}"{(" by " + author) if author else ""}. '
+        f'Describe the plot and genre briefly. Do not use the phrases "this book" or '
+        f'"the book". Just output the description, nothing else.'
+    )
+
+    def generate():
+        try:
+            resp = ollama.chat(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                stream=True,
+            )
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                chunk = json.loads(line)
+                token = chunk.get("message", {}).get("content", "")
+                if token:
+                    yield token
+        except Exception as e:
+            yield f"\n[Error: {e}]"
+
+    return Response(stream_with_context(generate()), mimetype="text/plain")
 
 
 # ── Members (students to check out to) ───────────────────────────────────────
