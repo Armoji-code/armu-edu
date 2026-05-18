@@ -10,6 +10,7 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    AI_PROVIDER           = os.environ.get("AI_PROVIDER",           "ollama")
     OLLAMA_BASE_URL       = os.environ.get("OLLAMA_BASE_URL",       "http://localhost:11434")
     OLLAMA_TRACKER_MODEL  = os.environ.get("OLLAMA_TRACKER_MODEL",  "llama3.2:3b")
     OLLAMA_TUTOR_MODEL    = os.environ.get("OLLAMA_TUTOR_MODEL",    "gemma3:12b")

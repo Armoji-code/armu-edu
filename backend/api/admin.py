@@ -124,6 +124,7 @@ def admin_overview(user):
 def admin_get_settings(user):
     school = _school(user)
     s = school.settings or {}
+    cfg = current_app.config
     return jsonify({
         "school_name":                 school.name,
         "hidden_tabs":                 s.get("hidden_tabs", []),
@@ -133,12 +134,24 @@ def admin_get_settings(user):
         "nudges_enabled":              s.get("nudges_enabled", True),
         "deadline_reminders_enabled":  s.get("deadline_reminders_enabled", True),
         "weekly_digest_enabled":       s.get("weekly_digest_enabled", True),
-        "ollama_tutor_model":          s.get("ollama_tutor_model",
-                                            current_app.config.get("OLLAMA_TUTOR_MODEL", "")),
-        "ollama_tracker_model":        s.get("ollama_tracker_model",
-                                            current_app.config.get("OLLAMA_TRACKER_MODEL", "")),
-        "ollama_advanced_model":       s.get("ollama_advanced_model",
-                                            current_app.config.get("OLLAMA_ADVANCED_MODEL", "")),
+        # AI provider config
+        "ai_provider":                 s.get("ai_provider", cfg.get("AI_PROVIDER", "ollama")),
+        "ollama_base_url":             s.get("ollama_base_url", cfg.get("OLLAMA_BASE_URL", "http://localhost:11434")),
+        "ai_api_key_set":              bool(s.get("ai_api_key", "")),
+        "ai_api_base_url":             s.get("ai_api_base_url", ""),
+        # Model names
+        "tutor_model":                 s.get("tutor_model", s.get("ollama_tutor_model",
+                                            cfg.get("OLLAMA_TUTOR_MODEL", "gemma3:12b"))),
+        "advanced_model":              s.get("advanced_model", s.get("ollama_advanced_model",
+                                            cfg.get("OLLAMA_ADVANCED_MODEL", "gemma3:12b"))),
+        "tracker_model":               s.get("tracker_model", s.get("ollama_tracker_model",
+                                            cfg.get("OLLAMA_TRACKER_MODEL", "llama3.2:3b"))),
+        # Generation params
+        "tutor_temperature":           float(s.get("tutor_temperature", 0.7)),
+        "tracker_temperature":         float(s.get("tracker_temperature", 0.3)),
+        "tutor_top_p":                 float(s.get("tutor_top_p", 1.0)),
+        "max_tokens":                  int(s.get("max_tokens", 2048)),
+        "tutor_system_prompt":         s.get("tutor_system_prompt", ""),
     })
 
 
@@ -157,13 +170,65 @@ def admin_update_settings(user):
                 "deadline_reminders_enabled", "weekly_digest_enabled"):
         if key in data:
             settings[key] = bool(data[key])
-    for key in ("ollama_tutor_model", "ollama_tracker_model", "ollama_advanced_model"):
+    # Provider selection
+    if "ai_provider" in data and data["ai_provider"] in ("ollama", "openai", "anthropic"):
+        settings["ai_provider"] = data["ai_provider"]
+    for key in ("ollama_base_url", "ai_api_base_url", "tutor_system_prompt"):
+        if key in data:
+            settings[key] = str(data[key]).strip()
+    if "ai_api_key" in data and str(data["ai_api_key"]).strip():
+        settings["ai_api_key"] = str(data["ai_api_key"]).strip()
+    # Model names
+    for key in ("tutor_model", "advanced_model", "tracker_model"):
         if key in data and str(data[key]).strip():
             settings[key] = str(data[key]).strip()
+    # Generation params
+    for key, lo, hi in (("tutor_temperature", 0.0, 2.0),
+                        ("tracker_temperature", 0.0, 2.0),
+                        ("tutor_top_p", 0.0, 1.0)):
+        if key in data:
+            try:
+                settings[key] = max(lo, min(hi, float(data[key])))
+            except (TypeError, ValueError):
+                pass
+    if "max_tokens" in data:
+        try:
+            settings["max_tokens"] = max(64, min(32768, int(data["max_tokens"])))
+        except (TypeError, ValueError):
+            pass
 
     school.settings = settings
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@blueprint.route("/admin/ai/pull", methods=["POST"])
+@login_required(roles=["admin"])
+def admin_ai_pull(user):
+    """Pull (install) an Ollama model. Streams progress as SSE."""
+    import requests as _req
+    from flask import Response, stream_with_context
+    data = request.get_json(silent=True) or {}
+    model = str(data.get("model", "")).strip()
+    if not model:
+        return jsonify({"error": "model name required"}), 400
+
+    school = _school(user)
+    s = school.settings or {}
+    base_url = s.get("ollama_base_url", current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434"))
+
+    def pull_stream():
+        try:
+            resp = _req.post(f"{base_url}/api/pull", json={"model": model}, stream=True, timeout=600)
+            resp.raise_for_status()
+            for line in resp.iter_lines():
+                if line:
+                    yield f"data: {line.decode()}\n\n"
+        except Exception as e:
+            yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
+        yield "data: {\"status\": \"done\"}\n\n"
+
+    return Response(stream_with_context(pull_stream()), content_type="text/event-stream")
 
 
 # ── Admin: users ──────────────────────────────────────────────────────────────

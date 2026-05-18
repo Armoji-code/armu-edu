@@ -18,12 +18,12 @@ with app.app_context():
         db.session.add(klass)
         db.session.flush()
 
-        student = User(name="Armin Test", email="student@test.lt", role="student",
+        student = User(name="Armin Test", email="student@test.com", role="student",
                        school_id=school.id, class_id=klass.id)
         student.set_password("password")
         db.session.add(student)
 
-        teacher = User(name="Teacher Demo", email="teacher@test.lt", role="teacher",
+        teacher = User(name="Teacher Demo", email="teacher@test.com", role="teacher",
                        school_id=school.id)
         teacher.set_password("password")
         db.session.add(teacher)
@@ -33,6 +33,6 @@ with app.app_context():
         db.session.add(math)
 
         db.session.commit()
-        print("Seeded: school, class 10A, student@test.lt, teacher@test.lt (password: password)")
+        print("Seeded: school, class 10A, student@test.com, teacher@test.com (password: password)")
     else:
         print("Already seeded.")

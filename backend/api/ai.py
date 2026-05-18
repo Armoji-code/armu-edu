@@ -6,7 +6,7 @@ from models.ai_session import AISession, AIMessage
 from models.social import Group
 from models.daily_digest import DailyDigest
 from models.academic import Assignment, Grade
-import ai as ollama
+import ai as _ai
 import json
 import io
 import threading
@@ -114,9 +114,11 @@ def create_session(user):
 @blueprint.route("/ai/models", methods=["GET"])
 @login_required()
 def get_models(user):
+    cfg = _ai.get_ai_config()
     return jsonify({
-        "standard": current_app.config["OLLAMA_TUTOR_MODEL"],
-        "advanced": current_app.config["OLLAMA_ADVANCED_MODEL"],
+        "standard": cfg["tutor_model"],
+        "advanced": cfg["advanced_model"],
+        "provider": cfg["provider"],
     })
 
 @blueprint.route("/ai/sessions/<int:session_id>", methods=["GET"])
@@ -184,12 +186,16 @@ def chat(user, session_id):
     db.session.add(user_msg)
     db.session.commit()
 
-    if ai_session.model_tier == "advanced":
-        model = current_app.config["OLLAMA_ADVANCED_MODEL"]
-    else:
-        model = current_app.config["OLLAMA_TUTOR_MODEL"]
+    ai_cfg = _ai.get_ai_config()
+    model = ai_cfg["advanced_model"] if ai_session.model_tier == "advanced" else ai_cfg["tutor_model"]
+    temperature = ai_cfg["tutor_temperature"]
+    top_p = ai_cfg["tutor_top_p"]
+    max_tokens = ai_cfg["max_tokens"]
 
-    system_prompt = TUTOR_SYSTEM_PROMPT_GROUP if is_group else TUTOR_SYSTEM_PROMPT
+    custom_prompt = ai_cfg["tutor_system_prompt"].strip()
+    base_prompt = TUTOR_SYSTEM_PROMPT_GROUP if is_group else TUTOR_SYSTEM_PROMPT
+    system_prompt = custom_prompt if custom_prompt else base_prompt
+
     all_msgs = AIMessage.query.filter_by(session_id=session_id).order_by(AIMessage.created_at).all()
     history = [{"role": "system", "content": system_prompt}] + \
               [{"role": m.role, "content": m.content} for m in all_msgs]
@@ -199,20 +205,10 @@ def chat(user, session_id):
     def generate():
         full_response = []
         try:
-            resp = ollama.chat(model=model, messages=history, stream=True, images=images)
-            for line in resp.iter_lines():
-                if not line:
-                    continue
-                try:
-                    chunk = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                token = chunk.get("message", {}).get("content", "")
-                if token:
-                    full_response.append(token)
-                    yield token
-                if chunk.get("done"):
-                    break
+            for token in _ai.stream(model=model, messages=history, temperature=temperature,
+                                    top_p=top_p, max_tokens=max_tokens, images=images):
+                full_response.append(token)
+                yield token
         except Exception as e:
             yield f"\n\n[Error: {e}]"
         finally:
@@ -232,7 +228,8 @@ def chat(user, session_id):
                             t = threading.Thread(
                                 target=_auto_title,
                                 args=(app, session_id,
-                                      app.config["OLLAMA_TRACKER_MODEL"],
+                                      ai_cfg["tracker_model"],
+                                      ai_cfg["tracker_temperature"],
                                       user_content or "image",
                                       "".join(full_response)),
                                 daemon=True,
@@ -315,17 +312,13 @@ def tutor_nudge(user):
     )
 
     try:
-        resp = ollama.chat(
-            model=current_app.config["OLLAMA_TRACKER_MODEL"],
-            messages=[{"role": "user", "content": prompt}],
-            stream=False,
-        )
-        raw = resp.json().get("message", {}).get("content", "").strip()
-        # Extract JSON array from response
+        ai_cfg = _ai.get_ai_config()
+        raw = _ai.complete(model=ai_cfg["tracker_model"],
+                           messages=[{"role": "user", "content": prompt}],
+                           temperature=ai_cfg["tracker_temperature"]).strip()
         start = raw.find("[")
         end = raw.rfind("]") + 1
         nudges = json.loads(raw[start:end]) if start != -1 else []
-        # Validate structure
         nudges = [n for n in nudges if isinstance(n, dict) and "label" in n and "message" in n][:3]
     except Exception:
         nudges = []
@@ -401,30 +394,18 @@ def daily_digest(user):
         f"Recent grades:\n{grade_lines}"
     )
 
-    model = current_app.config["OLLAMA_TRACKER_MODEL"]
+    ai_cfg = _ai.get_ai_config()
+    model = ai_cfg["tracker_model"]
+    tracker_temp = ai_cfg["tracker_temperature"]
     app = current_app._get_current_object()
 
     def generate():
         full = []
         try:
-            resp = ollama.chat(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                stream=True,
-            )
-            for line in resp.iter_lines():
-                if not line:
-                    continue
-                try:
-                    chunk = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                token = chunk.get("message", {}).get("content", "")
-                if token:
-                    full.append(token)
-                    yield token
-                if chunk.get("done"):
-                    break
+            for token in _ai.stream(model=model, messages=[{"role": "user", "content": prompt}],
+                                    temperature=tracker_temp):
+                full.append(token)
+                yield token
         except Exception as e:
             yield f"[Error: {e}]"
         finally:
@@ -512,26 +493,18 @@ def teacher_digest(user):
         f"{context}"
     )
 
-    model = current_app.config["OLLAMA_TRACKER_MODEL"]
+    ai_cfg = _ai.get_ai_config()
+    model = ai_cfg["tracker_model"]
+    tracker_temp = ai_cfg["tracker_temperature"]
     app = current_app._get_current_object()
 
     def generate():
         full = []
         try:
-            resp = ollama.chat(model=model, messages=[{"role": "user", "content": prompt}], stream=True)
-            for line in resp.iter_lines():
-                if not line:
-                    continue
-                try:
-                    chunk = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                token = chunk.get("message", {}).get("content", "")
-                if token:
-                    full.append(token)
-                    yield token
-                if chunk.get("done"):
-                    break
+            for token in _ai.stream(model=model, messages=[{"role": "user", "content": prompt}],
+                                    temperature=tracker_temp):
+                full.append(token)
+                yield token
         except Exception as e:
             yield f"[Error: {e}]"
         finally:
@@ -599,12 +572,10 @@ def teacher_nudge(user):
     )
 
     try:
-        resp = ollama.chat(
-            model=current_app.config["OLLAMA_TRACKER_MODEL"],
-            messages=[{"role": "user", "content": prompt}],
-            stream=False,
-        )
-        raw = resp.json().get("message", {}).get("content", "").strip()
+        ai_cfg = _ai.get_ai_config()
+        raw = _ai.complete(model=ai_cfg["tracker_model"],
+                           messages=[{"role": "user", "content": prompt}],
+                           temperature=ai_cfg["tracker_temperature"]).strip()
         start, end = raw.find("["), raw.rfind("]") + 1
         nudges = json.loads(raw[start:end]) if start != -1 else []
         nudges = [n for n in nudges if isinstance(n, dict) and "label" in n and "href" in n][:3]
@@ -620,7 +591,7 @@ def teacher_nudge(user):
     return jsonify({"nudges": nudges})
 
 
-def _auto_title(app, session_id, model, user_msg, ai_msg):
+def _auto_title(app, session_id, model, temperature, user_msg, ai_msg):
     with app.app_context():
         try:
             prompt = (
@@ -628,12 +599,9 @@ def _auto_title(app, session_id, model, user_msg, ai_msg):
                 "that summarises this conversation.\n\n"
                 f"User: {user_msg[:300]}\nAssistant: {ai_msg[:300]}"
             )
-            resp = ollama.chat(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                stream=False,
-            )
-            title = resp.json().get("message", {}).get("content", "").strip().strip('"').strip("'")[:80]
+            title = _ai.complete(model=model,
+                                 messages=[{"role": "user", "content": prompt}],
+                                 temperature=temperature).strip().strip('"').strip("'")[:80]
             if title:
                 s = AISession.query.get(session_id)
                 if s:

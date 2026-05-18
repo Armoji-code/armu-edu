@@ -1,12 +1,14 @@
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from api import blueprint
 from auth import login_required
 from models import db
 from models.school import Subject, Class
-from models.academic import Assignment, Grade
+from models.academic import Assignment, Grade, SchedulePeriod
 from models.conduct import ConductEvent
+from models.notification import Notification
 from models.user import User
 from datetime import datetime, timezone
+import io, csv
 
 
 def _teacher_subjects(teacher):
@@ -296,3 +298,182 @@ def log_conduct(user):
     db.session.add(ev)
     db.session.commit()
     return jsonify({"id": ev.id}), 201
+
+
+# ── Conduct log viewer ────────────────────────────────────────────────────────
+
+@blueprint.route("/teacher/conduct-log", methods=["GET"])
+@login_required(roles=["teacher"])
+def teacher_conduct_log(user):
+    subject_ids = _teacher_subject_ids(user)
+    events = (
+        ConductEvent.query
+        .filter(ConductEvent.teacher_id == user.id)
+        .order_by(ConductEvent.date.desc())
+        .limit(200)
+        .all()
+    )
+    result = []
+    for ev in events:
+        result.append({
+            "id":           ev.id,
+            "student_id":   ev.student_id,
+            "student_name": ev.student.name if ev.student else "",
+            "subject_name": ev.subject.name if ev.subject else "",
+            "class_name":   ev.subject.klass.name if ev.subject and ev.subject.klass else "",
+            "points":       ev.points,
+            "category":     ev.category,
+            "reason":       ev.reason,
+            "date":         ev.date.isoformat(),
+        })
+    return jsonify(result)
+
+
+# ── Analytics ─────────────────────────────────────────────────────────────────
+
+@blueprint.route("/teacher/analytics", methods=["GET"])
+@login_required(roles=["teacher"])
+def teacher_analytics(user):
+    subjects = _teacher_subjects(user)
+    result = []
+    for s in subjects:
+        students = s.klass.students
+        student_ids = [st.id for st in students]
+        assignments = Assignment.query.filter_by(subject_id=s.id).all()
+        asn_ids = [a.id for a in assignments]
+
+        grades = (
+            Grade.query
+            .filter(Grade.assignment_id.in_(asn_ids), Grade.student_id.in_(student_ids))
+            .all()
+        ) if asn_ids else []
+
+        scores = [g.score for g in grades]
+        avg = round(sum(scores) / len(scores), 1) if scores else None
+
+        # Distribution buckets: A(90-100), B(75-89), C(60-74), D(50-59), F(<50)
+        dist = {"A": 0, "B": 0, "C": 0, "D": 0, "F": 0}
+        for sc in scores:
+            if sc >= 90:   dist["A"] += 1
+            elif sc >= 75: dist["B"] += 1
+            elif sc >= 60: dist["C"] += 1
+            elif sc >= 50: dist["D"] += 1
+            else:          dist["F"] += 1
+
+        # Per-student averages
+        per_student = []
+        for st in students:
+            st_scores = [g.score for g in grades if g.student_id == st.id]
+            per_student.append({
+                "name":  st.name,
+                "avg":   round(sum(st_scores)/len(st_scores), 1) if st_scores else None,
+                "count": len(st_scores),
+            })
+        per_student.sort(key=lambda x: (x["avg"] is None, -(x["avg"] or 0)))
+
+        result.append({
+            "subject_id":    s.id,
+            "subject_name":  s.name,
+            "class_name":    s.klass.name,
+            "student_count": len(students),
+            "assignment_count": len(assignments),
+            "graded_count":  len(grades),
+            "avg":           avg,
+            "distribution":  dist,
+            "per_student":   per_student,
+        })
+    return jsonify(result)
+
+
+# ── Schedule viewer ───────────────────────────────────────────────────────────
+
+@blueprint.route("/teacher/schedule", methods=["GET"])
+@login_required(roles=["teacher"])
+def teacher_schedule(user):
+    subject_ids = _teacher_subject_ids(user)
+    periods = (
+        SchedulePeriod.query
+        .filter(SchedulePeriod.subject_id.in_(subject_ids))
+        .order_by(SchedulePeriod.day_of_week, SchedulePeriod.period_number)
+        .all()
+    )
+    DAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    by_day = {i: [] for i in range(5)}
+    for p in periods:
+        if 0 <= p.day_of_week <= 4:
+            subj = Subject.query.get(p.subject_id)
+            by_day[p.day_of_week].append({
+                "id":           p.id,
+                "period":       p.period_number,
+                "start":        p.start_time,
+                "end":          p.end_time,
+                "subject_name": subj.name if subj else "",
+                "class_name":   subj.klass.name if subj and subj.klass else "",
+            })
+    return jsonify([
+        {"day": DAY_NAMES[i], "day_index": i, "periods": by_day[i]}
+        for i in range(5)
+    ])
+
+
+# ── Announce to class ─────────────────────────────────────────────────────────
+
+@blueprint.route("/teacher/announce", methods=["POST"])
+@login_required(roles=["teacher"])
+def teacher_announce(user):
+    from app import socketio  # lazy import — avoids circular dependency at module load
+    data = request.get_json(silent=True) or {}
+    subject_id = data.get("subject_id")
+    title      = (data.get("title") or "").strip()
+    body_text  = (data.get("body") or "").strip()
+
+    if subject_id not in _teacher_subject_ids(user):
+        return jsonify({"error": "forbidden"}), 403
+    if not title:
+        return jsonify({"error": "title required"}), 400
+
+    subj = Subject.query.get_or_404(subject_id)
+    students = subj.klass.students
+    notif_ids = []
+    for st in students:
+        n = Notification(
+            user_id=st.id,
+            title=title,
+            body=body_text,
+            type="info",
+            link="/homework",
+        )
+        db.session.add(n)
+        db.session.flush()
+        socketio.emit("notification", n.to_dict(), room=f"user_{st.id}")
+        notif_ids.append(n.id)
+    db.session.commit()
+    return jsonify({"sent": len(notif_ids)}), 201
+
+
+# ── Grade export CSV ──────────────────────────────────────────────────────────
+
+@blueprint.route("/teacher/assignments/<int:assignment_id>/grades/export", methods=["GET"])
+@login_required(roles=["teacher"])
+def export_grades_csv(user, assignment_id):
+    a, err = _owns_assignment(user, assignment_id)
+    if err:
+        return err
+
+    students = a.subject.klass.students
+    grades_map = {g.student_id: g.score for g in a.grades}
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Student", "Score", "Max"])
+    for s in students:
+        score = grades_map.get(s.id)
+        writer.writerow([s.name, "" if score is None else score, 100])
+
+    filename = f"{a.title.replace(' ','_')}_{a.subject.klass.name}_grades.csv"
+    from flask import Response
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

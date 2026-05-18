@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="lt" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,16 +12,17 @@
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition);}
   .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  #sidebarNav{display:contents;}
   .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
   .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
   .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
   .nav-section{padding:0 12px;margin-bottom:8px;}
   .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
-  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
   .nav-item:hover{background:var(--bg3);color:var(--text);}
   .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
   .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-  .nav-icon{font-size:16px;width:20px;text-align:center;}.nav-icon svg{width:16px;height:16px;}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}
   .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
   .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
   .user-card:hover{background:var(--bg3);}
@@ -338,6 +339,12 @@ function applyTeacherNav(activePage) {
       <a class="nav-item" href="/teacher"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
       <a class="nav-item" href="/teacher/classes"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Classes</span></a>
       <a class="nav-item" href="/teacher/assignments"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Assignments</span></a>
+      <a class="nav-item" href="/teacher/analytics"><span class="nav-icon">📊</span><span>Analytics</span></a>
+      <a class="nav-item" href="/teacher/schedule"><span class="nav-icon">📅</span><span>Schedule</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Insights</div>
+      <a class="nav-item" href="/teacher/conduct"><span class="nav-icon">🚩</span><span>Conduct Log</span></a>
     </div>
     <div class="nav-section">
       <div class="nav-label">Other</div>
@@ -364,19 +371,19 @@ function applyAdminNav() {
     </div>`;
 }
 
-function applyLibrarianNav() {
+function applyLibrarianNav(activePage) {
   document.getElementById('logoSub').textContent = 'library panel';
   document.getElementById('sidebarNav').innerHTML = `
     <div class="nav-section">
       <div class="nav-label">Library</div>
-      <a class="nav-item" href="/librarian"><span class="nav-icon">▦</span><span>Overview</span></a>
-      <a class="nav-item" href="/librarian/books"><span class="nav-icon">📖</span><span>Books</span></a>
-      <a class="nav-item" href="/librarian/loans"><span class="nav-icon">≡</span><span>Loans</span></a>
+      <a class="nav-item" href="/librarian"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+      <a class="nav-item" href="/librarian/books"><span class="nav-icon"><svg class="icon"><use href="#ic-library"/></svg></span><span>Books</span></a>
+      <a class="nav-item" href="/librarian/loans"><span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span><span>Loans</span></a>
     </div>
     <div class="nav-section">
       <div class="nav-label">Other</div>
-      <a class="nav-item active" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
-      <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+      <a class="nav-item${activePage==='/messages'?' active':''}" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item${activePage==='/settings'?' active':''}" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
     </div>`;
 }
 
@@ -390,14 +397,15 @@ async function boot() {
 
   if (me.role === 'teacher')        applyTeacherNav('/messages');
   else if (me.role === 'admin')     applyAdminNav();
-  else if (me.role === 'librarian') applyLibrarianNav();
+  else if (me.role === 'librarian') applyLibrarianNav('/messages');
 
   myId = me.id;
   document.getElementById('userName').textContent = me.name || me.email;
   document.getElementById('userAvatar').textContent =
     (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
-  if (me.class_name) document.getElementById('userClass').textContent =
-    me.class_name + (me.school_name ? ' · ' + me.school_name : '');
+  document.getElementById('userClass').textContent = me.class_name
+    ? me.class_name + (me.school_name ? ' · ' + me.school_name : '')
+    : me.role ? me.role.charAt(0).toUpperCase() + me.role.slice(1) : '';
 
   conversations = buildConversations(Array.isArray(messages) ? messages : []);
   renderConvList();

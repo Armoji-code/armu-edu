@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="lt" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -80,6 +80,38 @@
   .toggle input:checked + .toggle-track{background:linear-gradient(135deg,var(--g1),var(--g2));}
   .toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform var(--transition);pointer-events:none;}
   .toggle input:checked ~ .toggle-thumb{transform:translateX(16px);}
+
+  /* ── Provider pills ─────────────────────────────────────────────────── */
+  .provider-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;}
+  .provider-pill{padding:7px 16px;border-radius:100px;border:1px solid var(--border);background:var(--bg3);font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all var(--transition);}
+  .provider-pill:hover{border-color:var(--border-accent);color:var(--text);}
+  .provider-pill.active{background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));border-color:var(--border-accent);color:var(--text);}
+
+  /* ── Sliders ─────────────────────────────────────────────────────────── */
+  .slider-row{display:flex;align-items:center;gap:12px;margin-bottom:4px;}
+  .slider-row input[type=range]{flex:1;accent-color:var(--g1);}
+  .slider-val{font-size:13px;font-weight:600;color:var(--text);min-width:36px;text-align:right;}
+
+  /* ── AI params grid ─────────────────────────────────────────────────── */
+  .ai-params-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 24px;}
+  @media(max-width:600px){.ai-params-grid{grid-template-columns:1fr;}}
+
+  /* ── Pull progress ───────────────────────────────────────────────────── */
+  .pull-row{display:flex;gap:8px;align-items:center;margin-top:12px;}
+  .pull-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;transition:border-color var(--transition);}
+  .pull-input:focus{border-color:var(--border-accent);}
+  .pull-btn{padding:8px 16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));border:1px solid var(--border-accent);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity var(--transition);white-space:nowrap;}
+  .pull-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .pull-status{font-size:12px;color:var(--text3);margin-top:8px;min-height:18px;}
+
+  /* ── Subheadings inside sections ─────────────────────────────────────── */
+  .sub-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin:20px 0 10px;}
+
+  /* ── Prompt textarea ─────────────────────────────────────────────────── */
+  .prompt-area{width:100%;min-height:120px;resize:vertical;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;transition:border-color var(--transition);box-sizing:border-box;}
+  .prompt-area:focus{border-color:var(--border-accent);}
+  .prompt-reset{font-size:12px;color:var(--g2);cursor:pointer;background:none;border:none;padding:0;margin-top:6px;font-family:inherit;}
+  .prompt-reset:hover{text-decoration:underline;}
 
   /* ── Save bar ────────────────────────────────────────────────────────── */
   .save-bar{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:12px;margin:-28px -28px 0;}
@@ -178,11 +210,11 @@ const FEATURES = [
   { key: 'weekly_digest_enabled',      label: 'Weekly Student Report', desc: 'Weekly email/notification summary' },
 ];
 
-const MODELS = [
-  { key: 'ollama_tutor_model',    label: 'Tutor Model',    ph: 'e.g. gemma3:12b' },
-  { key: 'ollama_tracker_model',  label: 'Tracker Model',  ph: 'e.g. llama3.2:3b' },
-  { key: 'ollama_advanced_model', label: 'Advanced Model', ph: 'e.g. gemma3:12b' },
-];
+const MODEL_PH = {
+  ollama:    { tutor: 'e.g. gemma3:12b', tracker: 'e.g. llama3.2:3b', advanced: 'e.g. gemma3:12b' },
+  openai:    { tutor: 'e.g. gpt-4o-mini', tracker: 'e.g. gpt-4o-mini', advanced: 'e.g. gpt-4o' },
+  anthropic: { tutor: 'e.g. claude-haiku-4-5-20251001', tracker: 'e.g. claude-haiku-4-5-20251001', advanced: 'e.g. claude-sonnet-4-6' },
+};
 
 let settings = null;
 
@@ -254,17 +286,126 @@ function renderAll(s) {
       <div class="tab-grid" id="tabGrid"></div>
     </div>
 
-    <!-- AI & Features -->
+    <!-- AI Features (toggles) -->
     <div class="section" id="section-ai">
       <div class="section-head">
         <div class="section-icon" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(61,214,140,0.15))">
           <svg class="icon icon-18" style="color:#a855f7"><use href="#ic-cpu"/></svg>
         </div>
-        <div><div class="section-title">AI &amp; Features</div><div class="section-desc">Toggle individual AI features and set Ollama model names</div></div>
+        <div><div class="section-title">AI Features</div><div class="section-desc">Enable or disable individual AI features school-wide</div></div>
       </div>
       <div class="feat-grid" id="featGrid"></div>
-      <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;">Ollama Models</div>
-      <div class="model-grid" id="modelGrid"></div>
+    </div>
+
+    <!-- AI Configuration -->
+    <div class="section" id="section-ai-config">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(168,85,247,0.15))">
+          <svg class="icon icon-18" style="color:var(--g2)"><use href="#ic-cpu"/></svg>
+        </div>
+        <div><div class="section-title">AI Configuration</div><div class="section-desc">Choose provider, set API keys, models, and generation parameters</div></div>
+      </div>
+
+      <!-- Provider -->
+      <div class="sub-label">Provider</div>
+      <div class="provider-pills">
+        <button class="provider-pill${s.ai_provider==='ollama'?' active':''}" onclick="setProvider('ollama')">🖥 Ollama (Local)</button>
+        <button class="provider-pill${s.ai_provider==='openai'?' active':''}" onclick="setProvider('openai')">✦ OpenAI / Compatible</button>
+        <button class="provider-pill${s.ai_provider==='anthropic'?' active':''}" onclick="setProvider('anthropic')">◆ Anthropic</button>
+      </div>
+
+      <!-- Ollama config -->
+      <div id="cfg-ollama" style="display:${s.ai_provider!=='openai'&&s.ai_provider!=='anthropic'?'block':'none'}">
+        <div class="field-row">
+          <div class="field-label">Ollama Server URL</div>
+          <input class="field-input" id="ollama_base_url" type="text" value="${escAttr(s.ollama_base_url||'http://localhost:11434')}" placeholder="http://localhost:11434">
+        </div>
+        <div class="sub-label">Install Model</div>
+        <div class="pull-row">
+          <input class="pull-input" id="pullModelInput" type="text" placeholder="e.g. llama3.2:3b, gemma3:12b">
+          <button class="pull-btn" id="pullBtn" onclick="pullModel()">Install</button>
+        </div>
+        <div class="pull-status" id="pullStatus"></div>
+      </div>
+
+      <!-- OpenAI config -->
+      <div id="cfg-openai" style="display:${s.ai_provider==='openai'?'block':'none'}">
+        <div class="field-row">
+          <div class="field-label">API Key</div>
+          <input class="field-input" id="ai_api_key_openai" type="password" placeholder="${s.ai_api_key_set?'Key saved — enter new to replace':'sk-...'}">
+        </div>
+        <div class="field-row">
+          <div class="field-label">Base URL <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — for OpenAI-compatible APIs)</span></div>
+          <input class="field-input" id="ai_api_base_url" type="text" value="${escAttr(s.ai_api_base_url||'')}" placeholder="https://api.openai.com/v1">
+        </div>
+      </div>
+
+      <!-- Anthropic config -->
+      <div id="cfg-anthropic" style="display:${s.ai_provider==='anthropic'?'block':'none'}">
+        <div class="field-row">
+          <div class="field-label">API Key</div>
+          <input class="field-input" id="ai_api_key_anthropic" type="password" placeholder="${s.ai_api_key_set?'Key saved — enter new to replace':'sk-ant-...'}">
+        </div>
+      </div>
+
+      <!-- Models -->
+      <div class="sub-label">Models</div>
+      <div class="ai-params-grid">
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Tutor Model</div>
+          <input class="field-input" id="tutor_model" type="text" value="${escAttr(s.tutor_model||'')}" placeholder="${(MODEL_PH[s.ai_provider]||MODEL_PH.ollama).tutor}">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Advanced Model</div>
+          <input class="field-input" id="advanced_model" type="text" value="${escAttr(s.advanced_model||'')}" placeholder="${(MODEL_PH[s.ai_provider]||MODEL_PH.ollama).advanced}">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Tracker Model <span style="font-weight:400;text-transform:none;letter-spacing:0">(digests, nudges)</span></div>
+          <input class="field-input" id="tracker_model" type="text" value="${escAttr(s.tracker_model||'')}" placeholder="${(MODEL_PH[s.ai_provider]||MODEL_PH.ollama).tracker}">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Max Tokens</div>
+          <input class="field-input" id="max_tokens" type="number" min="64" max="32768" value="${s.max_tokens||2048}">
+        </div>
+      </div>
+
+      <!-- Generation params -->
+      <div class="sub-label">Generation Parameters</div>
+      <div class="ai-params-grid">
+        <div>
+          <div class="field-label" style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Tutor Temperature</div>
+          <div class="slider-row">
+            <input type="range" id="tutor_temperature" min="0" max="2" step="0.05" value="${s.tutor_temperature??0.7}"
+              oninput="document.getElementById('tutor_temp_val').textContent=parseFloat(this.value).toFixed(2)">
+            <span class="slider-val" id="tutor_temp_val">${(s.tutor_temperature??0.7).toFixed(2)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3)">0 = deterministic · 1 = creative · 2 = wild</div>
+        </div>
+        <div>
+          <div class="field-label" style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Tracker Temperature</div>
+          <div class="slider-row">
+            <input type="range" id="tracker_temperature" min="0" max="2" step="0.05" value="${s.tracker_temperature??0.3}"
+              oninput="document.getElementById('tracker_temp_val').textContent=parseFloat(this.value).toFixed(2)">
+            <span class="slider-val" id="tracker_temp_val">${(s.tracker_temperature??0.3).toFixed(2)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3)">Lower = more consistent structured output</div>
+        </div>
+        <div>
+          <div class="field-label" style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Top-P (Tutor)</div>
+          <div class="slider-row">
+            <input type="range" id="tutor_top_p" min="0" max="1" step="0.05" value="${s.tutor_top_p??1.0}"
+              oninput="document.getElementById('top_p_val').textContent=parseFloat(this.value).toFixed(2)">
+            <span class="slider-val" id="top_p_val">${(s.tutor_top_p??1.0).toFixed(2)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3)">Nucleus sampling — 1.0 = off</div>
+        </div>
+      </div>
+
+      <!-- System Prompt -->
+      <div class="sub-label" style="margin-top:24px;">Tutor System Prompt</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Leave blank to use the built-in Socratic method prompt.</div>
+      <textarea class="prompt-area" id="tutor_system_prompt" placeholder="Custom system prompt… (leave blank for default)">${escAttr(s.tutor_system_prompt||'')}</textarea>
+      <button class="prompt-reset" onclick="document.getElementById('tutor_system_prompt').value=''">↺ Reset to default</button>
     </div>
 
     <!-- Save bar -->
@@ -316,18 +457,6 @@ function renderAll(s) {
     fg.appendChild(div);
   });
 
-  // Model inputs
-  const mg = document.getElementById('modelGrid');
-  MODELS.forEach(m => {
-    const div = document.createElement('div');
-    div.className = 'field-row';
-    div.style.maxWidth = '';
-    div.innerHTML = `
-      <div class="field-label">${m.label}</div>
-      <input class="field-input" id="${m.key}" type="text" value="${escAttr(s[m.key] || '')}" placeholder="${m.ph}">`;
-    mg.appendChild(div);
-  });
-
   // Scroll to hash
   const hash = location.hash.slice(1);
   if (hash === 'tabs') document.getElementById('section-tabs')?.scrollIntoView({ behavior: 'smooth' });
@@ -338,9 +467,66 @@ function escAttr(s) {
   return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 }
 
+function setProvider(p) {
+  settings.ai_provider = p;
+  document.querySelectorAll('.provider-pill').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.provider-pill[onclick="setProvider('${p}')"]`)?.classList.add('active');
+  document.getElementById('cfg-ollama').style.display    = p === 'ollama'    ? 'block' : 'none';
+  document.getElementById('cfg-openai').style.display    = p === 'openai'    ? 'block' : 'none';
+  document.getElementById('cfg-anthropic').style.display = p === 'anthropic' ? 'block' : 'none';
+  const ph = MODEL_PH[p] || MODEL_PH.ollama;
+  document.getElementById('tutor_model').placeholder    = ph.tutor;
+  document.getElementById('advanced_model').placeholder = ph.advanced;
+  document.getElementById('tracker_model').placeholder  = ph.tracker;
+}
+
+async function pullModel() {
+  const input  = document.getElementById('pullModelInput');
+  const model  = input.value.trim();
+  if (!model) return;
+  const btn    = document.getElementById('pullBtn');
+  const status = document.getElementById('pullStatus');
+  btn.disabled = true;
+  status.textContent = 'Starting…';
+  try {
+    const resp = await fetch('/api/admin/ai/pull', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model }),
+    });
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    outer: while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const d = JSON.parse(line.slice(6));
+          if (d.error)           { status.textContent = 'Error: ' + d.error; break outer; }
+          if (d.status === 'done') { status.textContent = '✓ ' + model + ' installed'; break outer; }
+          const pct = d.total ? Math.round((d.completed || 0) / d.total * 100) : null;
+          status.textContent = d.status + (pct !== null ? ' ' + pct + '%' : '');
+        } catch {}
+      }
+    }
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+  }
+  btn.disabled = false;
+}
+
 async function save() {
   const btn = document.getElementById('saveBtn');
   btn.disabled = true;
+  const provider = settings.ai_provider || 'ollama';
+  const apiKey = provider === 'openai'
+    ? (document.getElementById('ai_api_key_openai')?.value.trim() || '')
+    : (document.getElementById('ai_api_key_anthropic')?.value.trim() || '');
   const payload = {
     school_name:                 document.getElementById('schoolName').value.trim(),
     hidden_tabs:                 settings.hidden_tabs || [],
@@ -350,10 +536,19 @@ async function save() {
     nudges_enabled:              settings.nudges_enabled,
     deadline_reminders_enabled:  settings.deadline_reminders_enabled,
     weekly_digest_enabled:       settings.weekly_digest_enabled,
-    ollama_tutor_model:          document.getElementById('ollama_tutor_model').value.trim(),
-    ollama_tracker_model:        document.getElementById('ollama_tracker_model').value.trim(),
-    ollama_advanced_model:       document.getElementById('ollama_advanced_model').value.trim(),
+    ai_provider:                 provider,
+    ollama_base_url:             document.getElementById('ollama_base_url')?.value.trim() || '',
+    ai_api_base_url:             document.getElementById('ai_api_base_url')?.value.trim() || '',
+    tutor_model:                 document.getElementById('tutor_model').value.trim(),
+    advanced_model:              document.getElementById('advanced_model').value.trim(),
+    tracker_model:               document.getElementById('tracker_model').value.trim(),
+    tutor_temperature:           parseFloat(document.getElementById('tutor_temperature').value),
+    tracker_temperature:         parseFloat(document.getElementById('tracker_temperature').value),
+    tutor_top_p:                 parseFloat(document.getElementById('tutor_top_p').value),
+    max_tokens:                  parseInt(document.getElementById('max_tokens').value, 10),
+    tutor_system_prompt:         document.getElementById('tutor_system_prompt').value,
   };
+  if (apiKey) payload.ai_api_key = apiKey;
   const ok = await fetch('/api/admin/settings', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
