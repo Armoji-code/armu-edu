@@ -67,6 +67,14 @@
   .gauge-detail{font-size:11px;color:var(--text3);}
   .gauge-detail span{color:var(--text2);font-weight:500;}
 
+  /* ── Per-core grid ──────────────────────────────────────────────────── */
+  .core-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(56px,1fr));gap:6px;margin-top:14px;}
+  .core-cell{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .core-bar-wrap{width:100%;height:48px;background:var(--bg4);border-radius:4px;display:flex;align-items:flex-end;overflow:hidden;}
+  .core-bar-fill{width:100%;border-radius:4px;transition:height 0.35s ease;min-height:2px;}
+  .core-label{font-size:9px;color:var(--text3);font-weight:600;}
+  .core-val{font-size:10px;color:var(--text2);}
+
   /* ── Ollama section ──────────────────────────────────────────────────── */
   .section-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
   .section-title{font-size:15px;font-weight:600;}
@@ -158,11 +166,12 @@
         </div>
         <div class="gauge-wrap">
           <div class="gauge-top">
-            <span class="gauge-label">Usage</span>
+            <span class="gauge-label">Overall</span>
             <span class="gauge-val" id="cpu-pct">—</span>
           </div>
           <div class="gauge-bar"><div class="gauge-fill fill-green" id="cpu-bar" style="width:0%"></div></div>
         </div>
+        <div class="core-grid" id="core-grid"></div>
       </div>
 
       <!-- RAM -->
@@ -291,10 +300,33 @@ function timeTo(iso) {
 }
 
 function render(d) {
-  // CPU
+  // CPU overall
   setGauge('cpu-bar', 'cpu-pct', d.cpu.percent, 'fill-green');
   document.getElementById('cpu-sub').textContent =
     d.cpu.cores + ' cores' + (d.cpu.freq_mhz ? ' · ' + (d.cpu.freq_mhz / 1000).toFixed(2) + ' GHz' : '');
+
+  // Per-core bars
+  const grid = document.getElementById('core-grid');
+  const cores = d.cpu.per_core || [];
+  if (grid.children.length !== cores.length) {
+    grid.innerHTML = cores.map((_, i) => `
+      <div class="core-cell">
+        <div class="core-bar-wrap">
+          <div class="core-bar-fill" id="core-${i}" style="height:0%"></div>
+        </div>
+        <div class="core-label">C${i}</div>
+        <div class="core-val" id="core-val-${i}">0%</div>
+      </div>`).join('');
+  }
+  cores.forEach((pct, i) => {
+    const bar = document.getElementById(`core-${i}`);
+    const val = document.getElementById(`core-val-${i}`);
+    if (!bar || !val) return;
+    const col = pct >= 85 ? '#f87171' : pct >= 60 ? '#fbbf24' : 'var(--g1)';
+    bar.style.height = Math.max(pct, 2) + '%';
+    bar.style.background = col;
+    val.textContent = Math.round(pct) + '%';
+  });
 
   // RAM
   setGauge('ram-bar', 'ram-pct', d.ram.percent, 'fill-blue');

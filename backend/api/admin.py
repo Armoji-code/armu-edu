@@ -20,9 +20,10 @@ def _school(user):
 @login_required(roles=["admin"])
 def admin_performance(user):
     # CPU
-    cpu_pct   = psutil.cpu_percent(interval=None)
-    cpu_cores = psutil.cpu_count(logical=True)
-    cpu_freq  = psutil.cpu_freq()
+    cpu_pct      = psutil.cpu_percent(interval=None)
+    cpu_per_core = psutil.cpu_percent(interval=None, percpu=True)
+    cpu_cores    = psutil.cpu_count(logical=True)
+    cpu_freq     = psutil.cpu_freq()
 
     # RAM
     ram = psutil.virtual_memory()
@@ -54,9 +55,10 @@ def admin_performance(user):
 
     return jsonify({
         "cpu": {
-            "percent": cpu_pct,
-            "cores":   cpu_cores,
-            "freq_mhz": round(cpu_freq.current, 0) if cpu_freq else None,
+            "percent":      cpu_pct,
+            "per_core":     cpu_per_core,
+            "cores":        cpu_cores,
+            "freq_mhz":     round(cpu_freq.current, 0) if cpu_freq else None,
         },
         "ram": {
             "total_gb":  round(ram.total     / 1024**3, 2),
