@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Assignments</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition);}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;margin-bottom:8px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:16px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-16{width:16px;height:16px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+
+  /* Split layout */
+  .split{display:flex;flex:1;overflow:hidden;}
+  .panel-left{width:380px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+  .panel-right{flex:1;overflow-y:auto;padding:28px;background:var(--bg);}
+  .panel-right::-webkit-scrollbar{width:4px;}
+  .panel-right::-webkit-scrollbar-track{background:transparent;}
+  .panel-right::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  .panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .panel-header-title{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;}
+  .assignment-list{overflow-y:auto;flex:1;}
+  .assignment-list::-webkit-scrollbar{width:3px;}
+  .assignment-list::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+
+  .asn-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);border-left:3px solid transparent;transition:all var(--transition);}
+  .asn-item:hover{background:var(--bg3);}
+  .asn-item.active{background:linear-gradient(90deg,rgba(61,214,140,0.07),transparent);border-left-color:var(--g1);}
+  .asn-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .asn-meta{font-size:11px;color:var(--text3);display:flex;gap:8px;align-items:center;}
+  .type-badge{display:inline-flex;padding:1px 7px;border-radius:100px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;}
+  .type-homework{background:rgba(56,189,248,0.12);color:#38bdf8;}
+  .type-test{background:rgba(251,191,36,0.12);color:#fbbf24;}
+  .type-project{background:rgba(168,85,247,0.12);color:#a855f7;}
+
+  /* Buttons */
+  .btn{padding:8px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--transition);display:inline-flex;align-items:center;gap:6px;}
+  .btn:hover{background:var(--bg4);}
+  .btn-primary{background:linear-gradient(135deg,var(--g1),var(--g2));border:none;color:#000;font-weight:600;}
+  .btn-primary:hover{opacity:0.9;}
+  .btn-danger{background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.2);color:#f87171;}
+  .btn-danger:hover{background:rgba(248,113,113,0.18);}
+  .btn-sm{padding:5px 12px;font-size:12px;}
+
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity var(--transition);}
+  .modal-overlay.open{opacity:1;pointer-events:all;}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:480px;max-width:92vw;max-height:90vh;overflow-y:auto;}
+  .modal-title{font-size:15px;font-weight:600;margin-bottom:18px;}
+  .form-row{margin-bottom:12px;}
+  .form-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;display:block;}
+  .form-input{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color var(--transition);}
+  .form-input:focus{border-color:var(--border-accent);}
+  textarea.form-input{resize:vertical;min-height:70px;}
+
+  /* Grade sheet */
+  .grade-row{display:grid;grid-template-columns:1fr 120px;padding:10px 16px;border-bottom:1px solid var(--border);align-items:center;transition:background var(--transition);}
+  .grade-row:last-child{border-bottom:none;}
+  .grade-row:hover{background:var(--bg3);}
+  .grade-row.header{background:var(--bg3);font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;}
+  .grade-row.header:hover{background:var(--bg3);}
+  .score-input{width:80px;padding:6px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg4);color:var(--text);font-size:13px;font-family:'DM Mono',monospace;outline:none;text-align:center;transition:border-color var(--transition);}
+  .score-input:focus{border-color:var(--border-accent);}
+  .score-input.saved{border-color:var(--g1);}
+
+  /* Progress bar */
+  .progress-bar{height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;margin-top:6px;}
+  .progress-fill{height:100%;border-radius:2px;background:var(--gradient);transition:width 0.4s ease;}
+
+  @keyframes slideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="ic-groups" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+    <symbol id="ic-homework" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="ic-messages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+    <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></symbol>
+    <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></symbol>
+    <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></symbol>
+  </defs>
+</svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">teacher portal</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Manage</div>
+    <a class="nav-item" href="/teacher"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+    <a class="nav-item" href="/teacher/classes"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Classes</span></a>
+    <a class="nav-item active" href="/teacher/assignments"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Assignments</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Other</div>
+    <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+    <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div style="font-size:11px;color:var(--text3);">Teacher</div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-homework"/></svg>
+    <span class="topbar-title">Assignments</span>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" onclick="openCreate()">
+        <svg class="icon icon-14"><use href="#ic-plus"/></svg> New Assignment
+      </button>
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+        <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="split">
+    <!-- Left: assignment list -->
+    <div class="panel-left">
+      <div class="panel-header">
+        <div class="panel-header-title">All Assignments</div>
+        <select id="filterSubject" onchange="renderList()" style="font-size:12px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:4px 8px;border-radius:var(--radius-sm);outline:none;font-family:'DM Sans',sans-serif;">
+          <option value="">All subjects</option>
+        </select>
+      </div>
+      <div class="assignment-list" id="assignmentList">
+        <div style="padding:20px;color:var(--text3);font-size:13px;">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Right: grade sheet / detail -->
+    <div class="panel-right" id="panelRight">
+      <div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select an assignment to view or enter grades</div>
+    </div>
+  </div>
+</div>
+
+<!-- Create / Edit Assignment Modal -->
+<div class="modal-overlay" id="asnModal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="modal-title" id="asnModalTitle">New Assignment</div>
+      <div class="icon-btn" onclick="closeModal()"><svg class="icon icon-14"><use href="#ic-x"/></svg></div>
+    </div>
+    <input type="hidden" id="asnId">
+    <div class="form-row">
+      <label class="form-label">Subject</label>
+      <select class="form-input" id="asnSubject"></select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Title</label>
+      <input class="form-input" id="asnTitle" placeholder="e.g. Chapter 5 homework">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Description (optional)</label>
+      <textarea class="form-input" id="asnDesc" placeholder="Instructions or notes…"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div class="form-row">
+        <label class="form-label">Type</label>
+        <select class="form-input" id="asnType">
+          <option value="homework">Homework</option>
+          <option value="test">Test</option>
+          <option value="project">Project</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label class="form-label">Due Date</label>
+        <input class="form-input" id="asnDue" type="datetime-local">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="asnSubmitBtn" onclick="submitAssignment()">Create</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+let assignments = [];
+let subjects    = [];
+let activeAsnId = null;
+
+function typeBadge(type) {
+  return `<span class="type-badge type-${type}">${type}</span>`;
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+}
+
+function renderList() {
+  const filter = document.getElementById('filterSubject').value;
+  const list = document.getElementById('assignmentList');
+  let items = assignments;
+  if (filter) items = items.filter(a => String(a.subject_id) === filter);
+
+  if (!items.length) {
+    list.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;">No assignments yet.</div>';
+    return;
+  }
+
+  list.innerHTML = items.map(a => {
+    const pct  = a.total ? Math.round(a.graded / a.total * 100) : 0;
+    const isActive = a.id === activeAsnId;
+    return `<div class="asn-item${isActive ? ' active' : ''}" data-id="${a.id}" onclick="selectAsn(${a.id})">
+      <div class="asn-title">${a.title}</div>
+      <div class="asn-meta" style="margin-bottom:6px;">
+        ${typeBadge(a.type)}
+        <span>${a.subject_name} · ${a.class_name}</span>
+        <span style="margin-left:auto;">Due ${fmtDate(a.due_date)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${pct}%;"></div></div>
+        <span style="font-size:11px;color:var(--text3);white-space:nowrap;">${a.graded}/${a.total}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectAsn(id) {
+  activeAsnId = id;
+  renderList();
+  loadGrades(id);
+}
+
+async function loadGrades(id) {
+  const panel = document.getElementById('panelRight');
+  panel.innerHTML = '<div style="color:var(--text3);font-size:13px;">Loading…</div>';
+
+  const a = assignments.find(x => x.id === id);
+  const data = await fetch(`/api/teacher/assignments/${id}/grades`).then(r => r.json()).catch(() => null);
+  if (!data) { panel.innerHTML = '<div style="color:#f87171;font-size:13px;">Failed to load grades.</div>'; return; }
+
+  const gradedCount = data.students.filter(s => s.score !== null).length;
+  const totalCount  = data.students.length;
+  const pct = totalCount ? Math.round(gradedCount / totalCount * 100) : 0;
+
+  panel.innerHTML = `
+    <div style="animation:slideIn 0.2s ease;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:17px;font-weight:600;margin-bottom:4px;">${data.assignment.title}</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);">
+            ${typeBadge(data.assignment.type)}
+            <span>Max: ${data.assignment.max} pts</span>
+            ${a ? `<span>· Due ${fmtDate(a.due_date)}</span>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <button class="btn btn-sm" onclick="openEdit(${id})"><svg class="icon icon-14"><use href="#ic-edit"/></svg> Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteAsn(${id})"><svg class="icon icon-14"><use href="#ic-trash"/></svg> Delete</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div class="progress-bar" style="flex:1;height:6px;">
+          <div class="progress-fill" style="width:${pct}%;"></div>
+        </div>
+        <span style="font-size:12px;color:var(--text3);white-space:nowrap;">${gradedCount} of ${totalCount} graded</span>
+      </div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+        <div class="grade-row header">
+          <div>Student</div>
+          <div style="text-align:center;">Score (0–10)</div>
+        </div>
+        ${data.students.map(s => {
+          const scoreVal = s.score !== null ? s.score : '';
+          const col = s.score !== null ? (s.score >= 7 ? '#3dd68c' : s.score >= 5 ? '#fbbf24' : '#f87171') : 'var(--text3)';
+          return `<div class="grade-row">
+            <div>
+              <div style="font-size:13px;font-weight:500;">${s.name}</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+              <input
+                class="score-input"
+                id="score-${s.id}"
+                type="number"
+                min="0" max="10" step="0.5"
+                value="${scoreVal}"
+                placeholder="—"
+                style="color:${s.score !== null ? col : 'var(--text2)'}"
+                onchange="saveGrade(${id}, ${s.id}, this)"
+                onkeydown="if(event.key==='Enter')this.blur()"
+              >
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px;">Changes save automatically on blur or Enter.</div>
+    </div>
+  `;
+}
+
+async function saveGrade(asnId, studentId, input) {
+  const val = input.value.trim();
+  if (val === '') return;
+  const score = parseFloat(val);
+  if (isNaN(score) || score < 0 || score > 10) {
+    input.style.borderColor = '#f87171';
+    return;
+  }
+  input.style.borderColor = 'var(--border)';
+
+  const res = await fetch('/api/teacher/grades', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ assignment_id: asnId, student_id: studentId, score }),
+  });
+  if (res.ok) {
+    input.classList.add('saved');
+    const col = score >= 7 ? '#3dd68c' : score >= 5 ? '#fbbf24' : '#f87171';
+    input.style.color = col;
+    setTimeout(() => { input.classList.remove('saved'); input.style.borderColor = ''; }, 1200);
+    // update graded count in list
+    const a = assignments.find(x => x.id === asnId);
+    if (a) {
+      const graded = await fetch(`/api/teacher/assignments/${asnId}/grades`).then(r => r.json()).catch(() => null);
+      if (graded) a.graded = graded.students.filter(s => s.score !== null).length;
+      renderList();
+    }
+  } else {
+    input.style.borderColor = '#f87171';
+  }
+}
+
+// ── Create / Edit ─────────────────────────────────────────────
+
+function openCreate() {
+  document.getElementById('asnModalTitle').textContent = 'New Assignment';
+  document.getElementById('asnSubmitBtn').textContent  = 'Create';
+  document.getElementById('asnId').value    = '';
+  document.getElementById('asnTitle').value = '';
+  document.getElementById('asnDesc').value  = '';
+  document.getElementById('asnType').value  = 'homework';
+  // Default due date: tomorrow at noon
+  const tom = new Date(); tom.setDate(tom.getDate()+1); tom.setHours(12,0,0,0);
+  document.getElementById('asnDue').value = tom.toISOString().slice(0,16);
+  document.getElementById('asnModal').classList.add('open');
+}
+
+function openEdit(id) {
+  const a = assignments.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('asnModalTitle').textContent = 'Edit Assignment';
+  document.getElementById('asnSubmitBtn').textContent  = 'Save';
+  document.getElementById('asnId').value      = a.id;
+  document.getElementById('asnTitle').value   = a.title;
+  document.getElementById('asnDesc').value    = a.description || '';
+  document.getElementById('asnType').value    = a.type;
+  document.getElementById('asnSubject').value = a.subject_id;
+  document.getElementById('asnDue').value     = new Date(a.due_date).toISOString().slice(0,16);
+  document.getElementById('asnModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('asnModal').classList.remove('open');
+}
+
+async function submitAssignment() {
+  const id      = document.getElementById('asnId').value;
+  const payload = {
+    subject_id:  +document.getElementById('asnSubject').value,
+    title:       document.getElementById('asnTitle').value.trim(),
+    description: document.getElementById('asnDesc').value.trim(),
+    type:        document.getElementById('asnType').value,
+    due_date:    new Date(document.getElementById('asnDue').value).toISOString(),
+  };
+
+  if (!payload.title) { alert('Title is required.'); return; }
+
+  let res;
+  if (id) {
+    res = await fetch(`/api/teacher/assignments/${id}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+  } else {
+    res = await fetch('/api/teacher/assignments', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+  }
+
+  if (res.ok) {
+    closeModal();
+    await reloadAssignments();
+    if (id) selectAsn(+id);
+  } else {
+    const err = await res.json().catch(() => ({}));
+    alert(err.error || 'Failed to save assignment.');
+  }
+}
+
+async function deleteAsn(id) {
+  if (!confirm('Delete this assignment and all its grades?')) return;
+  const res = await fetch(`/api/teacher/assignments/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    activeAsnId = null;
+    document.getElementById('panelRight').innerHTML = '<div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select an assignment to view or enter grades</div>';
+    await reloadAssignments();
+  }
+}
+
+async function reloadAssignments() {
+  assignments = await fetch('/api/teacher/assignments').then(r => r.json()).catch(() => []);
+  renderList();
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error || me.role !== 'teacher') { location.href = '/login'; return; }
+  document.getElementById('userName').textContent = me.name || me.email;
+  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('userAvatar').textContent = initials;
+
+  [assignments, subjects] = await Promise.all([
+    fetch('/api/teacher/assignments').then(r => r.json()).catch(() => []),
+    fetch('/api/teacher/subjects').then(r => r.json()).catch(() => []),
+  ]);
+
+  // Populate subject filter + modal select
+  const filterEl  = document.getElementById('filterSubject');
+  const subjectEl = document.getElementById('asnSubject');
+  subjects.forEach(s => {
+    filterEl.add(new Option(`${s.name} (${s.class_name})`, s.id));
+    subjectEl.add(new Option(`${s.name} — ${s.class_name}`, s.id));
+  });
+
+  // Pre-select from URL ?subject=X
+  const sp = new URLSearchParams(location.search);
+  if (sp.has('subject')) filterEl.value = sp.get('subject');
+
+  renderList();
+
+  // Auto-open first ungraded assignment
+  const ungraded = assignments.find(a => a.graded < a.total);
+  if (ungraded) selectAsn(ungraded.id);
+}
+
+boot();
+</script>
+<script src="/static/notif.js"></script>
+</body>
+</html>

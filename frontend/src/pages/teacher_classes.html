@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Classes</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition);}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;margin-bottom:8px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-class{font-size:11px;color:var(--text3);}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:16px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-16{width:16px;height:16px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+
+  /* Two-panel layout */
+  .split{display:flex;flex:1;overflow:hidden;}
+  .panel-left{width:280px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+  .panel-right{flex:1;overflow-y:auto;padding:28px;}
+  .panel-right::-webkit-scrollbar{width:4px;}
+  .panel-right::-webkit-scrollbar-track{background:transparent;}
+  .panel-right::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+
+  .panel-header{padding:16px 20px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.6px;flex-shrink:0;}
+  .class-list{overflow-y:auto;flex:1;}
+  .class-list::-webkit-scrollbar{width:3px;}
+  .class-list::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+  .class-item{padding:14px 20px;cursor:pointer;transition:all var(--transition);border-bottom:1px solid var(--border);border-left:3px solid transparent;}
+  .class-item:hover{background:var(--bg3);}
+  .class-item.active{background:linear-gradient(90deg,rgba(61,214,140,0.07),transparent);border-left-color:var(--g1);}
+  .class-item-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:2px;}
+  .class-item-meta{font-size:11px;color:var(--text3);}
+
+  .section-title{font-size:15px;font-weight:600;letter-spacing:-0.2px;margin-bottom:4px;}
+  .section-sub{font-size:12px;color:var(--text3);margin-bottom:18px;}
+
+  .student-table{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .student-row{display:grid;grid-template-columns:1fr 80px 80px 120px;padding:11px 16px;border-bottom:1px solid var(--border);transition:background var(--transition);align-items:center;}
+  .student-row:last-child{border-bottom:none;}
+  .student-row:hover{background:var(--bg3);}
+  .student-row.header{background:var(--bg3);font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;}
+  .student-row.header:hover{background:var(--bg3);}
+  .score-chip{display:inline-flex;align-items:center;padding:3px 10px;border-radius:100px;font-size:12px;font-weight:600;}
+
+  /* Conduct modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity var(--transition);}
+  .modal-overlay.open{opacity:1;pointer-events:all;}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:400px;max-width:90vw;}
+  .modal-title{font-size:15px;font-weight:600;margin-bottom:16px;}
+  .form-row{margin-bottom:12px;}
+  .form-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;display:block;}
+  .form-input{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color var(--transition);}
+  .form-input:focus{border-color:var(--border-accent);}
+  .btn{padding:9px 18px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--transition);}
+  .btn:hover{background:var(--bg4);}
+  .btn-primary{background:linear-gradient(135deg,var(--g1),var(--g2));border:none;color:#000;font-weight:600;}
+  .btn-primary:hover{opacity:0.9;}
+  .conduct-btn{padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--transition);}
+  .conduct-btn:hover{background:var(--bg4);color:var(--text);}
+
+  @keyframes slideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <defs>
+    <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="ic-groups" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+    <symbol id="ic-homework" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="m9 14 2 2 4-4"/></symbol>
+    <symbol id="ic-messages" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+    <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  </defs>
+</svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">teacher portal</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Manage</div>
+    <a class="nav-item" href="/teacher"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+    <a class="nav-item active" href="/teacher/classes"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Classes</span></a>
+    <a class="nav-item" href="/teacher/assignments"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Assignments</span></a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Other</div>
+    <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+    <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div class="user-class">Teacher</div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-groups"/></svg>
+    <span class="topbar-title">Classes</span>
+    <div class="topbar-right">
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+        <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="panel-left">
+      <div class="panel-header">My Classes</div>
+      <div class="class-list" id="classList">
+        <div style="padding:20px;color:var(--text3);font-size:13px;">Loading…</div>
+      </div>
+    </div>
+    <div class="panel-right" id="panelRight">
+      <div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select a class to view students</div>
+    </div>
+  </div>
+</div>
+
+<!-- Conduct modal -->
+<div class="modal-overlay" id="conductModal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <div class="modal-title">Log Conduct Event</div>
+      <div class="icon-btn" onclick="closeConduct()"><svg class="icon icon-14"><use href="#ic-x"/></svg></div>
+    </div>
+    <input type="hidden" id="conductStudentId">
+    <input type="hidden" id="conductSubjectId">
+    <div class="form-row">
+      <label class="form-label">Student</label>
+      <div id="conductStudentName" style="font-size:14px;font-weight:500;color:var(--text);padding:6px 0;"></div>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Points (negative = deduction)</label>
+      <input class="form-input" id="conductPoints" type="number" value="-1" min="-10" max="10" placeholder="-1">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Category</label>
+      <select class="form-input" id="conductCategory">
+        <option value="behaviour">Behaviour</option>
+        <option value="attendance">Attendance</option>
+        <option value="achievement">Achievement</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label class="form-label">Reason</label>
+      <input class="form-input" id="conductReason" placeholder="Brief description…">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+      <button class="btn" onclick="closeConduct()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitConduct()">Log Event</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+let classes = [];
+let activeClassId = null;
+
+function scoreColor(avg) {
+  if (avg === null) return 'var(--text3)';
+  if (avg >= 8)  return '#3dd68c';
+  if (avg >= 6)  return '#fbbf24';
+  return '#f87171';
+}
+
+function selectClass(cls) {
+  activeClassId = cls.id;
+  document.querySelectorAll('.class-item').forEach(el => {
+    el.classList.toggle('active', +el.dataset.id === cls.id);
+  });
+  loadStudents(cls);
+}
+
+async function loadStudents(cls) {
+  const panel = document.getElementById('panelRight');
+  panel.innerHTML = '<div style="color:var(--text3);font-size:13px;">Loading…</div>';
+
+  const data = await fetch(`/api/teacher/classes/${cls.id}/students`).then(r => r.json()).catch(() => null);
+  if (!data) { panel.innerHTML = '<div style="color:#f87171;font-size:13px;">Failed to load students.</div>'; return; }
+
+  const subjectList = cls.subjects.map(s => `<span style="font-size:11px;color:var(--text3);background:var(--bg3);padding:2px 8px;border-radius:100px;margin-right:4px;">${s.name}</span>`).join('');
+
+  panel.innerHTML = `
+    <div style="animation:slideIn 0.2s ease;">
+      <div style="margin-bottom:18px;">
+        <div style="font-size:17px;font-weight:600;margin-bottom:4px;">${cls.name} — Year ${cls.year ?? ''}</div>
+        <div style="margin-bottom:8px;color:var(--text3);font-size:12px;">${data.students.length} students · Subjects: ${subjectList}</div>
+      </div>
+      <div class="student-table">
+        <div class="student-row header">
+          <div>Student</div>
+          <div style="text-align:center;">Avg Score</div>
+          <div style="text-align:center;">Grades</div>
+          <div style="text-align:right;">Actions</div>
+        </div>
+        ${data.students.length ? data.students.map(s => {
+          const col = scoreColor(s.grade_avg);
+          const avgStr = s.grade_avg !== null ? s.grade_avg.toFixed(1) : '—';
+          return `<div class="student-row">
+            <div>
+              <div style="font-size:13px;font-weight:500;">${s.name}</div>
+              <div style="font-size:11px;color:var(--text3);">${s.email || ''}</div>
+            </div>
+            <div style="text-align:center;">
+              <span class="score-chip" style="background:${col}18;color:${col};">${avgStr}</span>
+            </div>
+            <div style="text-align:center;font-size:13px;color:var(--text3);">${s.grade_count}</div>
+            <div style="text-align:right;">
+              ${cls.subjects.map(sub =>
+                `<button class="conduct-btn" onclick="openConduct(${s.id},'${s.name.replace(/'/g,"\\'")}',${sub.id})" style="margin-left:4px;">+ Conduct · ${sub.name}</button>`
+              ).join('')}
+            </div>
+          </div>`;
+        }).join('') : '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">No students in this class</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function openConduct(studentId, studentName, subjectId) {
+  document.getElementById('conductStudentId').value = studentId;
+  document.getElementById('conductSubjectId').value  = subjectId;
+  document.getElementById('conductStudentName').textContent = studentName;
+  document.getElementById('conductPoints').value = '-1';
+  document.getElementById('conductReason').value = '';
+  document.getElementById('conductModal').classList.add('open');
+}
+
+function closeConduct() {
+  document.getElementById('conductModal').classList.remove('open');
+}
+
+async function submitConduct() {
+  const payload = {
+    student_id: +document.getElementById('conductStudentId').value,
+    subject_id: +document.getElementById('conductSubjectId').value,
+    points:     +document.getElementById('conductPoints').value,
+    category:    document.getElementById('conductCategory').value,
+    reason:      document.getElementById('conductReason').value,
+  };
+  const res = await fetch('/api/teacher/conduct', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    closeConduct();
+  } else {
+    alert('Failed to log conduct event.');
+  }
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error || me.role !== 'teacher') { location.href = '/login'; return; }
+  document.getElementById('userName').textContent = me.name || me.email;
+  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('userAvatar').textContent = initials;
+
+  classes = await fetch('/api/teacher/classes').then(r => r.json()).catch(() => []);
+
+  const list = document.getElementById('classList');
+  if (!classes.length) {
+    list.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;">No classes assigned.</div>';
+    return;
+  }
+
+  list.innerHTML = classes.map(c => `
+    <div class="class-item" data-id="${c.id}" onclick="selectClass(${JSON.stringify(JSON.stringify(c)).slice(1,-1)})">
+      <div class="class-item-name">${c.name}</div>
+      <div class="class-item-meta">${c.students} students · ${c.subjects.length} subject${c.subjects.length !== 1 ? 's' : ''}</div>
+    </div>
+  `).join('');
+
+  // Store classes on items for easy retrieval
+  classes.forEach((c, i) => {
+    list.querySelectorAll('.class-item')[i].onclick = () => selectClass(c);
+  });
+
+  selectClass(classes[0]);
+}
+
+boot();
+</script>
+<script src="/static/notif.js"></script>
+</body>
+</html>
