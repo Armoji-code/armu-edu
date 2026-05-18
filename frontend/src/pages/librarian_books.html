@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Books</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;margin-bottom:8px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-icon{width:20px;text-align:center;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);background:var(--bg2);gap:10px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;margin-right:8px;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+
+  .search-input{flex:1;max-width:320px;padding:8px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color var(--transition);}
+  .search-input:focus{border-color:var(--border-accent);}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--radius-sm);border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all var(--transition);}
+  .btn-primary{background:linear-gradient(135deg,var(--g1),var(--g2));color:#000;}
+  .btn-primary:hover{opacity:0.9;}
+  .btn-ghost{background:var(--bg3);border:1px solid var(--border);color:var(--text2);}
+  .btn-ghost:hover{background:var(--bg4);color:var(--text);}
+  .btn-danger{background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;}
+  .btn-danger:hover{background:rgba(248,113,113,0.2);}
+
+  .content{flex:1;overflow-y:auto;padding:20px 28px;}
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .content{animation:slideIn 0.2s ease;}
+
+  .book-table{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .book-row{display:grid;grid-template-columns:2fr 1.2fr 0.8fr 80px 80px 80px;gap:12px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;}
+  .book-row:last-child{border-bottom:none;}
+  .book-row.header{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;background:var(--bg3);}
+  .book-row:not(.header):hover{background:var(--bg3);}
+  .book-title{font-weight:500;color:var(--text);}
+  .book-author{color:var(--text2);}
+  .book-genre{color:var(--text3);font-size:12px;}
+  .avail-good{color:var(--g1);font-weight:600;}
+  .avail-none{color:#f87171;font-weight:600;}
+  .row-actions{display:flex;gap:6px;}
+  .act-btn{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg4);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);transition:all var(--transition);}
+  .act-btn:hover{color:var(--text);border-color:var(--border-accent);}
+  .act-btn.del:hover{border-color:rgba(248,113,113,0.4);color:#f87171;background:rgba(248,113,113,0.08);}
+  .empty{padding:48px;text-align:center;color:var(--text3);font-size:13px;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity var(--transition);}
+  .modal-overlay.open{opacity:1;pointer-events:all;}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:480px;max-width:94vw;max-height:90vh;overflow-y:auto;}
+  .modal-title{font-size:15px;font-weight:600;margin-bottom:18px;}
+  .form-row{margin-bottom:12px;}
+  .form-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:5px;display:block;}
+  .form-input{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color var(--transition);}
+  .form-input:focus{border-color:var(--border-accent);}
+  .form-textarea{resize:vertical;min-height:72px;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none"><defs>
+  <symbol id="ic-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+  <symbol id="ic-books" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></symbol>
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+  <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+</defs></svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">library panel</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Library</div>
+    <a class="nav-item" href="/librarian"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+    <a class="nav-item active" href="/librarian/books"><span class="nav-icon"><svg class="icon"><use href="#ic-book"/></svg></span><span>Books</span></a>
+    <a class="nav-item" href="/librarian/loans"><span class="nav-icon"><svg class="icon"><use href="#ic-list"/></svg></span><span>Loans</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div style="font-size:11px;color:var(--text3);">Librarian</div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-books"/></svg>
+    <span class="topbar-title">Books</span>
+    <input class="search-input" id="searchInput" type="text" placeholder="Search title, author, ISBN…" oninput="onSearch()">
+    <div class="topbar-right">
+      <button class="btn btn-primary" onclick="openModal()"><svg class="icon icon-14"><use href="#ic-plus"/></svg> Add Book</button>
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"/></svg></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="book-table" id="bookTable">
+      <div class="empty">Loading…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Add Book</div>
+    <div class="grid-2">
+      <div class="form-row" style="grid-column:1/-1">
+        <label class="form-label">Title *</label>
+        <input class="form-input" id="fTitle" placeholder="Book title">
+      </div>
+      <div class="form-row" style="grid-column:1/-1">
+        <label class="form-label">Author *</label>
+        <input class="form-input" id="fAuthor" placeholder="Author name">
+      </div>
+      <div class="form-row">
+        <label class="form-label">ISBN</label>
+        <input class="form-input" id="fIsbn" placeholder="978-…">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Genre</label>
+        <input class="form-input" id="fGenre" placeholder="Fiction, Science…">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Pages</label>
+        <input class="form-input" id="fPages" type="number" min="1" placeholder="320">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Copies</label>
+        <input class="form-input" id="fCopies" type="number" min="1" value="1">
+      </div>
+      <div class="form-row" style="grid-column:1/-1">
+        <label class="form-label">Cover URL</label>
+        <input class="form-input" id="fCover" placeholder="https://…">
+      </div>
+      <div class="form-row" style="grid-column:1/-1">
+        <label class="form-label">Description</label>
+        <textarea class="form-input form-textarea" id="fDesc" placeholder="Short synopsis…"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBook()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+let books = [];
+let editId = null;
+let searchTimer = null;
+
+function renderTable(data) {
+  const tbl = document.getElementById('bookTable');
+  if (!data.length) { tbl.innerHTML = '<div class="empty">No books found.</div>'; return; }
+  tbl.innerHTML = `
+    <div class="book-row header">
+      <span>Title</span><span>Author</span><span>Genre</span>
+      <span style="text-align:center">Copies</span><span style="text-align:center">Available</span><span></span>
+    </div>
+    ${data.map(b => `
+      <div class="book-row">
+        <span class="book-title">${esc(b.title)}</span>
+        <span class="book-author">${esc(b.author)}</span>
+        <span class="book-genre">${esc(b.genre||'—')}</span>
+        <span style="text-align:center;color:var(--text2)">${b.total_copies}</span>
+        <span style="text-align:center" class="${b.available_copies>0?'avail-good':'avail-none'}">${b.available_copies}</span>
+        <span class="row-actions">
+          <button class="act-btn" onclick='openModal(${JSON.stringify(b)})' title="Edit"><svg class="icon icon-14"><use href="#ic-edit"/></svg></button>
+          <button class="act-btn del" onclick="deleteBook(${b.id},'${esc(b.title)}')" title="Delete"><svg class="icon icon-14"><use href="#ic-trash"/></svg></button>
+        </span>
+      </div>`).join('')}`;
+}
+
+async function loadBooks(q) {
+  const url = q ? `/api/librarian/books?q=${encodeURIComponent(q)}` : '/api/librarian/books';
+  books = await fetch(url).then(r => r.json()).catch(() => []);
+  renderTable(books);
+}
+
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => loadBooks(document.getElementById('searchInput').value.trim()), 300);
+}
+
+function openModal(book) {
+  editId = book ? book.id : null;
+  document.getElementById('modalTitle').textContent = book ? 'Edit Book' : 'Add Book';
+  document.getElementById('fTitle').value  = book?.title  || '';
+  document.getElementById('fAuthor').value = book?.author || '';
+  document.getElementById('fIsbn').value   = book?.isbn   || '';
+  document.getElementById('fGenre').value  = book?.genre  || '';
+  document.getElementById('fPages').value  = book?.pages  || '';
+  document.getElementById('fCopies').value = book?.total_copies || 1;
+  document.getElementById('fCover').value  = book?.cover_url || '';
+  document.getElementById('fDesc').value   = book?.description || '';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editId = null;
+}
+
+async function saveBook() {
+  const payload = {
+    title:        document.getElementById('fTitle').value.trim(),
+    author:       document.getElementById('fAuthor').value.trim(),
+    isbn:         document.getElementById('fIsbn').value.trim(),
+    genre:        document.getElementById('fGenre').value.trim(),
+    pages:        document.getElementById('fPages').value || null,
+    total_copies: document.getElementById('fCopies').value || 1,
+    cover_url:    document.getElementById('fCover').value.trim(),
+    description:  document.getElementById('fDesc').value.trim(),
+  };
+  if (!payload.title || !payload.author) { alert('Title and author are required.'); return; }
+  const url    = editId ? `/api/librarian/books/${editId}` : '/api/librarian/books';
+  const method = editId ? 'PATCH' : 'POST';
+  const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  if (!res.ok) { const e = await res.json().catch(()=>{}); alert(e?.error || 'Save failed'); return; }
+  closeModal();
+  loadBooks(document.getElementById('searchInput').value.trim());
+}
+
+async function deleteBook(id, title) {
+  if (!confirm(`Delete "${title}"?`)) return;
+  const res = await fetch(`/api/librarian/books/${id}`, { method: 'DELETE' });
+  if (!res.ok) { const e = await res.json().catch(()=>{}); alert(e?.error || 'Delete failed'); return; }
+  loadBooks(document.getElementById('searchInput').value.trim());
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error || me.role !== 'librarian') { location.href = '/login'; return; }
+  document.getElementById('userName').textContent   = me.name || me.email;
+  document.getElementById('userAvatar').textContent = (me.name||me.email).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  loadBooks();
+}
+boot();
+</script>
+<script src="/static/notif.js"></script>
+</body>
+</html>

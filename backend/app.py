@@ -126,6 +126,18 @@ def create_app(config=Config):
     def admin_performance_page():
         return send_from_directory(FRONTEND_DIR, "admin_performance.html")
 
+    @app.route("/librarian")
+    def librarian_dashboard_page():
+        return send_from_directory(FRONTEND_DIR, "librarian_dashboard.html")
+
+    @app.route("/librarian/books")
+    def librarian_books_page():
+        return send_from_directory(FRONTEND_DIR, "librarian_books.html")
+
+    @app.route("/librarian/loans")
+    def librarian_loans_page():
+        return send_from_directory(FRONTEND_DIR, "librarian_loans.html")
+
     @app.route("/static/<path:filename>")
     def serve_static(filename):
         return send_from_directory(STATIC_DIR, filename)
