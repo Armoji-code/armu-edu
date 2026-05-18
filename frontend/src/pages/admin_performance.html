@@ -75,6 +75,15 @@
   .core-label{font-size:9px;color:var(--text3);font-weight:600;}
   .core-val{font-size:10px;color:var(--text2);}
 
+  /* ── History graph ───────────────────────────────────────────────────── */
+  .history-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+  .history-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .history-title{font-size:13px;font-weight:600;color:var(--text);}
+  .history-legend{display:flex;gap:14px;}
+  .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);}
+  .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  canvas#histCanvas{width:100%;display:block;border-radius:6px;}
+
   /* ── Ollama section ──────────────────────────────────────────────────── */
   .section-head{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
   .section-title{font-size:15px;font-weight:600;}
@@ -149,6 +158,19 @@
     <div class="refresh-row">
       <div class="pulse"></div>
       <span id="refreshLabel">Auto-refreshes every second</span>
+    </div>
+
+    <!-- History graph -->
+    <div class="history-card">
+      <div class="history-header">
+        <span class="history-title">Last 60 seconds</span>
+        <div class="history-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#3dd68c"></div>CPU</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#38bdf8"></div>RAM</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div>Disk</div>
+        </div>
+      </div>
+      <canvas id="histCanvas" height="140"></canvas>
     </div>
 
     <!-- Metrics cards -->
@@ -273,6 +295,124 @@ function toggleTheme() {
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
   document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+  drawHistory();
+}
+window.addEventListener('resize', drawHistory);
+
+// ── History ──────────────────────────────────────────────────────────────────
+const HISTORY = 60;
+const hist = { cpu: [], ram: [], disk: [] };
+
+function pushHistory(cpu, ram, disk) {
+  hist.cpu.push(cpu);
+  hist.ram.push(ram);
+  hist.disk.push(disk);
+  if (hist.cpu.length  > HISTORY) hist.cpu.shift();
+  if (hist.ram.length  > HISTORY) hist.ram.shift();
+  if (hist.disk.length > HISTORY) hist.disk.shift();
+}
+
+function drawHistory() {
+  const canvas = document.getElementById('histCanvas');
+  if (!canvas) return;
+
+  // Match CSS pixel width
+  const rect = canvas.getBoundingClientRect();
+  const dpr  = window.devicePixelRatio || 1;
+  canvas.width  = rect.width  * dpr;
+  canvas.height = canvas.height || 140 * dpr;
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // Dark background
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const bg     = isDark ? '#1a1a1a' : '#f5f7fa';
+  const grid   = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+  const lblClr = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)';
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const PAD_L = 36 * dpr, PAD_R = 10 * dpr, PAD_T = 10 * dpr, PAD_B = 20 * dpr;
+  const gW = W - PAD_L - PAD_R;
+  const gH = H - PAD_T - PAD_B;
+
+  // Grid lines at 0, 25, 50, 75, 100 %
+  ctx.font = `${10 * dpr}px DM Sans, sans-serif`;
+  ctx.fillStyle = lblClr;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  [0, 25, 50, 75, 100].forEach(v => {
+    const y = PAD_T + gH * (1 - v / 100);
+    ctx.strokeStyle = grid;
+    ctx.lineWidth = dpr;
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(PAD_L + gW, y); ctx.stroke();
+    ctx.fillText(v + '%', PAD_L - 5 * dpr, y);
+  });
+
+  // X-axis time labels
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = lblClr;
+  [-60, -45, -30, -15, 0].forEach(sec => {
+    const frac = (sec + 60) / 60;
+    const x = PAD_L + gW * frac;
+    ctx.fillText(sec === 0 ? 'now' : sec + 's', x, PAD_T + gH + 4 * dpr);
+  });
+
+  // Draw a series
+  function drawLine(data, color, alpha) {
+    if (data.length < 2) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2 * dpr;
+    ctx.lineJoin    = 'round';
+    ctx.lineCap     = 'round';
+
+    // Filled area
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = PAD_L + gW * (i / (HISTORY - 1));
+      const y = PAD_T + gH * (1 - v / 100);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    const endX = PAD_L + gW * ((data.length - 1) / (HISTORY - 1));
+    ctx.lineTo(endX, PAD_T + gH);
+    ctx.lineTo(PAD_L, PAD_T + gH);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, PAD_T, 0, PAD_T + gH);
+    grad.addColorStop(0,   color.replace(')', ', 0.18)').replace('rgb', 'rgba'));
+    grad.addColorStop(1,   color.replace(')', ', 0)').replace('rgb', 'rgba'));
+    ctx.fillStyle = grad;
+    ctx.globalAlpha = alpha * 0.6;
+    ctx.fill();
+
+    // Line on top
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = PAD_L + gW * (i / (HISTORY - 1));
+      const y = PAD_T + gH * (1 - v / 100);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Pad shorter arrays to HISTORY slots (left-align with gaps at start)
+  function padded(arr) {
+    const out = new Array(HISTORY).fill(null);
+    arr.forEach((v, i) => { out[HISTORY - arr.length + i] = v; });
+    return out.filter(v => v !== null);
+  }
+
+  drawLine(padded(hist.disk), '#a855f7', 0.7);
+  drawLine(padded(hist.ram),  '#38bdf8', 0.85);
+  drawLine(padded(hist.cpu),  '#3dd68c', 1);
 }
 
 function fillColor(pct) {
@@ -300,6 +440,10 @@ function timeTo(iso) {
 }
 
 function render(d) {
+  // Record history and redraw graph
+  pushHistory(d.cpu.percent, d.ram.percent, d.disk.percent);
+  drawHistory();
+
   // CPU overall
   setGauge('cpu-bar', 'cpu-pct', d.cpu.percent, 'fill-green');
   document.getElementById('cpu-sub').textContent =
