@@ -190,24 +190,51 @@ def librarian_book_covers(user):
     if not title:
         return jsonify({"error": "title required"}), 400
 
+    # Subjects that are metadata noise, not actual genres
+    _SKIP_SUBJECTS = {
+        "accessible book", "protected daisy", "open library staff picks",
+        "large type books", "in library", "internet archive wishlist",
+        "overdrive", "nonfiction", "fiction", "juvenile fiction",
+        "juvenile nonfiction", "children's fiction", "children's nonfiction",
+        "english language", "reading level",
+    }
+
     try:
-        params = {"limit": 20, "fields": "cover_i,title,author_name"}
+        params = {"limit": 20, "fields": "cover_i,title,author_name,subject"}
         if title:  params["title"]  = title
         if author: params["author"] = author
         resp = _req.get("https://openlibrary.org/search.json", params=params, timeout=6)
         docs = resp.json().get("docs", [])
+
         # Collect up to 3 distinct cover IDs
-        seen, urls = set(), []
+        seen_covers, urls = set(), []
+        found_author, found_genre = None, None
+
         for d in docs:
+            # Author — take from first result that has one
+            if not found_author:
+                names = d.get("author_name") or []
+                if names:
+                    found_author = names[0]
+
+            # Genre — pick first short, non-noise subject
+            if not found_genre:
+                for s in (d.get("subject") or []):
+                    if len(s) <= 40 and s.lower() not in _SKIP_SUBJECTS:
+                        found_genre = s
+                        break
+
             cid = d.get("cover_i")
-            if cid and cid not in seen:
-                seen.add(cid)
+            if cid and cid not in seen_covers:
+                seen_covers.add(cid)
                 urls.append(f"https://covers.openlibrary.org/b/id/{cid}-L.jpg")
-            if len(urls) == 3:
+
+            if len(urls) == 3 and found_author and found_genre:
                 break
-        return jsonify({"covers": urls})
+
+        return jsonify({"covers": urls, "author": found_author, "genre": found_genre})
     except Exception as e:
-        return jsonify({"covers": [], "error": str(e)})
+        return jsonify({"covers": [], "author": None, "genre": None, "error": str(e)})
 
 
 @blueprint.route("/librarian/book-description", methods=["GET"])
