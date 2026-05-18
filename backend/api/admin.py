@@ -20,7 +20,7 @@ def _school(user):
 @login_required(roles=["admin"])
 def admin_performance(user):
     # CPU
-    cpu_pct   = psutil.cpu_percent(interval=0.2)
+    cpu_pct   = psutil.cpu_percent(interval=None)
     cpu_cores = psutil.cpu_count(logical=True)
     cpu_freq  = psutil.cpu_freq()
 

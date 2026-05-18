@@ -56,7 +56,7 @@
   .gauge-label{font-size:12px;color:var(--text2);}
   .gauge-val{font-size:20px;font-weight:700;line-height:1;}
   .gauge-bar{height:8px;background:var(--bg4);border-radius:100px;overflow:hidden;}
-  .gauge-fill{height:100%;border-radius:100px;transition:width 0.6s ease;}
+  .gauge-fill{height:100%;border-radius:100px;transition:width 0.4s ease;}
   .fill-green{background:linear-gradient(90deg,var(--g1),var(--g3));}
   .fill-yellow{background:linear-gradient(90deg,#fbbf24,#f59e0b);}
   .fill-red{background:linear-gradient(90deg,#f87171,#ef4444);}
@@ -85,8 +85,8 @@
 
   /* ── Refresh indicator ───────────────────────────────────────────────── */
   .refresh-row{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);margin-bottom:20px;}
-  .pulse{width:7px;height:7px;border-radius:50%;background:var(--g1);animation:pulse 2s infinite;}
-  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+  .pulse{width:7px;height:7px;border-radius:50%;background:var(--g1);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.2;}}
 </style>
 </head>
 <body>
@@ -140,7 +140,7 @@
   <div class="content">
     <div class="refresh-row">
       <div class="pulse"></div>
-      <span id="refreshLabel">Auto-refreshes every 5 seconds</span>
+      <span id="refreshLabel">Auto-refreshes every second</span>
     </div>
 
     <!-- Metrics cards -->
@@ -345,16 +345,17 @@ function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 }
 
+let fetching = false;
 async function refresh() {
-  const btn = document.getElementById('refreshBtn');
-  btn.style.opacity = '0.5';
+  if (fetching) return;
+  fetching = true;
   try {
     const d = await fetch('/api/admin/performance').then(r => r.ok ? r.json() : null);
     if (d) render(d);
+    document.getElementById('refreshLabel').textContent =
+      'Last updated ' + new Date().toLocaleTimeString();
   } catch (_) {}
-  btn.style.opacity = '';
-  document.getElementById('refreshLabel').textContent =
-    'Last updated ' + new Date().toLocaleTimeString() + ' · auto-refresh every 5s';
+  fetching = false;
 }
 
 async function boot() {
@@ -364,7 +365,7 @@ async function boot() {
   document.getElementById('userAvatar').textContent = (me.name||me.email).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
 
   await refresh();
-  setInterval(refresh, 5000);
+  setInterval(refresh, 1000);
 }
 boot();
 </script>
