@@ -1,0 +1,258 @@
+from flask import request, jsonify, current_app
+from api import blueprint
+from auth import login_required
+from models import db
+from models.user import User
+from models.school import School, Class, Subject
+from models.academic import Assignment, Grade
+
+
+def _school(user):
+    return School.query.get(user.school_id)
+
+
+# ── Public: tab visibility ────────────────────────────────────────────────────
+
+@blueprint.route("/settings/tabs", methods=["GET"])
+@login_required()
+def settings_tabs(user):
+    s = (_school(user).settings or {})
+    return jsonify({"hidden": s.get("hidden_tabs", [])})
+
+
+# ── Admin: overview ───────────────────────────────────────────────────────────
+
+@blueprint.route("/admin/overview", methods=["GET"])
+@login_required(roles=["admin"])
+def admin_overview(user):
+    school = _school(user)
+    users = User.query.filter_by(school_id=school.id).all()
+    role_counts = {}
+    for u in users:
+        role_counts[u.role] = role_counts.get(u.role, 0) + 1
+
+    classes  = Class.query.filter_by(school_id=school.id).count()
+    subjects = Subject.query.join(Class).filter(Class.school_id == school.id).count()
+    assigns  = Assignment.query.join(Subject).join(Class).filter(Class.school_id == school.id).count()
+    grades   = Grade.query.join(Assignment).join(Subject).join(Class).filter(Class.school_id == school.id).count()
+
+    return jsonify({
+        "school_name":  school.name,
+        "users":        role_counts,
+        "total_users":  len(users),
+        "classes":      classes,
+        "subjects":     subjects,
+        "assignments":  assigns,
+        "grades_given": grades,
+    })
+
+
+# ── Admin: settings ───────────────────────────────────────────────────────────
+
+@blueprint.route("/admin/settings", methods=["GET"])
+@login_required(roles=["admin"])
+def admin_get_settings(user):
+    school = _school(user)
+    s = school.settings or {}
+    return jsonify({
+        "school_name":                 school.name,
+        "hidden_tabs":                 s.get("hidden_tabs", []),
+        "ai_enabled":                  s.get("ai_enabled", True),
+        "tutor_enabled":               s.get("tutor_enabled", True),
+        "digest_enabled":              s.get("digest_enabled", True),
+        "nudges_enabled":              s.get("nudges_enabled", True),
+        "deadline_reminders_enabled":  s.get("deadline_reminders_enabled", True),
+        "weekly_digest_enabled":       s.get("weekly_digest_enabled", True),
+        "ollama_tutor_model":          s.get("ollama_tutor_model",
+                                            current_app.config.get("OLLAMA_TUTOR_MODEL", "")),
+        "ollama_tracker_model":        s.get("ollama_tracker_model",
+                                            current_app.config.get("OLLAMA_TRACKER_MODEL", "")),
+        "ollama_advanced_model":       s.get("ollama_advanced_model",
+                                            current_app.config.get("OLLAMA_ADVANCED_MODEL", "")),
+    })
+
+
+@blueprint.route("/admin/settings", methods=["PATCH"])
+@login_required(roles=["admin"])
+def admin_update_settings(user):
+    school = _school(user)
+    data = request.get_json(silent=True) or {}
+    settings = dict(school.settings or {})
+
+    if "school_name" in data and data["school_name"].strip():
+        school.name = data["school_name"].strip()
+    if "hidden_tabs" in data:
+        settings["hidden_tabs"] = list(data["hidden_tabs"])
+    for key in ("ai_enabled", "tutor_enabled", "digest_enabled", "nudges_enabled",
+                "deadline_reminders_enabled", "weekly_digest_enabled"):
+        if key in data:
+            settings[key] = bool(data[key])
+    for key in ("ollama_tutor_model", "ollama_tracker_model", "ollama_advanced_model"):
+        if key in data and str(data[key]).strip():
+            settings[key] = str(data[key]).strip()
+
+    school.settings = settings
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+# ── Admin: users ──────────────────────────────────────────────────────────────
+
+@blueprint.route("/admin/users", methods=["GET"])
+@login_required(roles=["admin"])
+def admin_users(user):
+    school = _school(user)
+    users = User.query.filter_by(school_id=school.id).order_by(User.role, User.name).all()
+    return jsonify([u.to_dict() for u in users])
+
+
+@blueprint.route("/admin/users", methods=["POST"])
+@login_required(roles=["admin"])
+def admin_create_user(user):
+    school = _school(user)
+    data = request.get_json(silent=True) or {}
+    name     = data.get("name", "").strip()
+    email    = data.get("email", "").strip().lower()
+    password = data.get("password", "").strip()
+    role     = data.get("role", "student")
+    class_id = data.get("class_id") or None
+
+    if not name or not email or not password:
+        return jsonify({"error": "name, email, and password required"}), 400
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "email already in use"}), 409
+
+    u = User(name=name, email=email, role=role, school_id=school.id, class_id=class_id)
+    u.set_password(password)
+    db.session.add(u)
+    db.session.commit()
+    return jsonify(u.to_dict()), 201
+
+
+@blueprint.route("/admin/users/<int:uid>", methods=["PATCH"])
+@login_required(roles=["admin"])
+def admin_update_user(user, uid):
+    school = _school(user)
+    target = User.query.filter_by(id=uid, school_id=school.id).first_or_404()
+    data = request.get_json(silent=True) or {}
+
+    if "name" in data and data["name"].strip():
+        target.name = data["name"].strip()
+    if "email" in data:
+        new_email = data["email"].strip().lower()
+        if new_email != target.email and User.query.filter_by(email=new_email).first():
+            return jsonify({"error": "email already in use"}), 409
+        target.email = new_email
+    if "role" in data:
+        target.role = data["role"]
+    if "class_id" in data:
+        target.class_id = data["class_id"] or None
+    if "password" in data and str(data["password"]).strip():
+        target.set_password(str(data["password"]).strip())
+
+    db.session.commit()
+    return jsonify(target.to_dict())
+
+
+@blueprint.route("/admin/users/<int:uid>", methods=["DELETE"])
+@login_required(roles=["admin"])
+def admin_delete_user(user, uid):
+    school = _school(user)
+    if uid == user.id:
+        return jsonify({"error": "cannot delete yourself"}), 400
+    target = User.query.filter_by(id=uid, school_id=school.id).first_or_404()
+    db.session.delete(target)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+# ── Admin: classes ────────────────────────────────────────────────────────────
+
+@blueprint.route("/admin/classes", methods=["GET"])
+@login_required(roles=["admin"])
+def admin_classes(user):
+    school = _school(user)
+    classes = Class.query.filter_by(school_id=school.id).order_by(Class.grade_year, Class.name).all()
+    return jsonify([{
+        "id":            c.id,
+        "name":          c.name,
+        "grade_year":    c.grade_year,
+        "student_count": len(c.students),
+        "subjects": [{
+            "id":           s.id,
+            "name":         s.name,
+            "teacher_id":   s.teacher_id,
+            "teacher_name": s.teacher.name,
+        } for s in c.subjects],
+    } for c in classes])
+
+
+@blueprint.route("/admin/classes", methods=["POST"])
+@login_required(roles=["admin"])
+def admin_create_class(user):
+    school = _school(user)
+    data = request.get_json(silent=True) or {}
+    name = data.get("name", "").strip()
+    year = data.get("grade_year", 0)
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    c = Class(name=name, grade_year=int(year), school_id=school.id)
+    db.session.add(c)
+    db.session.commit()
+    return jsonify({"id": c.id, "name": c.name}), 201
+
+
+@blueprint.route("/admin/classes/<int:class_id>", methods=["PATCH"])
+@login_required(roles=["admin"])
+def admin_update_class(user, class_id):
+    school = _school(user)
+    c = Class.query.filter_by(id=class_id, school_id=school.id).first_or_404()
+    data = request.get_json(silent=True) or {}
+    if "name" in data and data["name"].strip():
+        c.name = data["name"].strip()
+    if "grade_year" in data:
+        c.grade_year = int(data["grade_year"])
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@blueprint.route("/admin/classes/<int:class_id>", methods=["DELETE"])
+@login_required(roles=["admin"])
+def admin_delete_class(user, class_id):
+    school = _school(user)
+    c = Class.query.filter_by(id=class_id, school_id=school.id).first_or_404()
+    db.session.delete(c)
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+# ── Admin: subjects ───────────────────────────────────────────────────────────
+
+@blueprint.route("/admin/subjects", methods=["POST"])
+@login_required(roles=["admin"])
+def admin_create_subject(user):
+    school = _school(user)
+    data = request.get_json(silent=True) or {}
+    name       = data.get("name", "").strip()
+    class_id   = data.get("class_id")
+    teacher_id = data.get("teacher_id")
+    if not name or not class_id or not teacher_id:
+        return jsonify({"error": "name, class_id, teacher_id required"}), 400
+    Class.query.filter_by(id=class_id, school_id=school.id).first_or_404()
+    s = Subject(name=name, class_id=class_id, teacher_id=teacher_id)
+    db.session.add(s)
+    db.session.commit()
+    return jsonify({"id": s.id, "name": s.name}), 201
+
+
+@blueprint.route("/admin/subjects/<int:subject_id>", methods=["DELETE"])
+@login_required(roles=["admin"])
+def admin_delete_subject(user, subject_id):
+    school = _school(user)
+    s = Subject.query.join(Class).filter(
+        Subject.id == subject_id,
+        Class.school_id == school.id,
+    ).first_or_404()
+    db.session.delete(s)
+    db.session.commit()
+    return jsonify({"ok": True})

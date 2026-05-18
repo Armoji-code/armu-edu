@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — School</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{width:20px;text-align:center;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:12px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+
+  .split{display:flex;flex:1;overflow:hidden;}
+  .panel-left{width:280px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;}
+  .panel-right{flex:1;overflow-y:auto;padding:24px;}
+  .panel-right::-webkit-scrollbar{width:4px;}
+  .panel-right::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  .panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .panel-header-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;}
+  .class-list{overflow-y:auto;flex:1;}
+  .class-list::-webkit-scrollbar{width:3px;}
+  .class-list::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:3px;}
+  .class-item{padding:13px 16px;cursor:pointer;border-bottom:1px solid var(--border);border-left:3px solid transparent;transition:all var(--transition);}
+  .class-item:hover{background:var(--bg3);}
+  .class-item.active{background:linear-gradient(90deg,rgba(61,214,140,0.07),transparent);border-left-color:var(--g1);}
+  .class-item-name{font-size:13px;font-weight:500;color:var(--text);}
+  .class-item-meta{font-size:11px;color:var(--text3);margin-top:2px;}
+
+  .section-title{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;margin-top:20px;}
+  .section-title:first-child{margin-top:0;}
+  .item-list{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:6px;}
+  .item-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);gap:12px;}
+  .item-row:last-child{border-bottom:none;}
+  .item-row:hover{background:var(--bg3);}
+  .item-name{font-size:13px;font-weight:500;color:var(--text);}
+  .item-sub{font-size:11px;color:var(--text3);}
+  .add-btn{padding:6px 14px;border-radius:var(--radius-sm);border:1px dashed var(--border-accent);background:transparent;color:var(--g2);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--transition);}
+  .add-btn:hover{background:rgba(56,189,248,0.06);}
+  .del-btn{width:24px;height:24px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg4);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);transition:all var(--transition);flex-shrink:0;}
+  .del-btn:hover{border-color:rgba(248,113,113,0.4);color:#f87171;background:rgba(248,113,113,0.08);}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity var(--transition);}
+  .modal-overlay.open{opacity:1;pointer-events:all;}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:420px;max-width:92vw;}
+  .modal-title{font-size:15px;font-weight:600;margin-bottom:18px;}
+  .form-row{margin-bottom:12px;}
+  .form-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;display:block;}
+  .form-input{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color var(--transition);}
+  .form-input:focus{border-color:var(--border-accent);}
+  .btn{padding:8px 18px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--transition);}
+  .btn:hover{background:var(--bg4);}
+  .btn-primary{background:linear-gradient(135deg,var(--g1),var(--g2));border:none;color:#000;font-weight:600;}
+  .btn-primary:hover{opacity:0.9;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none"><defs>
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+  <symbol id="ic-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+  <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+</defs></svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">admin panel</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Admin</div>
+    <a class="nav-item" href="/admin"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+    <a class="nav-item" href="/admin/users"><span class="nav-icon"><svg class="icon"><use href="#ic-users"/></svg></span><span>Users</span></a>
+    <a class="nav-item active" href="/admin/school"><span class="nav-icon"><svg class="icon"><use href="#ic-school"/></svg></span><span>School</span></a>
+    <a class="nav-item" href="/admin/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div style="font-size:11px;color:var(--text3);">Administrator</div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-school"/></svg>
+    <span class="topbar-title">Classes &amp; Subjects</span>
+    <div class="topbar-right">
+      <button onclick="openAddClass()" style="padding:7px 14px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--g1),var(--g2));color:#000;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        <svg class="icon icon-14"><use href="#ic-plus"/></svg> Add Class
+      </button>
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"/></svg></div>
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="panel-left">
+      <div class="panel-header"><div class="panel-header-title">Classes</div></div>
+      <div class="class-list" id="classList">
+        <div style="padding:16px;color:var(--text3);font-size:13px;">Loading…</div>
+      </div>
+    </div>
+    <div class="panel-right" id="panelRight">
+      <div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select a class to manage it</div>
+    </div>
+  </div>
+</div>
+
+<!-- Add Class modal -->
+<div class="modal-overlay" id="classModal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="modal-title">Add Class</div>
+      <div class="icon-btn" onclick="closeModal('classModal')"><svg class="icon icon-14"><use href="#ic-x"/></svg></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row">
+        <label class="form-label">Class Name</label>
+        <input class="form-input" id="cName" placeholder="e.g. 10A">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Grade Year</label>
+        <input class="form-input" id="cYear" type="number" min="1" max="13" placeholder="10">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn" onclick="closeModal('classModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitClass()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Subject modal -->
+<div class="modal-overlay" id="subjectModal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="modal-title">Add Subject</div>
+      <div class="icon-btn" onclick="closeModal('subjectModal')"><svg class="icon icon-14"><use href="#ic-x"/></svg></div>
+    </div>
+    <input type="hidden" id="sClassId">
+    <div class="form-row">
+      <label class="form-label">Subject Name</label>
+      <input class="form-input" id="sName" placeholder="e.g. Chemistry">
+    </div>
+    <div class="form-row">
+      <label class="form-label">Teacher</label>
+      <select class="form-input" id="sTeacher"></select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn" onclick="closeModal('subjectModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitSubject()">Add Subject</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t==='dark'?'#ic-sun':'#ic-moon');
+})();
+function toggleTheme(){
+  const next = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('theme',next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href',next==='dark'?'#ic-sun':'#ic-moon');
+}
+
+let classes  = [];
+let teachers = [];
+let activeClassId = null;
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function selectClass(c) {
+  activeClassId = c.id;
+  document.querySelectorAll('.class-item').forEach(el =>
+    el.classList.toggle('active', +el.dataset.id === c.id));
+  renderDetail(c);
+}
+
+function renderDetail(c) {
+  const panel = document.getElementById('panelRight');
+  panel.style.animation = 'slideIn 0.2s ease';
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:17px;font-weight:600;">${c.name}</div>
+        <div style="font-size:12px;color:var(--text3);">Year ${c.grade_year} · ${c.student_count} student${c.student_count!==1?'s':''}</div>
+      </div>
+      <button onclick="deleteClass(${c.id},'${c.name.replace(/'/g,"\\'")}');"
+        style="padding:6px 14px;border-radius:var(--radius-sm);border:1px solid rgba(248,113,113,0.3);background:rgba(248,113,113,0.08);color:#f87171;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;">
+        Delete Class
+      </button>
+    </div>
+
+    <div class="section-title">Subjects</div>
+    <div class="item-list">
+      ${c.subjects.length ? c.subjects.map(s => `
+        <div class="item-row">
+          <div>
+            <div class="item-name">${s.name}</div>
+            <div class="item-sub">${s.teacher_name}</div>
+          </div>
+          <div class="del-btn" onclick="deleteSubject(${s.id},'${s.name.replace(/'/g,"\\'")}')">
+            <svg class="icon icon-14"><use href="#ic-trash"/></svg>
+          </div>
+        </div>`).join('') : '<div style="padding:16px;color:var(--text3);font-size:13px;">No subjects yet.</div>'}
+    </div>
+    <button class="add-btn" onclick="openAddSubject(${c.id})">+ Add Subject</button>
+  `;
+}
+
+function openAddClass() {
+  document.getElementById('cName').value = '';
+  document.getElementById('cYear').value = '';
+  document.getElementById('classModal').classList.add('open');
+}
+
+async function submitClass() {
+  const name = document.getElementById('cName').value.trim();
+  const year = document.getElementById('cYear').value;
+  if (!name) { alert('Class name required.'); return; }
+  const res = await fetch('/api/admin/classes', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name, grade_year: +year || 0}),
+  });
+  if (res.ok) { closeModal('classModal'); await reload(); }
+  else { const e = await res.json().catch(()=>{}); alert(e?.error || 'Error creating class.'); }
+}
+
+async function deleteClass(id, name) {
+  if (!confirm(`Delete class "${name}" and all its subjects?`)) return;
+  await fetch(`/api/admin/classes/${id}`, {method:'DELETE'});
+  activeClassId = null;
+  document.getElementById('panelRight').innerHTML =
+    '<div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select a class to manage it</div>';
+  await reload();
+}
+
+function openAddSubject(classId) {
+  document.getElementById('sClassId').value = classId;
+  document.getElementById('sName').value = '';
+  const sel = document.getElementById('sTeacher');
+  sel.innerHTML = teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  document.getElementById('subjectModal').classList.add('open');
+}
+
+async function submitSubject() {
+  const payload = {
+    name:       document.getElementById('sName').value.trim(),
+    class_id:   +document.getElementById('sClassId').value,
+    teacher_id: +document.getElementById('sTeacher').value,
+  };
+  if (!payload.name) { alert('Subject name required.'); return; }
+  const res = await fetch('/api/admin/subjects', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) { closeModal('subjectModal'); await reload(); }
+  else { const e = await res.json().catch(()=>{}); alert(e?.error || 'Error adding subject.'); }
+}
+
+async function deleteSubject(id, name) {
+  if (!confirm(`Remove subject "${name}"?`)) return;
+  await fetch(`/api/admin/subjects/${id}`, {method:'DELETE'});
+  await reload();
+}
+
+async function reload() {
+  classes = await fetch('/api/admin/classes').then(r => r.json()).catch(() => []);
+  const list = document.getElementById('classList');
+  if (!classes.length) {
+    list.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;">No classes yet.</div>';
+    return;
+  }
+  list.innerHTML = classes.map(c => `
+    <div class="class-item${c.id===activeClassId?' active':''}" data-id="${c.id}">
+      <div class="class-item-name">${c.name}</div>
+      <div class="class-item-meta">Year ${c.grade_year} · ${c.student_count} students · ${c.subjects.length} subjects</div>
+    </div>`).join('');
+  list.querySelectorAll('.class-item').forEach((el, i) =>
+    el.addEventListener('click', () => selectClass(classes[i])));
+
+  if (activeClassId) {
+    const active = classes.find(c => c.id === activeClassId);
+    if (active) renderDetail(active);
+  }
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error || me.role !== 'admin') { location.href = '/login'; return; }
+  document.getElementById('userName').textContent = me.name || me.email;
+  document.getElementById('userAvatar').textContent = (me.name||me.email).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+  const users = await fetch('/api/admin/users').then(r => r.json()).catch(() => []);
+  teachers = users.filter(u => u.role === 'teacher');
+
+  await reload();
+}
+boot();
+</script>
+<script src="/static/notif.js"></script>
+</body>
+</html>

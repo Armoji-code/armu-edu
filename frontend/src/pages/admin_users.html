@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Users</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{width:20px;text-align:center;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:12px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  .content{flex:1;overflow-y:auto;padding:28px;}
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-16{width:16px;height:16px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .content{animation:slideIn 0.25s ease;}
+
+  /* Filter tabs */
+  .filter-tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+  .filter-tab{padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:12px;font-weight:500;cursor:pointer;transition:all var(--transition);}
+  .filter-tab:hover{border-color:var(--border-accent);color:var(--text);}
+  .filter-tab.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);font-weight:600;}
+
+  /* User table */
+  .user-table{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .user-row{display:grid;grid-template-columns:1fr 180px 100px 120px 80px;padding:11px 16px;border-bottom:1px solid var(--border);align-items:center;transition:background var(--transition);}
+  .user-row:last-child{border-bottom:none;}
+  .user-row:hover{background:var(--bg3);}
+  .user-row.header{background:var(--bg3);font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;}
+  .user-row.header:hover{background:var(--bg3);}
+  .role-badge{display:inline-flex;padding:2px 9px;border-radius:100px;font-size:11px;font-weight:600;text-transform:capitalize;}
+  .role-student{background:rgba(56,189,248,0.12);color:#38bdf8;}
+  .role-teacher{background:rgba(61,214,140,0.12);color:#3dd68c;}
+  .role-admin{background:rgba(168,85,247,0.12);color:#a855f7;}
+  .role-librarian{background:rgba(251,191,36,0.12);color:#fbbf24;}
+  .role-parent{background:rgba(248,113,113,0.12);color:#f87171;}
+  .action-btns{display:flex;gap:4px;justify-content:flex-end;}
+  .action-btn{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg4);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);transition:all var(--transition);}
+  .action-btn:hover{border-color:var(--border-accent);color:var(--text);}
+  .action-btn.danger:hover{border-color:rgba(248,113,113,0.4);color:#f87171;background:rgba(248,113,113,0.08);}
+
+  /* Modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:1000;opacity:0;pointer-events:none;transition:opacity var(--transition);}
+  .modal-overlay.open{opacity:1;pointer-events:all;}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:460px;max-width:92vw;max-height:90vh;overflow-y:auto;}
+  .modal-title{font-size:15px;font-weight:600;margin-bottom:18px;}
+  .form-row{margin-bottom:12px;}
+  .form-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;display:block;}
+  .form-input{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color var(--transition);}
+  .form-input:focus{border-color:var(--border-accent);}
+  .btn{padding:8px 18px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--transition);}
+  .btn:hover{background:var(--bg4);}
+  .btn-primary{background:linear-gradient(135deg,var(--g1),var(--g2));border:none;color:#000;font-weight:600;}
+  .btn-primary:hover{opacity:0.9;}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none"><defs>
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+  <symbol id="ic-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+  <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+</defs></svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">admin panel</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Admin</div>
+    <a class="nav-item" href="/admin"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+    <a class="nav-item active" href="/admin/users"><span class="nav-icon"><svg class="icon"><use href="#ic-users"/></svg></span><span>Users</span></a>
+    <a class="nav-item" href="/admin/school"><span class="nav-icon"><svg class="icon"><use href="#ic-school"/></svg></span><span>School</span></a>
+    <a class="nav-item" href="/admin/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div style="font-size:11px;color:var(--text3);">Administrator</div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-users"/></svg>
+    <span class="topbar-title">Users</span>
+    <div class="topbar-right">
+      <button onclick="openCreate()" style="padding:7px 14px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--g1),var(--g2));color:#000;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        <svg class="icon icon-14"><use href="#ic-plus"/></svg> Add User
+      </button>
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"/></svg></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="filter-tabs" id="filterTabs">
+      <div class="filter-tab active" data-role="" onclick="setFilter(this,'')">All</div>
+      <div class="filter-tab" data-role="student" onclick="setFilter(this,'student')">Students</div>
+      <div class="filter-tab" data-role="teacher" onclick="setFilter(this,'teacher')">Teachers</div>
+      <div class="filter-tab" data-role="admin" onclick="setFilter(this,'admin')">Admins</div>
+      <div class="filter-tab" data-role="librarian" onclick="setFilter(this,'librarian')">Librarians</div>
+    </div>
+
+    <div class="user-table">
+      <div class="user-row header">
+        <div>Name</div><div>Email</div><div>Role</div><div>Class</div><div style="text-align:right;">Actions</div>
+      </div>
+      <div id="userList"><div style="padding:24px;color:var(--text3);font-size:13px;">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Create / Edit modal -->
+<div class="modal-overlay" id="userModal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div class="modal-title" id="modalTitle">Add User</div>
+      <div class="icon-btn" onclick="closeModal()"><svg class="icon icon-14"><use href="#ic-x"/></svg></div>
+    </div>
+    <input type="hidden" id="editId">
+    <div class="grid-2">
+      <div class="form-row">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" id="fName" placeholder="Jane Smith">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Email</label>
+        <input class="form-input" id="fEmail" type="email" placeholder="jane@school.lt">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-row">
+        <label class="form-label">Role</label>
+        <select class="form-input" id="fRole" onchange="toggleClassField()">
+          <option value="student">Student</option>
+          <option value="teacher">Teacher</option>
+          <option value="admin">Admin</option>
+          <option value="librarian">Librarian</option>
+          <option value="parent">Parent</option>
+        </select>
+      </div>
+      <div class="form-row" id="classRow">
+        <label class="form-label">Class</label>
+        <select class="form-input" id="fClass">
+          <option value="">— None —</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label class="form-label" id="pwLabel">Password</label>
+      <input class="form-input" id="fPassword" type="password" placeholder="Leave blank to keep current">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t==='dark'?'#ic-sun':'#ic-moon');
+})();
+function toggleTheme(){
+  const next = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('theme',next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href',next==='dark'?'#ic-sun':'#ic-moon');
+}
+
+let allUsers = [];
+let classes  = [];
+let activeFilter = '';
+
+function setFilter(el, role) {
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = role;
+  renderUsers();
+}
+
+function renderUsers() {
+  const list = document.getElementById('userList');
+  const filtered = activeFilter ? allUsers.filter(u => u.role === activeFilter) : allUsers;
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:24px;color:var(--text3);font-size:13px;">No users found.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(u => `
+    <div class="user-row">
+      <div>
+        <div style="font-size:13px;font-weight:500;">${u.name}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.email}</div>
+      <div><span class="role-badge role-${u.role}">${u.role}</span></div>
+      <div style="font-size:12px;color:var(--text3);">${u.class_name || '—'}</div>
+      <div class="action-btns">
+        <div class="action-btn" onclick="openEdit(${u.id})" title="Edit"><svg class="icon icon-14"><use href="#ic-edit"/></svg></div>
+        <div class="action-btn danger" onclick="deleteUser(${u.id},'${u.name.replace(/'/g,"\\'")}')"><svg class="icon icon-14"><use href="#ic-trash"/></svg></div>
+      </div>
+    </div>`).join('');
+}
+
+function openCreate() {
+  document.getElementById('modalTitle').textContent = 'Add User';
+  document.getElementById('editId').value = '';
+  document.getElementById('fName').value = '';
+  document.getElementById('fEmail').value = '';
+  document.getElementById('fRole').value = 'student';
+  document.getElementById('fClass').value = '';
+  document.getElementById('fPassword').value = '';
+  document.getElementById('pwLabel').textContent = 'Password';
+  toggleClassField();
+  document.getElementById('userModal').classList.add('open');
+}
+
+function openEdit(id) {
+  const u = allUsers.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('modalTitle').textContent = 'Edit User';
+  document.getElementById('editId').value = id;
+  document.getElementById('fName').value = u.name;
+  document.getElementById('fEmail').value = u.email;
+  document.getElementById('fRole').value = u.role;
+  document.getElementById('fClass').value = u.class_id || '';
+  document.getElementById('fPassword').value = '';
+  document.getElementById('pwLabel').textContent = 'New Password (leave blank to keep)';
+  toggleClassField();
+  document.getElementById('userModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('userModal').classList.remove('open'); }
+
+function toggleClassField() {
+  const role = document.getElementById('fRole').value;
+  document.getElementById('classRow').style.display = role === 'student' ? '' : 'none';
+}
+
+async function submitUser() {
+  const id = document.getElementById('editId').value;
+  const payload = {
+    name:     document.getElementById('fName').value.trim(),
+    email:    document.getElementById('fEmail').value.trim(),
+    role:     document.getElementById('fRole').value,
+    class_id: document.getElementById('fClass').value || null,
+    password: document.getElementById('fPassword').value,
+  };
+  if (!payload.password) delete payload.password;
+  if (!id && !payload.password) { alert('Password is required for new users.'); return; }
+
+  const res = id
+    ? await fetch(`/api/admin/users/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+    : await fetch('/api/admin/users',        {method:'POST',  headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+
+  if (res.ok) { closeModal(); await reload(); }
+  else { const e = await res.json().catch(()=>{}); alert(e?.error || 'Error saving user.'); }
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+  const res = await fetch(`/api/admin/users/${id}`, {method:'DELETE'});
+  if (res.ok) await reload();
+  else { const e = await res.json().catch(()=>{}); alert(e?.error || 'Error deleting user.'); }
+}
+
+async function reload() {
+  allUsers = await fetch('/api/admin/users').then(r => r.json()).catch(() => []);
+  renderUsers();
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error || me.role !== 'admin') { location.href = '/login'; return; }
+  document.getElementById('userName').textContent = me.name || me.email;
+  document.getElementById('userAvatar').textContent = (me.name||me.email).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+  [allUsers, classes] = await Promise.all([
+    fetch('/api/admin/users').then(r => r.json()).catch(() => []),
+    fetch('/api/admin/classes').then(r => r.json()).catch(() => []),
+  ]);
+
+  const sel = document.getElementById('fClass');
+  classes.forEach(c => sel.add(new Option(`${c.name} (Year ${c.grade_year})`, c.id)));
+
+  renderUsers();
+}
+boot();
+</script>
+<script src="/static/notif.js"></script>
+</body>
+</html>

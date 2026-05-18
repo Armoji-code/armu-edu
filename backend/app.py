@@ -106,6 +106,22 @@ def create_app(config=Config):
     def teacher_assignments_page():
         return send_from_directory(FRONTEND_DIR, "teacher_assignments.html")
 
+    @app.route("/admin")
+    def admin_dashboard_page():
+        return send_from_directory(FRONTEND_DIR, "admin_dashboard.html")
+
+    @app.route("/admin/users")
+    def admin_users_page():
+        return send_from_directory(FRONTEND_DIR, "admin_users.html")
+
+    @app.route("/admin/school")
+    def admin_school_page():
+        return send_from_directory(FRONTEND_DIR, "admin_school.html")
+
+    @app.route("/admin/settings")
+    def admin_settings_page():
+        return send_from_directory(FRONTEND_DIR, "admin_settings.html")
+
     @app.route("/static/<path:filename>")
     def serve_static(filename):
         return send_from_directory(STATIC_DIR, filename)

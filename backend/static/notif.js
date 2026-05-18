@@ -213,6 +213,43 @@
     });
   }
 
+  // ── Tab visibility ────────────────────────────────────────────────────────
+  const TAB_ROUTES = {
+    calendar: '/calendar', homework: '/homework', tests: '/tests',
+    schedule: '/schedule', activities: '/activities', grades: '/grades',
+    conduct: '/conduct', leaderboard: '/leaderboard', tutor: '/tutor',
+    whiteboard: '/whiteboard', library: '/library', groups: '/groups',
+    messages: '/messages',
+  };
+
+  async function applyTabVisibility() {
+    const CACHE_KEY = 'mokyai_hidden_tabs';
+    const DATE_KEY  = 'mokyai_hidden_tabs_date';
+    const today = new Date().toISOString().slice(0, 10);
+
+    let hidden = null;
+    if (sessionStorage.getItem(DATE_KEY) === today) {
+      try { hidden = JSON.parse(sessionStorage.getItem(CACHE_KEY)); } catch {}
+    }
+    if (!hidden) {
+      try {
+        const data = await fetch('/api/settings/tabs').then(r => r.ok ? r.json() : {});
+        hidden = data.hidden || [];
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify(hidden));
+        sessionStorage.setItem(DATE_KEY, today);
+      } catch { hidden = []; }
+    }
+    if (!hidden.length) return;
+    hidden.forEach(tab => {
+      const href = TAB_ROUTES[tab];
+      if (!href) return;
+      document.querySelectorAll(`.nav-item[href="${href}"]`).forEach(el => {
+        el.style.display = 'none';
+      });
+      if (location.pathname === href) location.href = '/dashboard';
+    });
+  }
+
   // ── Boot ──────────────────────────────────────────────────────────────────
   async function boot() {
     injectStyles();
@@ -226,6 +263,7 @@
 
     await fetchNotifications();
     connectSocketIO();
+    applyTabVisibility();
 
     // Refresh every 60s as fallback
     setInterval(fetchNotifications, 60000);

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="lt" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MokyAI — Admin Settings</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;}
+  .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
+  .logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+  .logo-text{font-size:22px;font-weight:600;letter-spacing:-0.5px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:0.5px;margin-top:2px;}
+  .nav-section{padding:0 12px;margin-bottom:8px;}
+  .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
+  .nav-item:hover{background:var(--bg3);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .nav-icon{font-size:16px;width:20px;text-align:center;}
+  .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
+  .user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:background var(--transition);text-decoration:none;}
+  .user-card:hover{background:var(--bg3);}
+  .avatar{width:32px;height:32px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;}
+  .user-info{flex:1;min-width:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{display:flex;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);background:var(--bg2);gap:16px;flex-shrink:0;}
+  .topbar-title{font-size:17px;font-weight:600;letter-spacing:-0.3px;}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all var(--transition);color:var(--text2);}
+  .icon-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border-accent);}
+  .content{flex:1;overflow-y:auto;padding:28px;}
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:4px;}
+  svg.icon{color:inherit;display:inline-block;width:1em;height:1em;vertical-align:middle;flex-shrink:0;}
+  .icon-14{width:14px;height:14px;}.icon-18{width:18px;height:18px;}.icon-20{width:20px;height:20px;}
+  @keyframes slideIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  .content{animation:slideIn 0.25s ease;}
+
+  /* ── Section ──────────────────────────────────────────────────────────── */
+  .section{margin-bottom:32px;}
+  .section-head{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .section-icon{width:34px;height:34px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .section-title{font-size:15px;font-weight:600;}
+  .section-desc{font-size:12px;color:var(--text3);margin-top:2px;}
+
+  /* ── Fields ──────────────────────────────────────────────────────────── */
+  .field-row{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;max-width:400px;}
+  .field-label{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;}
+  .field-input{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px 12px;font-size:13.5px;color:var(--text);font-family:inherit;outline:none;transition:border-color var(--transition);}
+  .field-input:focus{border-color:var(--border-accent);}
+
+  /* ── Toggle cards grid ───────────────────────────────────────────────── */
+  .tab-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+  .tab-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:10px;transition:border-color var(--transition);}
+  .tab-card.enabled{border-color:var(--border-accent);}
+  .tab-card-name{font-size:13px;font-weight:500;color:var(--text);text-transform:capitalize;}
+  .tab-card-desc{font-size:11px;color:var(--text3);line-height:1.3;}
+
+  /* ── Feature toggles ─────────────────────────────────────────────────── */
+  .feat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:20px;}
+  .feat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:border-color var(--transition);}
+  .feat-card.enabled{border-color:var(--border-accent);}
+  .feat-info{flex:1;min-width:0;}
+  .feat-name{font-size:13px;font-weight:500;color:var(--text);}
+  .feat-desc{font-size:11px;color:var(--text3);margin-top:2px;}
+
+  /* ── Model fields ────────────────────────────────────────────────────── */
+  .model-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+
+  /* ── Toggle switch ───────────────────────────────────────────────────── */
+  .toggle{position:relative;display:inline-block;width:38px;height:22px;flex-shrink:0;}
+  .toggle input{opacity:0;width:0;height:0;position:absolute;}
+  .toggle-track{position:absolute;inset:0;background:var(--bg4);border-radius:100px;transition:background var(--transition);cursor:pointer;}
+  .toggle input:checked + .toggle-track{background:linear-gradient(135deg,var(--g1),var(--g2));}
+  .toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform var(--transition);pointer-events:none;}
+  .toggle input:checked ~ .toggle-thumb{transform:translateX(16px);}
+
+  /* ── Save bar ────────────────────────────────────────────────────────── */
+  .save-bar{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:12px;margin:-28px -28px 0;}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600;cursor:pointer;border:none;transition:all var(--transition);font-family:inherit;}
+  .btn-primary{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;}
+  .btn-primary:hover{opacity:0.9;}
+  .btn-primary:disabled{opacity:0.5;cursor:not-allowed;}
+  .save-msg{font-size:13px;color:var(--g1);opacity:0;transition:opacity 0.3s;}
+  .save-msg.visible{opacity:1;}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none"><defs>
+  <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></symbol>
+  <symbol id="ic-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
+  <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
+  <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="ic-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="ic-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+</defs></svg>
+
+<aside class="sidebar">
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">admin panel</div></div>
+  <div class="nav-section">
+    <div class="nav-label">Admin</div>
+    <a class="nav-item" href="/admin"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+    <a class="nav-item" href="/admin/users"><span class="nav-icon"><svg class="icon"><use href="#ic-users"/></svg></span><span>Users</span></a>
+    <a class="nav-item" href="/admin/school"><span class="nav-icon"><svg class="icon"><use href="#ic-school"/></svg></span><span>School</span></a>
+    <a class="nav-item active" href="/admin/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
+  <div class="sidebar-bottom">
+    <a class="user-card" href="/profile">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="user-info"><div class="user-name" id="userName">Loading…</div><div style="font-size:11px;color:var(--text3);">Administrator</div></div>
+      <svg class="icon icon-14" style="color:var(--text3);margin-left:auto;flex-shrink:0"><use href="#ic-chevright"/></svg>
+    </a>
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-settings"/></svg>
+    <span class="topbar-title">Settings</span>
+    <div class="topbar-right">
+      <div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"/></svg></div>
+    </div>
+  </div>
+
+  <div class="content" id="mainContent">
+    <div style="padding:48px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+const TABS = [
+  { key: 'calendar',    label: 'Calendar',    desc: 'Class schedule & events' },
+  { key: 'homework',    label: 'Homework',    desc: 'Assignment tracking' },
+  { key: 'tests',       label: 'Tests',       desc: 'Upcoming tests' },
+  { key: 'schedule',    label: 'Schedule',    desc: 'Daily timetable' },
+  { key: 'activities',  label: 'Activities',  desc: 'Extracurriculars' },
+  { key: 'grades',      label: 'Grades',      desc: 'Grade history' },
+  { key: 'conduct',     label: 'Conduct',     desc: 'Behaviour log' },
+  { key: 'leaderboard', label: 'Leaderboard', desc: 'Student ranking' },
+  { key: 'tutor',       label: 'AI Tutor',    desc: 'Chat with AI' },
+  { key: 'whiteboard',  label: 'Whiteboard',  desc: 'Collaborative drawing' },
+  { key: 'library',     label: 'Library',     desc: 'Learning resources' },
+  { key: 'groups',      label: 'Groups',      desc: 'Study groups' },
+  { key: 'messages',    label: 'Messages',    desc: 'Peer messaging' },
+];
+
+const FEATURES = [
+  { key: 'ai_enabled',                 label: 'AI Features',         desc: 'Master switch for all AI' },
+  { key: 'tutor_enabled',              label: 'AI Tutor',            desc: 'Per-student chat tutor' },
+  { key: 'digest_enabled',             label: 'Teacher Digest',      desc: 'Daily AI briefing for teachers' },
+  { key: 'nudges_enabled',             label: 'Teacher Nudges',      desc: 'Action chips on teacher dashboard' },
+  { key: 'deadline_reminders_enabled', label: 'Deadline Reminders',  desc: 'Scheduled push notifications' },
+  { key: 'weekly_digest_enabled',      label: 'Weekly Student Report', desc: 'Weekly email/notification summary' },
+];
+
+const MODELS = [
+  { key: 'ollama_tutor_model',    label: 'Tutor Model',    ph: 'e.g. gemma3:12b' },
+  { key: 'ollama_tracker_model',  label: 'Tracker Model',  ph: 'e.g. llama3.2:3b' },
+  { key: 'ollama_advanced_model', label: 'Advanced Model', ph: 'e.g. gemma3:12b' },
+];
+
+let settings = null;
+
+function toggle(key) {
+  settings[key] = !settings[key];
+  renderToggleCard(key);
+  renderFeatCard(key);
+}
+
+function toggleTab(key) {
+  const hidden = settings.hidden_tabs || [];
+  const idx = hidden.indexOf(key);
+  if (idx === -1) hidden.push(key); else hidden.splice(idx, 1);
+  settings.hidden_tabs = hidden;
+  renderTabCard(key);
+}
+
+function renderTabCard(key) {
+  const el = document.querySelector(`.tab-card[data-key="${key}"]`);
+  if (!el) return;
+  const enabled = !(settings.hidden_tabs || []).includes(key);
+  el.classList.toggle('enabled', enabled);
+  const inp = el.querySelector('input');
+  if (inp) inp.checked = enabled;
+  updateThumb(el.querySelector('.toggle-thumb'), inp);
+}
+
+function renderFeatCard(key) {
+  const el = document.querySelector(`.feat-card[data-key="${key}"]`);
+  if (!el) return;
+  const enabled = !!settings[key];
+  el.classList.toggle('enabled', enabled);
+  const inp = el.querySelector('input');
+  if (inp) inp.checked = enabled;
+  updateThumb(el.querySelector('.toggle-thumb'), inp);
+}
+
+function updateThumb(thumb, inp) {
+  if (!thumb || !inp) return;
+  thumb.style.transform = inp.checked ? 'translateX(16px)' : '';
+}
+
+function renderAll(s) {
+  settings = s;
+  const c = document.getElementById('mainContent');
+  c.innerHTML = `
+    <!-- School Name -->
+    <div class="section" id="section-school">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15))">
+          <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-school"/></svg>
+        </div>
+        <div><div class="section-title">School</div><div class="section-desc">Basic school information</div></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">School Name</div>
+        <input class="field-input" id="schoolName" type="text" value="${escAttr(s.school_name || '')}" placeholder="Your school name">
+      </div>
+    </div>
+
+    <!-- Page Visibility -->
+    <div class="section" id="section-tabs">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(110,231,183,0.15))">
+          <svg class="icon icon-18" style="color:var(--g2)"><use href="#ic-eye"/></svg>
+        </div>
+        <div><div class="section-title">Page Visibility</div><div class="section-desc">Hide nav tabs school-wide — students on hidden pages are redirected to Dashboard</div></div>
+      </div>
+      <div class="tab-grid" id="tabGrid"></div>
+    </div>
+
+    <!-- AI & Features -->
+    <div class="section" id="section-ai">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(61,214,140,0.15))">
+          <svg class="icon icon-18" style="color:#a855f7"><use href="#ic-cpu"/></svg>
+        </div>
+        <div><div class="section-title">AI &amp; Features</div><div class="section-desc">Toggle individual AI features and set Ollama model names</div></div>
+      </div>
+      <div class="feat-grid" id="featGrid"></div>
+      <div style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:12px;">Ollama Models</div>
+      <div class="model-grid" id="modelGrid"></div>
+    </div>
+
+    <!-- Save bar -->
+    <div class="save-bar">
+      <button class="btn btn-primary" id="saveBtn" onclick="save()">
+        <svg class="icon icon-14"><use href="#ic-save"/></svg> Save Changes
+      </button>
+      <span class="save-msg" id="saveMsg">Saved!</span>
+    </div>
+  `;
+
+  // Tab cards
+  const tg = document.getElementById('tabGrid');
+  TABS.forEach(t => {
+    const enabled = !(s.hidden_tabs || []).includes(t.key);
+    const div = document.createElement('div');
+    div.className = 'tab-card' + (enabled ? ' enabled' : '');
+    div.dataset.key = t.key;
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span class="tab-card-name">${t.label}</span>
+        <label class="toggle">
+          <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleTab('${t.key}')">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="tab-card-desc">${t.desc}</div>`;
+    tg.appendChild(div);
+  });
+
+  // Feature cards
+  const fg = document.getElementById('featGrid');
+  FEATURES.forEach(f => {
+    const enabled = !!s[f.key];
+    const div = document.createElement('div');
+    div.className = 'feat-card' + (enabled ? ' enabled' : '');
+    div.dataset.key = f.key;
+    div.innerHTML = `
+      <div class="feat-info">
+        <div class="feat-name">${f.label}</div>
+        <div class="feat-desc">${f.desc}</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggle('${f.key}')">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>`;
+    fg.appendChild(div);
+  });
+
+  // Model inputs
+  const mg = document.getElementById('modelGrid');
+  MODELS.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'field-row';
+    div.style.maxWidth = '';
+    div.innerHTML = `
+      <div class="field-label">${m.label}</div>
+      <input class="field-input" id="${m.key}" type="text" value="${escAttr(s[m.key] || '')}" placeholder="${m.ph}">`;
+    mg.appendChild(div);
+  });
+
+  // Scroll to hash
+  const hash = location.hash.slice(1);
+  if (hash === 'tabs') document.getElementById('section-tabs')?.scrollIntoView({ behavior: 'smooth' });
+  else if (hash === 'ai') document.getElementById('section-ai')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function escAttr(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+async function save() {
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  const payload = {
+    school_name:                 document.getElementById('schoolName').value.trim(),
+    hidden_tabs:                 settings.hidden_tabs || [],
+    ai_enabled:                  settings.ai_enabled,
+    tutor_enabled:               settings.tutor_enabled,
+    digest_enabled:              settings.digest_enabled,
+    nudges_enabled:              settings.nudges_enabled,
+    deadline_reminders_enabled:  settings.deadline_reminders_enabled,
+    weekly_digest_enabled:       settings.weekly_digest_enabled,
+    ollama_tutor_model:          document.getElementById('ollama_tutor_model').value.trim(),
+    ollama_tracker_model:        document.getElementById('ollama_tracker_model').value.trim(),
+    ollama_advanced_model:       document.getElementById('ollama_advanced_model').value.trim(),
+  };
+  const ok = await fetch('/api/admin/settings', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then(r => r.ok).catch(() => false);
+  btn.disabled = false;
+  if (ok) {
+    // Clear sessionStorage tab cache so notif.js picks up new visibility
+    sessionStorage.removeItem('mokyai_hidden_tabs');
+    sessionStorage.removeItem('mokyai_hidden_tabs_date');
+    const msg = document.getElementById('saveMsg');
+    msg.classList.add('visible');
+    setTimeout(() => msg.classList.remove('visible'), 2500);
+  } else {
+    alert('Save failed. Please try again.');
+  }
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error || me.role !== 'admin') { location.href = '/login'; return; }
+  document.getElementById('userName').textContent  = me.name || me.email;
+  document.getElementById('userAvatar').textContent = (me.name||me.email).split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+  const s = await fetch('/api/admin/settings').then(r => r.json()).catch(() => null);
+  if (!s) {
+    document.getElementById('mainContent').innerHTML = '<div style="padding:48px;text-align:center;color:var(--text3);">Failed to load settings.</div>';
+    return;
+  }
+  renderAll(s);
+}
+boot();
+</script>
+<script src="/static/notif.js"></script>
+</body>
+</html>
