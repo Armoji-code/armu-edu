@@ -2,13 +2,18 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+_DEFAULT_SECRET = "change-me-in-production"
+
 class Config:
-    SECRET_KEY = os.environ.get("SECRET_KEY", "change-me-in-production")
+    SECRET_KEY = os.environ.get("SECRET_KEY", _DEFAULT_SECRET)
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
         f"sqlite:///{os.path.join(BASE_DIR, '..', 'mokyai.db')}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    DEBUG        = os.environ.get("FLASK_DEBUG", "0") == "1"
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5000")
 
     AI_PROVIDER           = os.environ.get("AI_PROVIDER",           "ollama")
     OLLAMA_BASE_URL       = os.environ.get("OLLAMA_BASE_URL",       "http://localhost:11434")

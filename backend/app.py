@@ -16,9 +16,17 @@ def create_app(config=Config):
     app = Flask(__name__)
     app.config.from_object(config)
 
+    if app.config["SECRET_KEY"] == "change-me-in-production":
+        import warnings
+        warnings.warn(
+            "SECRET_KEY is set to the default insecure value. "
+            "Set the SECRET_KEY environment variable before deploying.",
+            stacklevel=2,
+        )
+
     db.init_app(app)
     migrate.init_app(app, db)
-    socketio.init_app(app, cors_allowed_origins="*")
+    socketio.init_app(app, cors_allowed_origins=app.config["CORS_ORIGINS"])
 
     from api import blueprint as api_bp
     app.register_blueprint(api_bp, url_prefix="/api")
@@ -164,4 +172,5 @@ def create_app(config=Config):
 
 if __name__ == "__main__":
     app = create_app()
-    socketio.run(app, debug=True, allow_unsafe_werkzeug=True)
+    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+    socketio.run(app, debug=debug, allow_unsafe_werkzeug=debug)

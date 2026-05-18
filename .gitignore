@@ -6,5 +6,4 @@ mokyai.db
 frontend/dist/
 .venv/
 venv/
-migrations/
 *.egg-info/

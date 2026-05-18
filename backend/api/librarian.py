@@ -7,8 +7,7 @@ from models.library import Book, BookCheckout
 from models.user import User
 from models.school import School
 import requests as _req
-import ai as ollama
-import json
+import ai as _ai
 
 
 def _school_id(user):
@@ -245,7 +244,8 @@ def librarian_book_description(user):
     if not title:
         return jsonify({"error": "title required"}), 400
 
-    model = current_app.config.get("OLLAMA_TRACKER_MODEL", "llama3.2:3b")
+    ai_cfg = _ai.get_ai_config()
+    model  = ai_cfg["tracker_model"]
     prompt = (
         f'Write a concise 2-3 sentence library catalog description for the book '
         f'"{title}"{(" by " + author) if author else ""}. '
@@ -255,18 +255,9 @@ def librarian_book_description(user):
 
     def generate():
         try:
-            resp = ollama.chat(
-                model=model,
-                messages=[{"role": "user", "content": prompt}],
-                stream=True,
-            )
-            for line in resp.iter_lines():
-                if not line:
-                    continue
-                chunk = json.loads(line)
-                token = chunk.get("message", {}).get("content", "")
-                if token:
-                    yield token
+            for token in _ai.stream(model=model, messages=[{"role": "user", "content": prompt}],
+                                    temperature=ai_cfg["tracker_temperature"]):
+                yield token
         except Exception as e:
             yield f"\n[Error: {e}]"
 
