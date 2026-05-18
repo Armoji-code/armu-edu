@@ -14,29 +14,46 @@ Licensed under **AGPL-3.0** — free to use, modify, and self-host. Distribution
 
 ## Getting started
 
-```bash
-# 1. Clone and set up the environment
-cd backend
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r ../requirements.txt
+The quickest way to get running is the interactive setup script:
 
-# 2. Configure (copy and edit the example)
-cp ../.env.example .env
-#    At minimum, set SECRET_KEY to a random value:
-#    python -c "import secrets; print(secrets.token_hex(32))"
+```bash
+git clone https://github.com/your-org/mokyai
+cd mokyai
+bash setup.sh
+```
+
+It will install dependencies, generate a secret key, walk you through AI provider selection (including pulling Ollama models), initialise the database, and optionally create demo accounts.
+
+Then start the server:
+
+```bash
+cd backend && python app.py
+```
+
+The app starts at **http://localhost:5000**.
+
+### Manual setup
+
+```bash
+# 1. Create venv and install dependencies
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Configure
+cp .env.example backend/.env
+# Edit backend/.env — at minimum set SECRET_KEY to a random value:
+python -c "import secrets; print(secrets.token_hex(32))"
 
 # 3. Initialise the database
-flask --app app db upgrade
+cd backend && flask --app app db upgrade
 
-# 4. (Optional) seed demo data
+# 4. (Optional) load demo accounts
 python seed.py
 
 # 5. Run
 python app.py
 ```
-
-The app starts at **http://localhost:5000**.
 
 ## AI setup
 
