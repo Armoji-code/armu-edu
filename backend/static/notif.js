@@ -255,15 +255,16 @@
     injectStyles();
     inject();
 
-    // Get user ID for SocketIO room
+    // Get user info for SocketIO room join and tab visibility gating
+    let myRole = null;
     try {
       const me = await fetch('/api/auth/me').then(r => r.ok ? r.json() : null);
-      if (me && !me.error) myUserId = me.id;
+      if (me && !me.error) { myUserId = me.id; myRole = me.role; }
     } catch (_) {}
 
     await fetchNotifications();
     connectSocketIO();
-    applyTabVisibility();
+    if (myRole === 'student') applyTabVisibility();
 
     // Refresh every 60s as fallback
     setInterval(fetchNotifications, 60000);

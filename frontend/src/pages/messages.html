@@ -346,6 +346,40 @@ function applyTeacherNav(activePage) {
     </div>`;
 }
 
+function applyAdminNav() {
+  document.getElementById('logoSub').textContent = 'admin panel';
+  document.getElementById('sidebarNav').innerHTML = `
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <a class="nav-item" href="/admin"><span class="nav-icon">▦</span><span>Overview</span></a>
+      <a class="nav-item" href="/admin/users"><span class="nav-icon">👥</span><span>Users</span></a>
+      <a class="nav-item" href="/admin/school"><span class="nav-icon">🏫</span><span>School</span></a>
+      <a class="nav-item" href="/admin/settings"><span class="nav-icon">⚙</span><span>Settings</span></a>
+      <a class="nav-item" href="/admin/performance"><span class="nav-icon">📈</span><span>Performance</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Other</div>
+      <a class="nav-item active" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+    </div>`;
+}
+
+function applyLibrarianNav() {
+  document.getElementById('logoSub').textContent = 'library panel';
+  document.getElementById('sidebarNav').innerHTML = `
+    <div class="nav-section">
+      <div class="nav-label">Library</div>
+      <a class="nav-item" href="/librarian"><span class="nav-icon">▦</span><span>Overview</span></a>
+      <a class="nav-item" href="/librarian/books"><span class="nav-icon">📖</span><span>Books</span></a>
+      <a class="nav-item" href="/librarian/loans"><span class="nav-icon">≡</span><span>Loans</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Other</div>
+      <a class="nav-item active" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+    </div>`;
+}
+
 async function boot() {
   const [me, messages] = await Promise.all([
     fetch('/api/auth/me').then(r => r.json()).catch(() => null),
@@ -354,7 +388,9 @@ async function boot() {
 
   if (!me || me.error) { location.href = '/login'; return; }
 
-  if (me.role === 'teacher') applyTeacherNav('/messages');
+  if (me.role === 'teacher')        applyTeacherNav('/messages');
+  else if (me.role === 'admin')     applyAdminNav();
+  else if (me.role === 'librarian') applyLibrarianNav();
 
   myId = me.id;
   document.getElementById('userName').textContent = me.name || me.email;
