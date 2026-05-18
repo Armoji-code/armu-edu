@@ -110,7 +110,8 @@
 </svg>
 
 <aside class="sidebar">
-  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">your learning assistant</div></div>
+  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub" id="logoSub">your learning assistant</div></div>
+  <div id="sidebarNav">
   <div class="nav-section">
     <div class="nav-label">Main</div>
     <a class="nav-item" href="/dashboard"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Dashboard</span></a>
@@ -134,6 +135,7 @@
   <div class="nav-section">
     <div class="nav-label">Other</div>
     <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+  </div>
   </div>
   <div class="sidebar-bottom">
     <a class="user-card" href="/profile">
@@ -328,6 +330,22 @@ async function sendMsg() {
   }
 }
 
+function applyTeacherNav(activePage) {
+  document.getElementById('logoSub').textContent = 'teacher portal';
+  document.getElementById('sidebarNav').innerHTML = `
+    <div class="nav-section">
+      <div class="nav-label">Manage</div>
+      <a class="nav-item" href="/teacher"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+      <a class="nav-item" href="/teacher/classes"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Classes</span></a>
+      <a class="nav-item" href="/teacher/assignments"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Assignments</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Other</div>
+      <a class="nav-item${activePage==='/messages'?' active':''}" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item${activePage==='/settings'?' active':''}" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+    </div>`;
+}
+
 async function boot() {
   const [me, messages] = await Promise.all([
     fetch('/api/auth/me').then(r => r.json()).catch(() => null),
@@ -335,6 +353,8 @@ async function boot() {
   ]);
 
   if (!me || me.error) { location.href = '/login'; return; }
+
+  if (me.role === 'teacher') applyTeacherNav('/messages');
 
   myId = me.id;
   document.getElementById('userName').textContent = me.name || me.email;
