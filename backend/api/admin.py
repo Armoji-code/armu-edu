@@ -1,3 +1,6 @@
+import os
+import psutil
+import requests as _requests
 from flask import request, jsonify, current_app
 from api import blueprint
 from auth import login_required
@@ -9,6 +12,71 @@ from models.academic import Assignment, Grade
 
 def _school(user):
     return School.query.get(user.school_id)
+
+
+# ── Admin: performance ────────────────────────────────────────────────────────
+
+@blueprint.route("/admin/performance", methods=["GET"])
+@login_required(roles=["admin"])
+def admin_performance(user):
+    # CPU
+    cpu_pct   = psutil.cpu_percent(interval=0.2)
+    cpu_cores = psutil.cpu_count(logical=True)
+    cpu_freq  = psutil.cpu_freq()
+
+    # RAM
+    ram = psutil.virtual_memory()
+
+    # Disk (root mount)
+    disk = psutil.disk_usage("/")
+
+    # Flask process memory
+    proc = psutil.Process(os.getpid())
+    proc_mem_mb = round(proc.memory_info().rss / 1024 / 1024, 1)
+
+    # Ollama — running models
+    ollama_url = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    ollama_ok  = False
+    ollama_models = []
+    try:
+        resp = _requests.get(f"{ollama_url}/api/ps", timeout=3)
+        if resp.ok:
+            ollama_ok = True
+            for m in resp.json().get("models", []):
+                ollama_models.append({
+                    "name":       m.get("name", ""),
+                    "size_gb":    round(m.get("size", 0) / 1024**3, 2),
+                    "vram_gb":    round(m.get("size_vram", 0) / 1024**3, 2),
+                    "expires_at": m.get("expires_at", ""),
+                })
+    except Exception:
+        pass
+
+    return jsonify({
+        "cpu": {
+            "percent": cpu_pct,
+            "cores":   cpu_cores,
+            "freq_mhz": round(cpu_freq.current, 0) if cpu_freq else None,
+        },
+        "ram": {
+            "total_gb":  round(ram.total     / 1024**3, 2),
+            "used_gb":   round(ram.used      / 1024**3, 2),
+            "avail_gb":  round(ram.available / 1024**3, 2),
+            "percent":   ram.percent,
+        },
+        "disk": {
+            "total_gb": round(disk.total / 1024**3, 1),
+            "used_gb":  round(disk.used  / 1024**3, 1),
+            "free_gb":  round(disk.free  / 1024**3, 1),
+            "percent":  disk.percent,
+        },
+        "process_mem_mb": proc_mem_mb,
+        "ollama": {
+            "reachable": ollama_ok,
+            "url":       ollama_url,
+            "models":    ollama_models,
+        },
+    })
 
 
 # ── Public: tab visibility ────────────────────────────────────────────────────
