@@ -1,4 +1,4 @@
-# MokyAI
+# Armu
 
 A free, open source, self-hosted school platform. Replaces fragmented school software (diary systems, Google Classroom, messaging, grades, library) with a single unified platform that schools own and run themselves.
 
@@ -17,8 +17,8 @@ Licensed under **AGPL-3.0** — free to use, modify, and self-host. Distribution
 The quickest way to get running is the interactive setup script:
 
 ```bash
-git clone https://github.com/your-org/mokyai
-cd mokyai
+git clone https://github.com/your-org/armu
+cd armu
 bash setup.sh
 ```
 
@@ -57,7 +57,7 @@ python app.py
 
 ## AI setup
 
-By default MokyAI uses **Ollama** for local inference (no API costs).
+By default Armu uses **Ollama** for local inference (no API costs).
 
 ```bash
 # Install Ollama: https://ollama.com
@@ -70,14 +70,14 @@ To switch to OpenAI or Anthropic, go to **Admin → Settings → AI Configuratio
 ## Project structure
 
 ```
-mokyai/
+armu/
 ├── backend/        Flask app, API routes, models, AI, WebSocket handlers
 │   ├── ai/         Multi-provider AI abstraction (Ollama / OpenAI / Anthropic)
 │   ├── api/        REST API blueprints
 │   ├── models/     SQLAlchemy models
 │   └── static/     Served at /static/ (notif.js)
 ├── frontend/       Vanilla JS frontend pages
-├── prototype/      mokyai-prototype.html — pixel-perfect design reference
+├── prototype/      armu-prototype.html — pixel-perfect design reference
 ├── docs/           Project documentation
 ├── .env.example    Environment variable template
 ├── requirements.txt

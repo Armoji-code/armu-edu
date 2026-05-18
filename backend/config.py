@@ -8,7 +8,7 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", _DEFAULT_SECRET)
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
-        f"sqlite:///{os.path.join(BASE_DIR, '..', 'mokyai.db')}"
+        f"sqlite:///{os.path.join(BASE_DIR, '..', 'armu.db')}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

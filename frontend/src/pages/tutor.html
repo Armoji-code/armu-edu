@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MokyAI — AI Tutor</title>
+<title>Armu — AI Tutor</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -195,7 +195,7 @@
 </svg>
 
 <aside class="sidebar">
-  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub">your learning assistant</div></div>
+  <div class="logo"><div class="logo-text">Armu</div><div class="logo-sub">your learning assistant</div></div>
   <div class="nav-section">
     <div class="nav-label">Main</div>
     <a class="nav-item" href="/dashboard"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Dashboard</span></a>
@@ -299,7 +299,7 @@ let myId = null;
 let myInitials = '?';
 let attachedFile = null;
 let filterText = '';
-let pinnedIds = new Set(JSON.parse(localStorage.getItem('mokyai_pinned') || '[]'));
+let pinnedIds = new Set(JSON.parse(localStorage.getItem('armu_pinned') || '[]'));
 let groupPollTimer = null;
 let currentTier = 'standard';
 let modelNames = {standard: 'Standard', advanced: 'Advanced'};
@@ -466,7 +466,7 @@ function togglePin(e, id) {
   e.stopPropagation();
   if (pinnedIds.has(id)) pinnedIds.delete(id);
   else pinnedIds.add(id);
-  localStorage.setItem('mokyai_pinned', JSON.stringify([...pinnedIds]));
+  localStorage.setItem('armu_pinned', JSON.stringify([...pinnedIds]));
   renderSessions();
 }
 
@@ -475,7 +475,7 @@ async function deleteSession(e, id) {
   if (!confirm('Delete this chat?')) return;
   await fetch('/api/ai/sessions/' + id, {method: 'DELETE'}).catch(() => {});
   sessions = sessions.filter(s => s.id !== id);
-  if (pinnedIds.has(id)) { pinnedIds.delete(id); localStorage.setItem('mokyai_pinned', JSON.stringify([...pinnedIds])); }
+  if (pinnedIds.has(id)) { pinnedIds.delete(id); localStorage.setItem('armu_pinned', JSON.stringify([...pinnedIds])); }
   if (activeSessionId === id) {
     activeSessionId = null;
     activeGroupId = null;
@@ -507,7 +507,7 @@ function updateModelSwitcher(tier, isGroup) {
 async function switchModel(tier) {
   if (!activeSessionId || activeGroupId) return;
   currentTier = tier;
-  localStorage.setItem('mokyai_model_tier', tier);
+  localStorage.setItem('armu_model_tier', tier);
   updateModelSwitcher(tier, false);
   await fetch('/api/ai/sessions/' + activeSessionId, {
     method: 'PATCH',
@@ -656,7 +656,7 @@ async function openSession(id, gid) {
   activeSessionId = id;
   activeGroupId = gid || null;
   const s = sessions.find(s => s.id === id);
-  currentTier = s?.model_tier || localStorage.getItem('mokyai_model_tier') || 'standard';
+  currentTier = s?.model_tier || localStorage.getItem('armu_model_tier') || 'standard';
   renderSessions();
   buildChatUI();
   updateModelSwitcher(currentTier, !!gid);
@@ -711,7 +711,7 @@ async function newSession() {
   const s = await fetch('/api/ai/sessions', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({model_tier: localStorage.getItem('mokyai_model_tier') || 'standard'}),
+    body: JSON.stringify({model_tier: localStorage.getItem('armu_model_tier') || 'standard'}),
   }).then(r => r.json()).catch(() => null);
 
   if (!s || s.error) return;
@@ -819,14 +819,14 @@ async function sendMessage() {
 // ── Proactive nudges ──────────────────────────────────────────────────────────
 async function loadNudges() {
   const todayKey = new Date().toISOString().split('T')[0];
-  const stored = JSON.parse(localStorage.getItem('mokyai_nudges') || '{}');
+  const stored = JSON.parse(localStorage.getItem('armu_nudges') || '{}');
   if (stored.date === todayKey && Array.isArray(stored.nudges)) {
     cachedNudges = stored.nudges;
   } else {
     try {
       const data = await fetch('/api/ai/tutor-nudge').then(r => r.ok ? r.json() : null);
       cachedNudges = data?.nudges || [];
-      localStorage.setItem('mokyai_nudges', JSON.stringify({date: todayKey, nudges: cachedNudges}));
+      localStorage.setItem('armu_nudges', JSON.stringify({date: todayKey, nudges: cachedNudges}));
     } catch { cachedNudges = []; }
   }
   renderNudges();

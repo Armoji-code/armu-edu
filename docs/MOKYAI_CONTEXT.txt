@@ -1,18 +1,18 @@
-PROJECT CONTEXT: MokyAI
+PROJECT CONTEXT: Armu
 =======================
 
 WHAT IT IS
 ----------
-MokyAI is a free, open source, self-hosted school platform. The core idea is to replace the fragmented mess of school software (diary systems, Google Classroom, messaging, grades, library, etc.) with a single unified platform that schools own and run themselves. It is licensed under AGPL-3.0, meaning anyone can use it, modify it, and self-host it for free, but if they distribute or offer it as a service they must release their source code too. Nobody can close-source it.
+Armu is a free, open source, self-hosted school platform. The core idea is to replace the fragmented mess of school software (diary systems, Google Classroom, messaging, grades, library, etc.) with a single unified platform that schools own and run themselves. It is licensed under AGPL-3.0, meaning anyone can use it, modify it, and self-host it for free, but if they distribute or offer it as a service they must release their source code too. Nobody can close-source it.
 
-The project was designed with two goals simultaneously: be genuinely useful to students right now, and be scalable enough that one day entire school districts or countries could adopt it. The name MokyAI is a codename — "Moky" comes from "mokytis," the Lithuanian word for "to learn."
+The project was designed with two goals simultaneously: be genuinely useful to students right now, and be scalable enough that one day entire school districts or countries could adopt it. The name Armu is a codename — "Moky" comes from "mokytis," the Lithuanian word for "to learn."
 
 
 WHERE IT CAME FROM
 ------------------
-The original idea was to build a tool that connects to TAMO dienynas, the Lithuanian national school diary system, and use AI to sort and prioritize assignments for students. During development the scope expanded significantly. We investigated TAMO's API situation and found there is no public OAuth — the only viable approach is an unofficial scraper (github.com/justinas2314/Tamo-API). However, as the vision expanded to global adoption, the dependency on TAMO became a limitation. The final architecture is that MokyAI IS the diary — teachers post directly into it, students read it, and it works anywhere in the world without needing to scrape anything.
+The original idea was to build a tool that connects to TAMO dienynas, the Lithuanian national school diary system, and use AI to sort and prioritize assignments for students. During development the scope expanded significantly. We investigated TAMO's API situation and found there is no public OAuth — the only viable approach is an unofficial scraper (github.com/justinas2314/Tamo-API). However, as the vision expanded to global adoption, the dependency on TAMO became a limitation. The final architecture is that Armu IS the diary — teachers post directly into it, students read it, and it works anywhere in the world without needing to scrape anything.
 
-The comparison that best describes what MokyAI is trying to be: Slack meets Google Classroom meets Notion, but fully open source, self-hosted, and with AI built in from the ground up. The closest existing product is Moodle, but Moodle is old, complex, ugly, and has no AI. MokyAI is what Moodle should have been in 2025.
+The comparison that best describes what Armu is trying to be: Slack meets Google Classroom meets Notion, but fully open source, self-hosted, and with AI built in from the ground up. The closest existing product is Moodle, but Moodle is old, complex, ugly, and has no AI. Armu is what Moodle should have been in 2025.
 
 
 WHO USES IT
@@ -73,7 +73,7 @@ Privacy is a core design principle, not an afterthought. All student data stays 
 
 WHAT THE PROTOTYPE COVERS (STUDENT SIDE)
 -----------------------------------------
-The HTML prototype (mokyai-prototype.html) is a complete visual mockup of the student experience. It is a single HTML file with all CSS and JavaScript inline. There is no backend — all data is hardcoded as JavaScript arrays. It demonstrates:
+The HTML prototype (armu-prototype.html) is a complete visual mockup of the student experience. It is a single HTML file with all CSS and JavaScript inline. There is no backend — all data is hardcoded as JavaScript arrays. It demonstrates:
 
 DASHBOARD
 - AI Priority Alert banner — shows the most urgent upcoming items
@@ -212,7 +212,7 @@ Everything listed above is prototype/frontend only. The following does not exist
 5. Parent view — read-only child progress view
 6. Librarian AI feature — photo → auto-generated book catalog entry
 7. Real-time features — WebSocket server for collaborative whiteboard and live messaging
-8. TAMO integration — the scraper exists (justinas2314/Tamo-API on GitHub) but is not integrated. This is now optional since MokyAI can be the primary diary, but it would be useful for schools already using TAMO to migrate their data
+8. TAMO integration — the scraper exists (justinas2314/Tamo-API on GitHub) but is not integrated. This is now optional since Armu can be the primary diary, but it would be useful for schools already using TAMO to migrate their data
 9. File storage — actual file upload/download for the messenger
 10. Notification system — the reminder AI logic
 11. Mobile — the prototype had a mobile layout that was removed. Mobile should be rebuilt from scratch as a proper responsive design, not patches on top of desktop
@@ -226,7 +226,7 @@ GITHUB STRUCTURE (PLANNED)
 ----------------------------
 The repository should be organized roughly as:
 
-mokyai/
+armu/
 ├── backend/
 │   ├── app.py              (Flask entry point)
 │   ├── api/                (REST API routes)
@@ -242,7 +242,7 @@ mokyai/
 │   │   └── styles/         (CSS variables, base styles)
 │   └── dist/               (built output)
 ├── prototype/
-│   └── mokyai-prototype.html   (the complete design reference)
+│   └── armu-prototype.html   (the complete design reference)
 ├── docs/
 │   └── index.html          (GitHub Pages site)
 ├── requirements.txt

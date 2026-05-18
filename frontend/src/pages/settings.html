@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MokyAI — Settings</title>
+<title>Armu — Settings</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
@@ -105,7 +105,7 @@
 </svg>
 
 <aside class="sidebar">
-  <div class="logo"><div class="logo-text">MokyAI</div><div class="logo-sub" id="logoSub">your learning assistant</div></div>
+  <div class="logo"><div class="logo-text">Armu</div><div class="logo-sub" id="logoSub">your learning assistant</div></div>
   <div id="sidebarNav">
   <div class="nav-section">
     <div class="nav-label">Main</div>
@@ -195,7 +195,7 @@
           <div class="setting-desc">Animated dots while the AI is thinking</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="typingToggle" onchange="saveBool('mokyai_typing', this.checked)">
+          <input type="checkbox" id="typingToggle" onchange="saveBool('armu_typing', this.checked)">
           <div class="toggle-track"></div>
           <div class="toggle-thumb"></div>
         </label>
@@ -206,7 +206,7 @@
           <div class="setting-desc">Generate a short title after the first exchange</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="autoTitleToggle" onchange="saveBool('mokyai_autotitle', this.checked)">
+          <input type="checkbox" id="autoTitleToggle" onchange="saveBool('armu_autotitle', this.checked)">
           <div class="toggle-track"></div>
           <div class="toggle-thumb"></div>
         </label>
@@ -237,7 +237,7 @@
     <!-- About -->
     <div class="card">
       <div class="card-title">About</div>
-      <div class="about-line">MokyAI · Free, self-hosted school platform</div>
+      <div class="about-line">Armu · Free, self-hosted school platform</div>
       <div class="about-line">Licensed under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank">GNU AGPL-3.0</a></div>
       <div class="about-line" style="margin-top:4px;color:var(--text3);">AI powered by <a href="https://ollama.com" target="_blank">Ollama</a> running locally</div>
     </div>
@@ -279,7 +279,7 @@ function loadBool(key, def = true) {
 }
 
 function setModelTier(tier) {
-  localStorage.setItem('mokyai_model_tier', tier);
+  localStorage.setItem('armu_model_tier', tier);
   document.getElementById('tileStandard').classList.toggle('selected', tier === 'standard');
   document.getElementById('tileAdvanced').classList.toggle('selected', tier === 'advanced');
 }
@@ -362,7 +362,7 @@ async function boot() {
 
   // Load saved preferences
   applyTheme(localStorage.getItem('theme') || 'dark');
-  setModelTier(localStorage.getItem('mokyai_model_tier') || 'standard');
+  setModelTier(localStorage.getItem('armu_model_tier') || 'standard');
 
   // Fetch real model names from backend
   fetch('/api/ai/models').then(r => r.json()).then(m => {
@@ -373,8 +373,8 @@ async function boot() {
     document.getElementById('modelNameStandard').textContent = 'Standard model';
     document.getElementById('modelNameAdvanced').textContent = 'Advanced model';
   });
-  document.getElementById('typingToggle').checked = loadBool('mokyai_typing', true);
-  document.getElementById('autoTitleToggle').checked = loadBool('mokyai_autotitle', true);
+  document.getElementById('typingToggle').checked = loadBool('armu_typing', true);
+  document.getElementById('autoTitleToggle').checked = loadBool('armu_autotitle', true);
 }
 
 boot();

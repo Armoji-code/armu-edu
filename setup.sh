@@ -12,7 +12,7 @@ ask() { printf "  ${Y}?${W} %s " "$*"; }
 err() { printf "  ${R}✗${W} %s\n" "$*" >&2; }
 
 clear
-printf "\n${BOLD}${G}  MokyAI — Setup${W}\n\n"
+printf "\n${BOLD}${G}  Armu — Setup${W}\n\n"
 hr
 printf "  This script will:\n"
 printf "    1. Create a Python virtual environment and install dependencies\n"
@@ -91,7 +91,7 @@ printf "\n"
 hr
 printf "  ${BOLD}3. AI Provider${W}\n"
 hr
-printf "  MokyAI supports three AI backends:\n\n"
+printf "  Armu supports three AI backends:\n\n"
 printf "    ${G}1${W}) Ollama   — local inference, no API costs (recommended)\n"
 printf "    ${G}2${W}) OpenAI   — GPT-4o and friends (API key required)\n"
 printf "    ${G}3${W}) Anthropic — Claude models (API key required)\n\n"
@@ -251,7 +251,7 @@ hr
 printf "  ${BOLD}${G}Setup complete!${W}\n"
 hr
 printf "\n"
-printf "  Start MokyAI:\n\n"
+printf "  Start Armu:\n\n"
 printf "    ${BOLD}cd backend${W}\n"
 printf "    ${BOLD}python app.py${W}\n\n"
 printf "  Then open ${B}http://localhost:5000${W} in your browser.\n\n"
