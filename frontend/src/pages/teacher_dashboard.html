@@ -61,6 +61,23 @@
   .subject-meta-item{font-size:11px;color:var(--text3);}
   .subject-meta-item span{color:var(--text);font-weight:600;}
   .badge-ungraded{display:inline-flex;align-items:center;padding:2px 8px;border-radius:100px;background:rgba(251,191,36,0.12);color:#fbbf24;font-size:11px;font-weight:600;margin-left:8px;}
+
+  /* AI card */
+  .ai-card{background:var(--bg2);border:1px solid var(--border-accent);border-radius:var(--radius);padding:18px 20px;margin-bottom:24px;}
+  .ai-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .ai-card-label{font-size:11px;font-weight:600;color:var(--g1);text-transform:uppercase;letter-spacing:0.8px;}
+  .ai-card-time{font-size:11px;color:var(--text3);}
+  .ai-card-refresh{width:28px;height:28px;border-radius:var(--radius-sm);border:none;background:transparent;cursor:pointer;color:var(--text3);display:flex;align-items:center;justify-content:center;transition:color var(--transition);}
+  .ai-card-refresh:hover{color:var(--g1);}
+  .ai-card-body{font-size:13.5px;line-height:1.65;color:var(--text2);}
+  .ai-card-body.streaming::after{content:'▋';animation:blink 1s step-start infinite;display:inline;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* Nudge chips */
+  .nudge-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;}
+  .nudge-chip{display:inline-flex;align-items:center;padding:7px 14px;border-radius:100px;border:1px solid var(--border-accent);background:linear-gradient(135deg,rgba(61,214,140,0.06),rgba(56,189,248,0.06));color:var(--text);font-size:13px;cursor:pointer;transition:all var(--transition);text-decoration:none;}
+  .nudge-chip:hover{background:linear-gradient(135deg,rgba(61,214,140,0.14),rgba(56,189,248,0.14));border-color:var(--g1);}
+  .nudge-chip svg{margin-right:6px;color:var(--g1);}
 </style>
 </head>
 <body>
@@ -75,6 +92,8 @@
     <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></symbol>
     <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></symbol>
     <symbol id="ic-chevright" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="ic-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></symbol>
   </defs>
 </svg>
 
@@ -120,6 +139,26 @@
       <div class="stat-card"><div class="stat-label">Ungraded</div><div class="stat-val" id="st-ungraded" style="color:#fbbf24;">—</div><div class="stat-sub">awaiting grades</div></div>
     </div>
 
+    <!-- AI Insights card -->
+    <div class="ai-card">
+      <div class="ai-card-header">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <svg class="icon icon-14" style="color:var(--g1)"><use href="#ic-zap"/></svg>
+          <span class="ai-card-label">AI Class Insights</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="ai-card-time" id="digestTime"></span>
+          <button class="ai-card-refresh" id="digestRefreshBtn" onclick="loadDigest(true)" title="Refresh">
+            <svg class="icon icon-14"><use href="#ic-refresh"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="ai-card-body" id="digestBody">Loading insights…</div>
+    </div>
+
+    <!-- AI Action chips -->
+    <div class="nudge-row" id="nudgeRow" style="display:none;"></div>
+
     <div class="section-title">My Subjects</div>
     <div class="subject-grid" id="subjectGrid">
       <div style="color:var(--text3);font-size:13px;">Loading…</div>
@@ -143,6 +182,71 @@ function toggleTheme() {
   document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
 }
 
+async function loadDigest(force = false) {
+  const body = document.getElementById('digestBody');
+  const timeEl = document.getElementById('digestTime');
+  const btn = document.getElementById('digestRefreshBtn');
+
+  btn.disabled = true;
+  body.className = 'ai-card-body streaming';
+  body.textContent = '';
+
+  const url = '/api/ai/teacher-digest' + (force ? '?force=1' : '');
+  const res = await fetch(url).catch(() => null);
+  if (!res) { body.textContent = 'Could not load insights.'; body.className = 'ai-card-body'; btn.disabled = false; return; }
+
+  if (res.headers.get('content-type')?.includes('application/json')) {
+    const data = await res.json();
+    body.textContent = data.content || '';
+    if (data.generated_at) timeEl.textContent = new Date(data.generated_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    body.className = 'ai-card-body';
+    btn.disabled = false;
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value, { stream: true });
+    body.textContent = text;
+  }
+  body.className = 'ai-card-body';
+  timeEl.textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  btn.disabled = false;
+}
+
+async function loadNudges() {
+  const CACHE_KEY = 'mokyai_teacher_nudges';
+  const CACHE_DATE_KEY = 'mokyai_teacher_nudges_date';
+  const today = new Date().toISOString().slice(0, 10);
+
+  let nudges = null;
+  if (localStorage.getItem(CACHE_DATE_KEY) === today) {
+    try { nudges = JSON.parse(localStorage.getItem(CACHE_KEY)); } catch {}
+  }
+
+  if (!nudges) {
+    const data = await fetch('/api/ai/teacher-nudge').then(r => r.json()).catch(() => null);
+    nudges = data?.nudges || [];
+    if (nudges.length) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(nudges));
+      localStorage.setItem(CACHE_DATE_KEY, today);
+    }
+  }
+
+  if (!nudges.length) return;
+  const row = document.getElementById('nudgeRow');
+  row.style.display = 'flex';
+  row.innerHTML = nudges.map(n =>
+    `<a class="nudge-chip" href="${n.href}">
+      <svg class="icon icon-14"><use href="#ic-zap"/></svg>${n.label}
+    </a>`
+  ).join('');
+}
+
 async function boot() {
   const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
   if (!me || me.error || me.role !== 'teacher') { location.href = '/login'; return; }
@@ -161,6 +265,10 @@ async function boot() {
   document.getElementById('st-students').textContent    = overview.students    ?? '—';
   document.getElementById('st-assignments').textContent = overview.assignments ?? '—';
   document.getElementById('st-ungraded').textContent    = overview.ungraded    ?? '—';
+
+  // AI features — fire and forget, don't block page load
+  loadDigest();
+  loadNudges();
 
   const grid = document.getElementById('subjectGrid');
   if (!subjects.length) {

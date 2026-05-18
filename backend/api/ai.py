@@ -444,6 +444,182 @@ def daily_digest(user):
     return Response(stream_with_context(generate()), content_type="text/plain")
 
 
+@blueprint.route("/ai/teacher-digest", methods=["GET"])
+@login_required(roles=["teacher"])
+def teacher_digest(user):
+    from models.school import Subject
+    from datetime import timedelta
+
+    today = date.today()
+    force = request.args.get("force") == "1"
+
+    if not force:
+        cached = DailyDigest.query.filter_by(user_id=user.id, date=today).first()
+        if cached:
+            return jsonify(cached.to_dict())
+
+    subjects = Subject.query.filter_by(teacher_id=user.id).all()
+    subject_ids = [s.id for s in subjects]
+    now = datetime.now(timezone.utc)
+
+    all_assignments = Assignment.query.filter(
+        Assignment.subject_id.in_(subject_ids)
+    ).all() if subject_ids else []
+
+    ungraded_lines = []
+    for a in all_assignments:
+        class_size = len(a.subject.klass.students)
+        graded = Grade.query.filter_by(assignment_id=a.id).count()
+        if graded < class_size:
+            days_ago = (now - a.due_date.replace(tzinfo=timezone.utc)).days
+            when = f"{days_ago}d overdue" if days_ago > 0 else "due soon"
+            ungraded_lines.append(
+                f"- {a.title} ({a.subject.name}): {graded}/{class_size} graded, {when}"
+            )
+
+    upcoming = Assignment.query.filter(
+        Assignment.subject_id.in_(subject_ids),
+        Assignment.due_date >= now,
+        Assignment.due_date <= now + timedelta(days=7),
+    ).order_by(Assignment.due_date).limit(5).all() if subject_ids else []
+
+    recent_grades = (
+        Grade.query.join(Assignment)
+        .filter(Assignment.subject_id.in_(subject_ids))
+        .order_by(Grade.created_at.desc())
+        .limit(20).all()
+    ) if subject_ids else []
+    avg = round(sum(g.score for g in recent_grades) / len(recent_grades), 1) if recent_grades else None
+
+    parts = []
+    if ungraded_lines:
+        parts.append("Needs grading:\n" + "\n".join(ungraded_lines[:5]))
+    if upcoming:
+        parts.append("Upcoming deadlines:\n" + "\n".join(
+            f"- {a.title} ({a.subject.name}, "
+            f"in {max(0,(a.due_date.replace(tzinfo=timezone.utc)-now).days)}d)"
+            for a in upcoming
+        ))
+    if avg is not None:
+        parts.append(f"Recent class average: {avg}/100")
+
+    context = "\n\n".join(parts) or "No pending tasks."
+
+    prompt = (
+        f"You are a school management assistant. Write a short daily briefing (2-3 sentences) "
+        f"for teacher {user.name}. Focus on what needs attention today — ungraded work, "
+        f"upcoming deadlines, class performance. Be specific and direct. Plain prose only.\n\n"
+        f"{context}"
+    )
+
+    model = current_app.config["OLLAMA_TRACKER_MODEL"]
+    app = current_app._get_current_object()
+
+    def generate():
+        full = []
+        try:
+            resp = ollama.chat(model=model, messages=[{"role": "user", "content": prompt}], stream=True)
+            for line in resp.iter_lines():
+                if not line:
+                    continue
+                try:
+                    chunk = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                token = chunk.get("message", {}).get("content", "")
+                if token:
+                    full.append(token)
+                    yield token
+                if chunk.get("done"):
+                    break
+        except Exception as e:
+            yield f"[Error: {e}]"
+        finally:
+            content = "".join(full).strip()
+            if content:
+                with app.app_context():
+                    existing = DailyDigest.query.filter_by(user_id=user.id, date=today).first()
+                    if existing:
+                        existing.content = content
+                        existing.generated_at = datetime.now(timezone.utc)
+                    else:
+                        db.session.add(DailyDigest(user_id=user.id, date=today, content=content))
+                    db.session.commit()
+
+    return Response(stream_with_context(generate()), content_type="text/plain")
+
+
+@blueprint.route("/ai/teacher-nudge", methods=["GET"])
+@login_required(roles=["teacher"])
+def teacher_nudge(user):
+    from models.school import Subject
+    from datetime import timedelta
+
+    subjects = Subject.query.filter_by(teacher_id=user.id).all()
+    subject_ids = [s.id for s in subjects]
+    now = datetime.now(timezone.utc)
+
+    task_lines = []
+    all_assignments = Assignment.query.filter(
+        Assignment.subject_id.in_(subject_ids)
+    ).all() if subject_ids else []
+
+    for a in all_assignments:
+        class_size = len(a.subject.klass.students)
+        graded = Grade.query.filter_by(assignment_id=a.id).count()
+        if graded < class_size:
+            missing = class_size - graded
+            days_ago = (now - a.due_date.replace(tzinfo=timezone.utc)).days
+            status = f"{days_ago}d overdue" if days_ago > 0 else "due soon"
+            task_lines.append(
+                f"- {a.title} ({a.subject.name}): {missing} student(s) ungraded, {status}"
+            )
+
+    upcoming = Assignment.query.filter(
+        Assignment.subject_id.in_(subject_ids),
+        Assignment.due_date >= now,
+        Assignment.due_date <= now + timedelta(days=7),
+    ).limit(3).all() if subject_ids else []
+
+    for a in upcoming:
+        days = max(0, (a.due_date.replace(tzinfo=timezone.utc) - now).days)
+        task_lines.append(f"- {a.title} ({a.subject.name}) due in {days} days")
+
+    context = "\n".join(task_lines[:8]) if task_lines else "All caught up."
+
+    prompt = (
+        f"You are generating action chips for teacher {user.name}.\n"
+        f"Current tasks:\n{context}\n\n"
+        f"Return a JSON array of exactly 3 short action chips. "
+        f"Each item: \"label\" (3-6 words, starts with a verb) and "
+        f"\"href\" (one of: \"/teacher/assignments\", \"/teacher/classes\", \"/teacher\"). "
+        f"Base on the actual tasks above. "
+        f'Example: [{{"label":"Grade Physics test","href":"/teacher/assignments"}}]\n'
+        f"Return only the JSON array, nothing else."
+    )
+
+    try:
+        resp = ollama.chat(
+            model=current_app.config["OLLAMA_TRACKER_MODEL"],
+            messages=[{"role": "user", "content": prompt}],
+            stream=False,
+        )
+        raw = resp.json().get("message", {}).get("content", "").strip()
+        start, end = raw.find("["), raw.rfind("]") + 1
+        nudges = json.loads(raw[start:end]) if start != -1 else []
+        nudges = [n for n in nudges if isinstance(n, dict) and "label" in n and "href" in n][:3]
+    except Exception:
+        nudges = []
+
+    if not nudges:
+        nudges = [
+            {"label": "Review ungraded work", "href": "/teacher/assignments"},
+            {"label": "Check class roster",   "href": "/teacher/classes"},
+        ]
+
+    return jsonify({"nudges": nudges})
+
+
 def _auto_title(app, session_id, model, user_msg, ai_msg):
     with app.app_context():
         try:
