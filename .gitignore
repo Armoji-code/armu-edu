@@ -7,3 +7,4 @@ frontend/dist/
 .venv/
 venv/
 *.egg-info/
+mokyai.db
