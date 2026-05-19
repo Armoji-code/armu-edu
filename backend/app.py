@@ -127,6 +127,14 @@ def create_app(config=Config):
     def teacher_schedule_page():
         return send_from_directory(FRONTEND_DIR, "teacher_schedule.html")
 
+    @app.route("/teacher/settings")
+    def teacher_settings_page():
+        return send_from_directory(FRONTEND_DIR, "teacher_settings.html")
+
+    @app.route("/teacher/profile")
+    def teacher_profile_page():
+        return send_from_directory(FRONTEND_DIR, "teacher_profile.html")
+
     @app.route("/admin")
     def admin_dashboard_page():
         return send_from_directory(FRONTEND_DIR, "admin_dashboard.html")
