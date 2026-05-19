@@ -264,7 +264,7 @@
   </div><!-- .wb-area -->
 </div><!-- .main -->
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/static/socket.io.min.js"></script>
 <script>
 /* ── Theme ── */
 (function(){
@@ -667,6 +667,27 @@ async function boot(){
 
 resize();
 boot();
+
+// Expose all onclick-called functions explicitly on window.
+// This is required when pjax evals this script: function declarations are
+// hoisted to global scope but their closures over eval-scoped variables
+// (socket, room, etc.) are not reliably accessible in all browsers.
+// Explicit window assignment guarantees onclick handlers always find them.
+window.switchRoomMode  = switchRoomMode;
+window.newGroupRoom    = newGroupRoom;
+window.copyRoomLink    = copyRoomLink;
+window.setTool         = setTool;
+window.setWidth        = setWidth;
+window.toggleTheme     = toggleTheme;
+window.toggleColorPopup= toggleColorPopup;
+window.clearBoard      = clearBoard;
+window.exportPNG       = exportPNG;
+window.undoStroke      = undoStroke;
+
+// Disconnect socket when pjax navigates away
+window.__pjaxCleanup = function() {
+  if (socket) { socket.disconnect(); }
+};
 </script>
 <script src="/static/notif.js"></script>
 <script src="/static/pjax.js"></script>

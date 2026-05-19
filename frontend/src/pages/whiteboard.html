@@ -275,7 +275,7 @@
   </div><!-- .wb-area -->
 </div><!-- .main -->
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/static/socket.io.min.js"></script>
 <script>
 /* ── Theme ── */
 (function(){
@@ -688,6 +688,21 @@ async function boot(){
 
 resize();  // set cssW/cssH immediately — before any mouse event can fire
 boot();
+
+window.switchRoomMode  = switchRoomMode;
+window.newGroupRoom    = newGroupRoom;
+window.copyRoomLink    = copyRoomLink;
+window.setTool         = setTool;
+window.setWidth        = setWidth;
+window.toggleTheme     = toggleTheme;
+window.toggleColorPopup= toggleColorPopup;
+window.clearBoard      = clearBoard;
+window.exportPNG       = exportPNG;
+window.undoStroke      = undoStroke;
+
+window.__pjaxCleanup = function() {
+  if (socket) { socket.disconnect(); }
+};
 </script>
 <script src="/static/notif.js"></script>
 <script src="/static/pjax.js"></script>
