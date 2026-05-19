@@ -10,8 +10,7 @@ _DEFAULTS = {
         {"label": "Learn", "items": [
             {"label": "Dashboard",   "icon": "ic-dashboard",  "path": "/dashboard"},
             {"label": "Calendar",    "icon": "ic-calendar",   "path": "/calendar"},
-            {"label": "Homework",    "icon": "ic-homework",   "path": "/homework"},
-            {"label": "Tests",       "icon": "ic-tests",      "path": "/tests"},
+            {"label": "Assignments", "icon": "ic-homework",   "path": "/homework"},
             {"label": "Schedule",    "icon": "ic-schedule",   "path": "/schedule"},
             {"label": "Grades",      "icon": "ic-grades",     "path": "/grades"},
         ]},

@@ -1,100 +1,141 @@
-
 <div class="topbar">
-<div class="topbar-title">Homework</div>
-<div class="topbar-right">
-<div class="icon-btn" onclick="toggleTheme()" title="Toggle theme"><svg class="icon icon-18"><use href="#ic-moon" id="themeIcon"></use></svg></div>
-<div class="icon-btn" title="Notifications"><svg class="icon icon-18"><use href="#ic-bell"></use></svg></div>
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-homework"/></svg>
+  <span class="topbar-title">Assignments</span>
+  <div class="topbar-right">
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+      <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+    </div>
+  </div>
 </div>
-</div>
+
 <div class="content">
-<!-- AI RECOMMENDATION -->
-<div style="background:linear-gradient(135deg,rgba(61,214,140,0.08),rgba(56,189,248,0.08));border:1px solid var(--border-accent);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start;">
-<div style="flex-shrink:0;color:var(--g1)"><svg class="icon icon-20"><use href="#ic-tutor"></use></svg></div>
-<div>
-<div style="font-size:11px;font-weight:600;color:var(--g1);letter-spacing:0.5px;margin-bottom:5px">AI RECOMMENDATION</div>
-<div id="aiRec" style="font-size:13px;color:var(--text);line-height:1.5">Analysing your assignments…</div>
-</div>
-</div>
-<!-- HEADER + FILTERS -->
-<div class="section-header" style="margin-bottom:14px">
-<div>
-<div class="section-title">All Homework</div>
-<div id="countLabel" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
-</div>
-<div style="display:flex;gap:8px">
-<button class="mode-btn active" id="f-all" onclick="setFilter('all')">All</button>
-<button class="mode-btn" id="f-incomplete" onclick="setFilter('incomplete')">Incomplete</button>
-<button class="mode-btn" id="f-done" onclick="setFilter('done')">Done</button>
-</div>
-</div>
-<div class="assignment-list" id="hwList">
-<div class="empty">Loading…</div>
-</div>
+  <!-- tabs -->
+  <div class="tabs" style="margin-bottom:20px">
+    <button class="mode-btn active" id="tab-hw"    onclick="switchTab('hw')">
+      <svg class="icon icon-14"><use href="#ic-homework"/></svg> Homework
+    </button>
+    <button class="mode-btn"        id="tab-tests" onclick="switchTab('tests')">
+      <svg class="icon icon-14"><use href="#ic-tests"/></svg> Tests
+    </button>
+  </div>
+
+  <!-- AI recommendation -->
+  <div style="background:linear-gradient(135deg,rgba(61,214,140,0.08),rgba(56,189,248,0.08));border:1px solid var(--border-accent);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start;">
+    <div style="flex-shrink:0;color:var(--g1)"><svg class="icon icon-20"><use href="#ic-tutor"/></svg></div>
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--g1);letter-spacing:0.5px;margin-bottom:5px">AI RECOMMENDATION</div>
+      <div id="aiRec" style="font-size:13px;color:var(--text);line-height:1.5">Analysing your work…</div>
+    </div>
+  </div>
+
+  <!-- ── HOMEWORK PANE ─────────────────────────────── -->
+  <div id="pane-hw">
+    <div class="section-header" style="margin-bottom:14px">
+      <div>
+        <div class="section-title">All Homework</div>
+        <div id="hwCountLabel" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="mode-btn active" id="f-all"        onclick="setHwFilter('all')">All</button>
+        <button class="mode-btn"        id="f-incomplete" onclick="setHwFilter('incomplete')">Incomplete</button>
+        <button class="mode-btn"        id="f-done"       onclick="setHwFilter('done')">Done</button>
+      </div>
+    </div>
+    <div class="assignment-list" id="hwList"><div class="empty">Loading…</div></div>
+  </div>
+
+  <!-- ── TESTS PANE ────────────────────────────────── -->
+  <div id="pane-tests" style="display:none">
+    <div class="section-header" style="margin-bottom:14px">
+      <div>
+        <div class="section-title">Upcoming Assessments</div>
+        <div id="testCountLabel" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
+      </div>
+    </div>
+    <div id="testList"><div class="empty">Loading…</div></div>
+  </div>
 </div>
 
 <script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
 
-
-let allHw = [];
-let filter = 'all';
-// Track checked state client-side (persisted to localStorage)
+let allHw    = [];
+let allTests = [];
+let hwFilter = 'all';
 let checkedIds = new Set(JSON.parse(localStorage.getItem('hw_checked') || '[]'));
 
+const SUBJECT_ICON = {
+  math:'📐', algebra:'📐', geometry:'📐', calculus:'📐',
+  chemistry:'⚗️', physics:'⚡', biology:'🔬', science:'🔬',
+  english:'📚', literature:'📚', history:'📖', geography:'🌍',
+  art:'🎨', music:'🎵', pe:'🏃', computer:'💻',
+};
+function subjectIcon(name) {
+  const lower = (name || '').toLowerCase();
+  return Object.entries(SUBJECT_ICON).find(([k]) => lower.includes(k))?.[1] ?? '📝';
+}
+
+/* ── Tab ────────────────────────────────────────────── */
+function switchTab(tab) {
+  document.getElementById('pane-hw').style.display    = tab === 'hw'    ? '' : 'none';
+  document.getElementById('pane-tests').style.display = tab === 'tests' ? '' : 'none';
+  document.getElementById('tab-hw').classList.toggle('active',    tab === 'hw');
+  document.getElementById('tab-tests').classList.toggle('active', tab === 'tests');
+  renderAiRec();
+}
+window.switchTab = switchTab;
+
+/* ── Boot ───────────────────────────────────────────── */
 async function boot() {
-  const me = await api('/api/auth/me');
-  if (!me) { window.location.href = '/login'; return; }
-  setUser(me);
-  const saved = localStorage.getItem('theme');
-  if (saved) setTheme(saved);
+  const [hw, tests] = await Promise.all([
+    fetch('/api/homework').then(r => r.ok ? r.json() : []).catch(() => []),
+    fetch('/api/tests').then(r => r.ok ? r.json() : []).catch(() => []),
+  ]);
+  allHw    = hw    || [];
+  allTests = tests || [];
 
-  const hw = await api('/api/homework');
-  if (hw) {
-    allHw = hw;
-    render();
-    renderAiRec();
-    const pending = hw.filter(a => !isDone(a)).length;
-    const badge = document.getElementById('hwBadge');
-    if (pending > 0) { badge.textContent = pending; badge.style.display = ''; }
-  } else {
-    document.getElementById('hwList').innerHTML = '<div class="empty">No homework found.</div>';
-    document.getElementById('aiRec').textContent = 'No assignments to analyse.';
-  }
+  renderHw();
+  renderTests();
+  renderAiRec();
 }
 
-function isDone(a) {
-  return a.completed || checkedIds.has(a.id);
-}
+/* ── Homework ───────────────────────────────────────── */
+function isDone(a) { return a.completed || checkedIds.has(a.id); }
 
-function setFilter(f) {
-  filter = f;
+function setHwFilter(f) {
+  hwFilter = f;
   ['all','incomplete','done'].forEach(x =>
     document.getElementById('f-' + x).classList.toggle('active', x === f)
   );
-  render();
+  renderHw();
 }
+window.setHwFilter = setHwFilter;
 
-function render() {
+function renderHw() {
   let items = allHw;
-  if (filter === 'incomplete') items = items.filter(a => !isDone(a));
-  if (filter === 'done')       items = items.filter(a => isDone(a));
+  if (hwFilter === 'incomplete') items = items.filter(a => !isDone(a));
+  if (hwFilter === 'done')       items = items.filter(a =>  isDone(a));
 
-  const label = document.getElementById('countLabel');
-  label.textContent = `${items.length} assignment${items.length !== 1 ? 's' : ''}`;
+  document.getElementById('hwCountLabel').textContent =
+    `${items.length} assignment${items.length !== 1 ? 's' : ''}`;
 
   if (!items.length) {
     document.getElementById('hwList').innerHTML =
-      `<div class="empty">${filter === 'done' ? 'Nothing completed yet.' : 'All caught up!'}</div>`;
+      `<div class="empty">${hwFilter === 'done' ? 'Nothing completed yet.' : 'All caught up!'}</div>`;
     return;
   }
-
   document.getElementById('hwList').innerHTML = items.map(a => {
-    const done = isDone(a);
-    const days = daysUntil(a.due_date);
+    const done     = isDone(a);
+    const days     = daysUntil(a.due_date);
     const priority = done ? 'priority-low' : days <= 1 ? 'priority-high' : days <= 3 ? 'priority-med' : 'priority-low';
     const dueClass = done ? '' : days <= 1 ? 'due-urgent' : days <= 3 ? 'due-soon' : '';
     const dueText  = done ? 'Done ✓' : relDue(a.due_date);
     const dateStr  = new Date(a.due_date).toLocaleDateString('en-US', { month:'2-digit', day:'2-digit', year:'numeric' });
-
     return `<div class="assignment-item${done ? ' done-item' : ''}" id="item-${a.id}">
       <div class="assignment-check${done ? ' done' : ''}" onclick="toggleDone(${a.id}, event)"></div>
       <div class="assignment-info">
@@ -108,31 +149,71 @@ function render() {
   }).join('');
 }
 
-function renderAiRec() {
-  const pending = allHw.filter(a => !isDone(a));
-  if (!pending.length) {
-    document.getElementById('aiRec').textContent = 'You\'re all caught up! No pending assignments.';
-    return;
-  }
-  pending.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
-  const first = pending[0];
-  const second = pending[1];
-  let text = `<strong>Start with ${esc(first.subject_name || 'your first assignment')}: ${esc(first.title)}</strong> — due ${relDue(first.due_date)}.`;
-  if (second) text += ` Then move on to ${esc(second.subject_name || '')}: ${esc(second.title)} (${relDue(second.due_date)}).`;
-  if (pending.length > 2) text += ` ${pending.length - 2} more assignment${pending.length > 3 ? 's' : ''} after that.`;
-  document.getElementById('aiRec').innerHTML = text;
-}
-
 function toggleDone(id, e) {
   e.stopPropagation();
-  if (checkedIds.has(id)) checkedIds.delete(id);
-  else checkedIds.add(id);
+  if (checkedIds.has(id)) checkedIds.delete(id); else checkedIds.add(id);
   localStorage.setItem('hw_checked', JSON.stringify([...checkedIds]));
-  render();
+  renderHw();
   renderAiRec();
 }
+window.toggleDone = toggleDone;
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+/* ── Tests ──────────────────────────────────────────── */
+function renderTests() {
+  const tests = allTests;
+  document.getElementById('testCountLabel').textContent =
+    `${tests.length} assessment${tests.length !== 1 ? 's' : ''}`;
+
+  if (!tests.length) {
+    document.getElementById('testList').innerHTML = '<div class="empty">No upcoming tests.</div>';
+    return;
+  }
+  document.getElementById('testList').innerHTML = tests.map(t => {
+    const days    = daysUntil(t.due_date);
+    const urgency = days <= 2 ? 'urgent' : days <= 5 ? 'soon' : '';
+    const dueText = relDue(t.due_date);
+    const dateStr = new Date(t.due_date).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+    const icon    = subjectIcon(t.subject_name);
+    const barPct  = Math.max(0, Math.min(100, Math.round((days / 14) * 100)));
+    const barCol  = days <= 2 ? '#f87171' : days <= 5 ? '#fbbf24' : 'var(--g1)';
+    return `<div class="test-item">
+      <div class="test-icon">${icon}</div>
+      <div style="flex:1;min-width:0">
+        <div class="assignment-subject">${esc(t.subject_name || '')}</div>
+        <div class="assignment-title">${esc(t.title)}</div>
+        <div class="test-meta">${esc(dateStr)}</div>
+        <div class="urgency-bar"><div class="urgency-fill" style="width:${barPct}%;background:${barCol}"></div></div>
+      </div>
+      <div class="test-days ${urgency}">${dueText}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ── AI rec (context-aware per active tab) ──────────── */
+function renderAiRec() {
+  const hwTab = document.getElementById('pane-hw').style.display !== 'none';
+  const el = document.getElementById('aiRec');
+  if (hwTab) {
+    const pending = allHw.filter(a => !isDone(a)).sort((a,b) => new Date(a.due_date)-new Date(b.due_date));
+    if (!pending.length) { el.textContent = 'All caught up! No pending assignments.'; return; }
+    const [first, second] = pending;
+    let text = `<strong>Start with ${esc(first.subject_name || 'your first assignment')}: ${esc(first.title)}</strong> — due ${relDue(first.due_date)}.`;
+    if (second) text += ` Then ${esc(second.subject_name || '')}: ${esc(second.title)} (${relDue(second.due_date)}).`;
+    if (pending.length > 2) text += ` ${pending.length - 2} more after that.`;
+    el.innerHTML = text;
+  } else {
+    if (!allTests.length) { el.textContent = 'No upcoming tests — enjoy the break!'; return; }
+    const [first, second] = allTests;
+    const days0 = daysUntil(first.due_date);
+    let text = `<strong>Priority: ${esc(first.subject_name || first.title)} ${days0 <= 1 ? 'tomorrow' : `in ${days0} days`}.</strong> Start reviewing now`;
+    if (second) text += `, then shift focus to ${esc(second.subject_name || second.title)} (${relDue(second.due_date)})`;
+    text += '.';
+    if (allTests.length > 2) text += ` ${allTests.length - 2} more assessment${allTests.length > 3 ? 's' : ''} coming up.`;
+    el.innerHTML = text;
+  }
+}
+
+/* ── Helpers ────────────────────────────────────────── */
 function daysUntil(iso) {
   const now = new Date(); now.setHours(0,0,0,0);
   const d = new Date(iso); d.setHours(0,0,0,0);
@@ -146,27 +227,6 @@ function relDue(iso) {
   return `In ${d}d.`;
 }
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function setUser(u) {
-  const initials = u.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
-  
-  
-  
-}
-function setTheme(t) {
-  document.documentElement.dataset.theme = t;
-  document.getElementById('themeIcon').setAttribute('href', t === 'dark' ? '#ic-moon' : '#ic-sun');
-  localStorage.setItem('theme', t);
-}
-function toggleTheme() { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); }
-async function api(url) {
-  try {
-    const r = await fetch(url, { credentials:'include' });
-    if (r.status === 401) return null;
-    return r.ok ? r.json() : null;
-  } catch { return null; }
-}
 
 boot();
-
-
 </script>

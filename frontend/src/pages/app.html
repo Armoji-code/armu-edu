@@ -1287,7 +1287,7 @@ const ROUTES = {
   '/dashboard':           'dashboard',
   '/calendar':            'calendar',
   '/homework':            'homework',
-  '/tests':               'tests',
+  '/tests':               'homework',
   '/schedule':            'schedule',
   '/grades':              'grades',
   '/leaderboard':         'leaderboard',
@@ -1398,6 +1398,9 @@ async function navigate(path, push = true) {
     document.querySelectorAll('.topbar [id="themeBtn"] use, .topbar [id="themeToggle"] use').forEach(u =>
       u.setAttribute('href', theme === 'dark' ? '#ic-sun' : '#ic-moon')
     );
+
+    // Auto-switch tab for aliased routes
+    if (path === '/tests' && typeof window.switchTab === 'function') window.switchTab('tests');
 
   } catch(e) {
     showError(path);
