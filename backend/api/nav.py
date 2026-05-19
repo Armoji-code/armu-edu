@@ -26,6 +26,7 @@ _DEFAULTS = {
             {"label": "Whiteboard",  "icon": "ic-whiteboard", "path": "/whiteboard"},
             {"label": "Meeting",     "icon": "ic-meeting",    "path": "/meeting"},
             {"label": "Messages",    "icon": "ic-messages",   "path": "/messages"},
+            {"label": "Settings",    "icon": "ic-settings",   "path": "/settings"},
         ]},
     ],
     "teacher": [
@@ -43,6 +44,7 @@ _DEFAULTS = {
             {"label": "Whiteboard",  "icon": "ic-whiteboard", "path": "/whiteboard"},
             {"label": "Meeting",     "icon": "ic-meeting",    "path": "/meeting"},
             {"label": "Messages",    "icon": "ic-messages",   "path": "/messages"},
+            {"label": "Settings",    "icon": "ic-settings",   "path": "/settings"},
         ]},
     ],
     "librarian": [
@@ -53,6 +55,7 @@ _DEFAULTS = {
         ]},
         {"label": "Tools", "items": [
             {"label": "Messages",    "icon": "ic-messages",   "path": "/messages"},
+            {"label": "Settings",    "icon": "ic-settings",   "path": "/settings"},
         ]},
     ],
     "admin": [
