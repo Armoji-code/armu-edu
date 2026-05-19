@@ -368,14 +368,19 @@ async function boot() {
   setModelTier(localStorage.getItem('armu_model_tier') || 'standard');
 
   // Fetch real model names from backend
-  fetch('/api/ai/models').then(r => r.json()).then(m => {
-    document.getElementById('modelNameStandard').textContent = m.standard || 'Standard';
-    document.getElementById('modelNameAdvanced').textContent = m.advanced !== m.standard
+  try {
+    const m = await fetch('/api/ai/models').then(r => r.json());
+    const elStd = document.getElementById('modelNameStandard');
+    const elAdv = document.getElementById('modelNameAdvanced');
+    if (elStd) elStd.textContent = m.standard || 'Standard';
+    if (elAdv) elAdv.textContent = m.advanced !== m.standard
       ? m.advanced : m.advanced + ' · same as standard';
-  }).catch(() => {
-    document.getElementById('modelNameStandard').textContent = 'Standard model';
-    document.getElementById('modelNameAdvanced').textContent = 'Advanced model';
-  });
+  } catch {
+    const elStd = document.getElementById('modelNameStandard');
+    const elAdv = document.getElementById('modelNameAdvanced');
+    if (elStd) elStd.textContent = 'Standard model';
+    if (elAdv) elAdv.textContent = 'Advanced model';
+  }
   document.getElementById('typingToggle').checked = loadBool('armu_typing', true);
   document.getElementById('autoTitleToggle').checked = loadBool('armu_autotitle', true);
 }

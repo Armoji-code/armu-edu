@@ -280,10 +280,12 @@ async function boot() {
     ? me.class_name + (me.school_name ? ' · '+me.school_name : '')
     : (me.role ? me.role[0].toUpperCase()+me.role.slice(1) : '');
 
-  // Teacher sidebar swap
+  // Teacher sidebar swap (null-check: pjax from teacher pages keeps teacher sidebar)
   if (me.role === 'teacher') {
-    document.getElementById('logoSub').textContent = 'teacher portal';
-    document.getElementById('sidebarNav').innerHTML = `
+    const _logoSub = document.getElementById('logoSub');
+    if (_logoSub) _logoSub.textContent = 'teacher portal';
+    const _sidebarNav = document.getElementById('sidebarNav');
+    if (_sidebarNav) _sidebarNav.innerHTML = `
       <div class="nav-section">
         <div class="nav-label">Manage</div>
         <a class="nav-item" href="/teacher"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
