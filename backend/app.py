@@ -173,4 +173,4 @@ def create_app(config=Config):
 if __name__ == "__main__":
     app = create_app()
     debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-    socketio.run(app, debug=debug, allow_unsafe_werkzeug=debug)
+    socketio.run(app, debug=debug, allow_unsafe_werkzeug=True)
