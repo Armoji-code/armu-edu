@@ -10,24 +10,26 @@
 <div style="padding:48px;text-align:center;color:var(--text3);">Loading…</div>
 </div>
 <!-- Start Meeting Modal -->
-<div class="modal-overlay" id="newMeetingModal">
-<div class="modal">
-<div class="modal-title">Start a Meeting</div>
-<div class="field-row">
-<div class="field-label">Title</div>
-<input class="field-input" id="newMeetingTitle" placeholder="e.g. Math Study Session" type="text"/>
-</div>
-<div class="field-row" id="classFieldRow">
-<div class="field-label">Class <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
-<select class="field-input" id="newMeetingClass">
-<option value="">No class — share the link manually</option>
-</select>
-</div>
-<div class="modal-actions">
-<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-<button class="btn btn-primary" onclick="confirmNewMeeting()">Start</button>
-</div>
-</div>
+<div class="modal-backdrop" id="newMeetingModal" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">Start a Meeting</div>
+    <div class="field" style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:500;">Title</label>
+      <input class="pw-input" id="newMeetingTitle" placeholder="e.g. Math Study Session" type="text" style="width:100%;"/>
+    </div>
+    <div class="field" id="classFieldRow" style="margin-bottom:14px;">
+      <label style="display:block;font-size:12px;color:var(--text3);margin-bottom:6px;font-weight:500;">
+        Class <span style="font-weight:400;">(optional)</span>
+      </label>
+      <select class="filter-select" id="newMeetingClass" style="width:100%;">
+        <option value="">No class — share the link manually</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmNewMeeting()">Start</button>
+    </div>
+  </div>
 </div>
 <!-- In-call overlay -->
 <div class="call-overlay" id="callOverlay">
@@ -461,12 +463,12 @@ async function openModal() {
   } else {
     document.getElementById('classFieldRow').style.display = 'none';
   }
-  document.getElementById('newMeetingModal').classList.add('open');
+  document.getElementById('newMeetingModal').style.display = 'flex';
   document.getElementById('newMeetingTitle').focus();
 }
 
 function closeModal() {
-  document.getElementById('newMeetingModal').classList.remove('open');
+  document.getElementById('newMeetingModal').style.display = 'none';
 }
 
 async function confirmNewMeeting() {
@@ -488,10 +490,6 @@ async function endMeeting(id) {
   refreshMeetings();
 }
 
-// Close modal on overlay click
-document.getElementById('newMeetingModal').addEventListener('click', e => {
-  if (e.target === e.currentTarget) closeModal();
-});
 
 // Keyboard shortcuts in call
 document.addEventListener('keydown', e => {
