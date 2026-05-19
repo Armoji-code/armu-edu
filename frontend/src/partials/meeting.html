@@ -33,11 +33,15 @@
 </div>
 <!-- In-call overlay -->
 <div class="call-overlay" id="callOverlay">
-  <div class="call-topbar">
+  <div class="call-topbar" id="callTopbar">
     <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-meeting"/></svg>
     <span class="call-title" id="callTitle">Meeting</span>
     <span class="call-duration" id="callDuration"></span>
+    <span class="pip-back-hint">Tap to return</span>
     <div class="call-spacer"></div>
+    <button class="pip-minimize-btn" id="btnMinimize" onclick="minimizeCall()" title="Minimize to corner">
+      <svg class="icon icon-16"><use href="#ic-chevrdown"/></svg>
+    </button>
   </div>
   <div class="call-body">
     <div class="video-grid" id="videoGrid"></div>
@@ -76,7 +80,6 @@
 
 <script>
 
-
 (function(){
   const t = localStorage.getItem('theme') || 'dark';
   document.documentElement.setAttribute('data-theme', t);
@@ -96,22 +99,88 @@ let iceServers = [];
 let socket = null;
 let localStream = null;
 let screenStream = null;
-let peerConnections = {};   // peer_id -> RTCPeerConnection
-let peerNames = {};          // peer_id -> name
+let peerConnections = {};
+let peerNames = {};
 let currentMeeting = null;
 let callStartTime = null;
 let durationInterval = null;
 let micOn = true, camOn = true, screenOn = false;
 
+// ── PiP: minimize call to floating corner tile ────────────────────────────────
+function minimizeCall() {
+  const overlay = document.getElementById('callOverlay');
+  if (!overlay || !overlay.classList.contains('active')) return;
+
+  // Preserve entire call state so it survives navigation
+  window.__callPipState = {
+    socket, localStream, screenStream, peerConnections,
+    peerNames, currentMeeting, callStartTime, durationInterval,
+    micOn, camOn, screenOn, me,
+  };
+
+  // Rename ID so it doesn't collide with the new partial's element
+  overlay.id = 'callOverlayPip';
+  // Detach from .main so router's innerHTML swap can't remove it
+  document.body.appendChild(overlay);
+  overlay.classList.add('pip-mode');
+
+  // Tapping the topbar expands back
+  document.getElementById('callTopbar').onclick = expandCall;
+}
+
+function expandCall() {
+  const overlay = document.getElementById('callOverlayPip') || document.getElementById('callOverlay');
+  if (!overlay) return;
+
+  // Restore ID and remove pip styles
+  overlay.id = 'callOverlay';
+  overlay.classList.remove('pip-mode');
+  const topbar = overlay.querySelector('#callTopbar');
+  if (topbar) topbar.onclick = null;
+
+  if (location.pathname !== '/meeting') {
+    // Navigate — boot() will finish restoration once partial loads
+    if (typeof navigate === 'function') navigate('/meeting');
+  } else {
+    // Already on /meeting, just clear pip state
+    window.__callPipState = null;
+  }
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 async function boot() {
+  // Returning to /meeting while call is alive in PiP
+  if (window.__callPipState) {
+    // Remove the fresh empty overlay injected by the router
+    const freshOverlay = document.getElementById('callOverlay');
+    if (freshOverlay && freshOverlay.parentElement !== document.body) freshOverlay.remove();
+
+    // Grab the real overlay from body and restore it
+    const pip = document.getElementById('callOverlayPip') || document.getElementById('callOverlay');
+    if (pip) {
+      pip.id = 'callOverlay';
+      pip.classList.remove('pip-mode');
+      const topbar = pip.querySelector('#callTopbar');
+      if (topbar) topbar.onclick = null;
+    }
+
+    // Restore all call-state variables
+    const s = window.__callPipState;
+    window.__callPipState = null;
+    me = s.me; socket = s.socket; localStream = s.localStream;
+    screenStream = s.screenStream; peerConnections = s.peerConnections;
+    peerNames = s.peerNames; currentMeeting = s.currentMeeting;
+    callStartTime = s.callStartTime; durationInterval = s.durationInterval;
+    micOn = s.micOn; camOn = s.camOn; screenOn = s.screenOn;
+
+    // Re-register cleanup for the now-active call
+    registerCleanup();
+    return;
+  }
+
   me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
   if (!me || me.error) { location.href='/login'; return; }
-  
-  
-  
 
-  // Fetch ICE config + meetings
   const [iceResp, mtgResp] = await Promise.all([
     fetch('/api/meetings/ice-config').then(r=>r.json()).catch(()=>({ice_servers:[]})),
     fetch('/api/meetings').then(r=>r.json()).catch(()=>[]),
@@ -122,6 +191,22 @@ async function boot() {
   renderLobby();
   initSocket();
   setInterval(refreshMeetings, 8000);
+  registerCleanup();
+}
+
+function registerCleanup() {
+  window.__cleanup = function() {
+    if (window.__callPipState) return; // Call lives in PiP — skip cleanup
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+    Object.values(peerConnections).forEach(pc => pc.close());
+    peerConnections = {};
+    clearInterval(durationInterval);
+    if (socket) { socket.disconnect(); socket = null; }
+    // Clean up pip overlay from body if it somehow ended up there
+    const pip = document.getElementById('callOverlayPip');
+    if (pip) pip.remove();
+  };
 }
 
 function initials(name) {
@@ -134,10 +219,7 @@ function initSocket() {
   socket.emit('user_join', {user_id: me.id});
 
   socket.on('meeting:peers', ({peers}) => {
-    peers.forEach(p => {
-      peerNames[p.id] = p.name;
-      createOffer(p.id);
-    });
+    peers.forEach(p => { peerNames[p.id] = p.name; createOffer(p.id); });
     renderParticipants();
   });
 
@@ -171,25 +253,14 @@ function ensurePeerConnection(peerId, isInitiator) {
   const pc = new RTCPeerConnection({iceServers});
   peerConnections[peerId] = pc;
 
-  // Add local tracks
   if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
-  // Handle remote stream
   const remoteStream = new MediaStream();
-  pc.ontrack = e => {
-    remoteStream.addTrack(e.track);
-    updateRemoteVideo(peerId, remoteStream);
-  };
-
-  // ICE candidates
-  pc.onicecandidate = e => {
-    if (e.candidate) signal(peerId, e.candidate.toJSON());
-  };
-
+  pc.ontrack = e => { remoteStream.addTrack(e.track); updateRemoteVideo(peerId, remoteStream); };
+  pc.onicecandidate = e => { if (e.candidate) signal(peerId, e.candidate.toJSON()); };
   pc.onconnectionstatechange = () => {
     if (['failed','disconnected','closed'].includes(pc.connectionState)) {
-      closePeer(peerId);
-      renderParticipants();
+      closePeer(peerId); renderParticipants();
     }
   };
 
@@ -221,8 +292,7 @@ function closePeer(peerId) {
   const pc = peerConnections[peerId];
   if (pc) { pc.close(); delete peerConnections[peerId]; }
   delete peerNames[peerId];
-  const tile = document.getElementById(`tile-${peerId}`);
-  if (tile) tile.remove();
+  document.getElementById(`tile-${peerId}`)?.remove();
   updateGridLayout();
 }
 
@@ -230,8 +300,7 @@ function closePeer(peerId) {
 function addLocalTile() {
   const grid = document.getElementById('videoGrid');
   const tile = document.createElement('div');
-  tile.className = 'video-tile local';
-  tile.id = 'tile-local';
+  tile.className = 'video-tile local'; tile.id = 'tile-local';
   const video = document.createElement('video');
   video.autoplay = true; video.muted = true; video.playsInline = true;
   video.srcObject = localStream;
@@ -248,8 +317,7 @@ function addRemoteTile(peerId) {
   if (document.getElementById(`tile-${peerId}`)) return;
   const grid = document.getElementById('videoGrid');
   const tile = document.createElement('div');
-  tile.className = 'video-tile';
-  tile.id = `tile-${peerId}`;
+  tile.className = 'video-tile'; tile.id = `tile-${peerId}`;
   const avatar = document.createElement('div');
   avatar.className = 'tile-avatar';
   avatar.textContent = initials(peerNames[peerId] || '?');
@@ -277,6 +345,7 @@ function updateRemoteVideo(peerId, stream) {
 
 function updateGridLayout() {
   const grid = document.getElementById('videoGrid');
+  if (!grid) return;
   const n = grid.children.length;
   if (n <= 1)      { grid.style.gridTemplateColumns = '1fr'; grid.style.gridTemplateRows = '1fr'; }
   else if (n <= 2) { grid.style.gridTemplateColumns = '1fr 1fr'; grid.style.gridTemplateRows = '1fr'; }
@@ -287,6 +356,7 @@ function updateGridLayout() {
 
 function renderParticipants() {
   const list = document.getElementById('participantList');
+  if (!list) return;
   const all = [{id: 'local', name: (me.name||'You') + ' (You)'}];
   Object.entries(peerNames).forEach(([id, name]) => all.push({id, name}));
   list.innerHTML = all.map(p => `
@@ -318,14 +388,15 @@ async function joinMeeting(meeting) {
   durationInterval = setInterval(() => {
     const s = Math.floor((Date.now()-callStartTime)/1000);
     const m = Math.floor(s/60), sec = s%60;
-    document.getElementById('callDuration').textContent = `${m}:${String(sec).padStart(2,'0')}`;
+    const el = document.getElementById('callDuration');
+    if (el) el.textContent = `${m}:${String(sec).padStart(2,'0')}`;
   }, 1000);
 
   socket.emit('meeting:join', {room_code: meeting.room_code});
 }
 
 async function leaveMeeting() {
-  if (currentMeeting) {
+  if (currentMeeting && socket) {
     socket.emit('meeting:leave', {room_code: currentMeeting.room_code});
   }
   Object.values(peerConnections).forEach(pc => pc.close());
@@ -333,30 +404,36 @@ async function leaveMeeting() {
   if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
   if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
   clearInterval(durationInterval);
-  document.getElementById('callOverlay').classList.remove('active');
-  document.getElementById('videoGrid').innerHTML = '';
+  window.__callPipState = null;
+
+  // Overlay might be in body (pip was active when Leave was clicked)
+  const overlay = document.getElementById('callOverlay') || document.getElementById('callOverlayPip');
+  if (overlay) {
+    overlay.classList.remove('active', 'pip-mode');
+    if (overlay.parentElement === document.body) {
+      overlay.id = 'callOverlay';
+      // Move back inside main so the page renders cleanly
+      document.getElementById('main')?.appendChild(overlay);
+    }
+  }
+
   currentMeeting = null; micOn = true; camOn = true; screenOn = false;
-  document.getElementById('btnMic').className = 'ctrl-btn on';
-  document.getElementById('btnCam').className = 'ctrl-btn on';
-  document.getElementById('btnScreen').className = 'ctrl-btn on';
+  const btnMic = document.getElementById('btnMic');
+  const btnCam = document.getElementById('btnCam');
+  const btnScreen = document.getElementById('btnScreen');
+  if (btnMic) btnMic.className = 'ctrl-btn on';
+  if (btnCam) btnCam.className = 'ctrl-btn on';
+  if (btnScreen) btnScreen.className = 'ctrl-btn on';
+
   refreshMeetings();
 }
-
-// Pjax cleanup: stop media + disconnect socket when navigating away
-window.__cleanup = function () {
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
-  Object.values(peerConnections).forEach(pc => pc.close());
-  peerConnections = {};
-  clearInterval(durationInterval);
-  if (socket) { socket.disconnect(); socket = null; }
-};
 
 // ── Controls ──────────────────────────────────────────────────────────────────
 function toggleMic() {
   micOn = !micOn;
   localStream?.getAudioTracks().forEach(t => t.enabled = micOn);
-  document.getElementById('btnMic').className = `ctrl-btn ${micOn?'on':'off'}`;
+  const btn = document.getElementById('btnMic');
+  if (btn) btn.className = `ctrl-btn ${micOn?'on':'off'}`;
 }
 
 function toggleCam() {
@@ -364,7 +441,8 @@ function toggleCam() {
   localStream?.getVideoTracks().forEach(t => t.enabled = camOn);
   const video = document.querySelector('#tile-local video');
   if (video) video.style.display = camOn ? '' : 'none';
-  document.getElementById('btnCam').className = `ctrl-btn ${camOn?'on':'off'}`;
+  const btn = document.getElementById('btnCam');
+  if (btn) btn.className = `ctrl-btn ${camOn?'on':'off'}`;
 }
 
 async function toggleScreen() {
@@ -380,7 +458,8 @@ async function toggleScreen() {
       if (localVideo) localVideo.srcObject = screenStream;
       screenTrack.onended = () => { screenOn = true; toggleScreen(); };
       screenOn = true;
-      document.getElementById('btnScreen').className = 'ctrl-btn off';
+      const btn = document.getElementById('btnScreen');
+      if (btn) btn.className = 'ctrl-btn off';
     } catch (e) { return; }
   } else {
     const camTrack = localStream?.getVideoTracks()[0];
@@ -394,13 +473,15 @@ async function toggleScreen() {
     const localVideo = document.querySelector('#tile-local video');
     if (localVideo) localVideo.srcObject = localStream;
     screenOn = false;
-    document.getElementById('btnScreen').className = 'ctrl-btn on';
+    const btn = document.getElementById('btnScreen');
+    if (btn) btn.className = 'ctrl-btn on';
   }
 }
 
 // ── Lobby render ──────────────────────────────────────────────────────────────
 function renderLobby() {
   const c = document.getElementById('mainContent');
+  if (!c) return;
   const canEnd = mid => {
     const m = meetings.find(x=>x.id===mid);
     return m && (m.host_id===me.id || me.role==='admin' || me.role==='teacher');
@@ -446,12 +527,12 @@ function renderLobby() {
 
 async function refreshMeetings() {
   meetings = await fetch('/api/meetings').then(r=>r.json()).catch(()=>[]);
-  if (!document.getElementById('callOverlay').classList.contains('active')) renderLobby();
+  const overlay = document.getElementById('callOverlay');
+  if (!overlay?.classList.contains('active')) renderLobby();
 }
 
 // ── Start meeting modal ───────────────────────────────────────────────────────
 async function openModal() {
-  // Populate class dropdown for teachers/admins
   const sel = document.getElementById('newMeetingClass');
   if (me.role === 'teacher' || me.role === 'admin') {
     const classes = await fetch('/api/teacher/classes').then(r=>r.ok?r.json():[]).catch(()=>[]);
@@ -461,7 +542,8 @@ async function openModal() {
       sel.appendChild(opt);
     });
   } else {
-    document.getElementById('classFieldRow').style.display = 'none';
+    const row = document.getElementById('classFieldRow');
+    if (row) row.style.display = 'none';
   }
   document.getElementById('newMeetingModal').style.display = 'flex';
   document.getElementById('newMeetingTitle').focus();
@@ -479,17 +561,13 @@ async function confirmNewMeeting() {
     body: JSON.stringify({title, class_id: class_id ? parseInt(class_id) : null}),
   }).then(r=>r.json()).catch(()=>null);
   closeModal();
-  if (m && m.id) {
-    await refreshMeetings();
-    joinMeeting(m);
-  }
+  if (m && m.id) { await refreshMeetings(); joinMeeting(m); }
 }
 
 async function endMeeting(id) {
   await fetch(`/api/meetings/${id}`, {method:'DELETE'});
   refreshMeetings();
 }
-
 
 // Keyboard shortcuts in call
 document.addEventListener('keydown', e => {
@@ -500,6 +578,5 @@ document.addEventListener('keydown', e => {
 });
 
 boot();
-
 
 </script>

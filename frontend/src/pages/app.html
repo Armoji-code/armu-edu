@@ -752,6 +752,18 @@
   /* Meeting */
   .call-overlay{display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column;}
   .call-overlay.active{display:flex;}
+  .call-overlay.pip-mode{position:fixed;inset:auto;bottom:20px;right:20px;width:256px;height:auto;border-radius:var(--radius);border:1px solid var(--border);box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:600;overflow:hidden;display:flex;}
+  .call-overlay.pip-mode .call-body{display:none;}
+  .call-overlay.pip-mode .call-topbar{padding:8px 12px;height:auto;cursor:pointer;gap:8px;user-select:none;}
+  .call-overlay.pip-mode .call-spacer{display:none;}
+  .call-overlay.pip-mode .call-controls{height:52px;gap:10px;}
+  .call-overlay.pip-mode .ctrl-label{display:none;}
+  .call-overlay.pip-mode .ctrl-btn{width:36px;height:36px;}
+  .pip-back-hint{display:none;font-size:11px;color:var(--text3);white-space:nowrap;}
+  .call-overlay.pip-mode .pip-back-hint{display:block;}
+  .pip-minimize-btn{background:none;border:none;color:var(--text2);cursor:pointer;display:flex;align-items:center;padding:3px;border-radius:4px;transition:color var(--transition);flex-shrink:0;}
+  .pip-minimize-btn:hover{color:var(--text);}
+  .call-overlay.pip-mode .pip-minimize-btn{display:none;}
   .call-topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 20px;flex-shrink:0;}
   .call-title{font-size:14px;font-weight:600;color:var(--text);}
   .call-duration{font-size:12px;color:var(--text3);}
