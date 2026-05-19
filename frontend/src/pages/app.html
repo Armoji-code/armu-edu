@@ -1447,6 +1447,10 @@ async function navigate(path, push = true) {
     }));
     tmp.querySelectorAll('script').forEach(s => s.remove());
 
+    // Rescue any active PiP call overlay before wiping .main
+    const __pip = main.querySelector('.call-overlay.pip-mode');
+    if (__pip) { __pip.id = '__callOverlayPip'; document.body.appendChild(__pip); }
+
     main.innerHTML = tmp.innerHTML;
 
     for (const { src, text } of scripts) {

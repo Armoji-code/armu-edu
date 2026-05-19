@@ -111,38 +111,46 @@ function minimizeCall() {
   const overlay = document.getElementById('callOverlay');
   if (!overlay || !overlay.classList.contains('active')) return;
 
-  // Preserve entire call state so it survives navigation
   window.__callPipState = {
     socket, localStream, screenStream, peerConnections,
     peerNames, currentMeeting, callStartTime, durationInterval,
     micOn, camOn, screenOn, me,
   };
 
-  // Rename ID so it doesn't collide with the new partial's element
-  overlay.id = 'callOverlayPip';
-  // Detach from .main so router's innerHTML swap can't remove it
-  document.body.appendChild(overlay);
   overlay.classList.add('pip-mode');
+
+  // Use inline styles — guaranteed to beat any CSS rule
+  Object.assign(overlay.style, {
+    position: 'fixed', top: 'auto', left: 'auto',
+    bottom: '20px', right: '20px',
+    width: '256px', height: 'auto',
+    inset: 'auto',
+  });
 
   // Tapping the topbar expands back
   document.getElementById('callTopbar').onclick = expandCall;
 }
 
 function expandCall() {
-  const overlay = document.getElementById('callOverlayPip') || document.getElementById('callOverlay');
+  // Overlay might be in body (__callOverlayPip) or still in main (callOverlay)
+  const overlay = document.getElementById('__callOverlayPip') || document.getElementById('callOverlay');
   if (!overlay) return;
 
-  // Restore ID and remove pip styles
   overlay.id = 'callOverlay';
   overlay.classList.remove('pip-mode');
+  overlay.style.cssText = ''; // clear all inline overrides
   const topbar = overlay.querySelector('#callTopbar');
   if (topbar) topbar.onclick = null;
 
-  if (location.pathname !== '/meeting') {
-    // Navigate — boot() will finish restoration once partial loads
-    if (typeof navigate === 'function') navigate('/meeting');
+  if (overlay.parentElement === document.body) {
+    if (location.pathname !== '/meeting') {
+      if (typeof navigate === 'function') navigate('/meeting');
+      return; // boot() will restore state
+    }
+    // Already on /meeting — put overlay back in main
+    document.getElementById('main')?.appendChild(overlay);
+    window.__callPipState = null;
   } else {
-    // Already on /meeting, just clear pip state
     window.__callPipState = null;
   }
 }
@@ -151,17 +159,18 @@ function expandCall() {
 async function boot() {
   // Returning to /meeting while call is alive in PiP
   if (window.__callPipState) {
-    // Remove the fresh empty overlay injected by the router
-    const freshOverlay = document.getElementById('callOverlay');
-    if (freshOverlay && freshOverlay.parentElement !== document.body) freshOverlay.remove();
+    // Remove the fresh empty overlay injected by the router into main
+    document.getElementById('callOverlay')?.remove();
 
-    // Grab the real overlay from body and restore it
-    const pip = document.getElementById('callOverlayPip') || document.getElementById('callOverlay');
+    // The router saved the real overlay in body as __callOverlayPip
+    const pip = document.getElementById('__callOverlayPip');
     if (pip) {
       pip.id = 'callOverlay';
       pip.classList.remove('pip-mode');
+      pip.style.cssText = '';
       const topbar = pip.querySelector('#callTopbar');
       if (topbar) topbar.onclick = null;
+      document.getElementById('main')?.appendChild(pip);
     }
 
     // Restore all call-state variables
@@ -173,7 +182,6 @@ async function boot() {
     callStartTime = s.callStartTime; durationInterval = s.durationInterval;
     micOn = s.micOn; camOn = s.camOn; screenOn = s.screenOn;
 
-    // Re-register cleanup for the now-active call
     registerCleanup();
     return;
   }
