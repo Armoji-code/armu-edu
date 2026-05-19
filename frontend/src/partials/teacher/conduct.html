@@ -1,53 +1,44 @@
-
 <div class="topbar">
-<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-flag"></use></svg>
-<span class="topbar-title">Conduct Log</span>
-<div class="topbar-right">
-<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
-<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-flag"/></svg>
+  <span class="topbar-title">Conduct Log</span>
+  <div class="topbar-right">
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+      <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+    </div>
+  </div>
 </div>
-</div>
-</div>
+
 <div class="content">
-<div class="filter-bar">
-<select class="filter-select" id="filterCat" onchange="renderTable()">
-<option value="">All categories</option>
-<option value="participation">Participation</option>
-<option value="behaviour">Behaviour</option>
-<option value="assignments">Assignments</option>
-<option value="absences">Absences</option>
-</select>
-<select class="filter-select" id="filterPts" onchange="renderTable()">
-<option value="">Any points</option>
-<option value="pos">Positive (+)</option>
-<option value="neg">Negative (−)</option>
-</select>
-<input class="filter-select" id="filterSearch" oninput="renderTable()" placeholder="Search student…" style="min-width:160px;" type="search"/>
-</div>
-<div id="conductContent" style="color:var(--text3);font-size:13px;">Loading…</div>
+  <div class="filter-bar">
+    <select class="filter-select" id="filterCat" onchange="renderTable()">
+      <option value="">All categories</option>
+      <option value="participation">Participation</option>
+      <option value="behaviour">Behaviour</option>
+      <option value="assignments">Assignments</option>
+      <option value="absences">Absences</option>
+    </select>
+    <select class="filter-select" id="filterPts" onchange="renderTable()">
+      <option value="">Any points</option>
+      <option value="pos">Positive (+)</option>
+      <option value="neg">Negative (−)</option>
+    </select>
+    <input class="filter-select" id="filterSearch" oninput="renderTable()"
+           placeholder="Search student…" style="min-width:160px;" type="search"/>
+  </div>
+  <div id="conductContent" style="color:var(--text3);font-size:13px;">Loading…</div>
 </div>
 
 <script>
-
 (function(){
   const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
   const btn = document.getElementById('themeBtn');
-  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
 })();
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
-}
 
 let events = [];
 
 function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'});
+  return new Date(iso).toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
 }
 
 function renderTable() {
@@ -56,10 +47,10 @@ function renderTable() {
   const search = document.getElementById('filterSearch').value.toLowerCase();
 
   let filtered = events;
-  if (cat)    filtered = filtered.filter(e => e.category === cat);
+  if (cat)           filtered = filtered.filter(e => e.category === cat);
   if (pts === 'pos') filtered = filtered.filter(e => e.points > 0);
   if (pts === 'neg') filtered = filtered.filter(e => e.points < 0);
-  if (search) filtered = filtered.filter(e => e.student_name.toLowerCase().includes(search));
+  if (search)        filtered = filtered.filter(e => e.student_name.toLowerCase().includes(search));
 
   const el = document.getElementById('conductContent');
   if (!filtered.length) {
@@ -70,40 +61,34 @@ function renderTable() {
   el.innerHTML = `
     <div class="conduct-table">
       <div class="ct-row header">
-        <div>Student</div>
-        <div>Subject</div>
-        <div>Points</div>
-        <div>Category</div>
-        <div>Reason</div>
-        <div>Date</div>
+        <div>Student</div><div>Subject</div><div>Points</div>
+        <div>Category</div><div>Reason</div><div>Date</div>
       </div>
       ${filtered.map(e => {
         const ptsCls = e.points > 0 ? 'pts-pos' : e.points < 0 ? 'pts-neg' : 'pts-zero';
         const ptsStr = e.points > 0 ? '+' + e.points : String(e.points);
         return `<div class="ct-row">
           <div style="font-size:13px;font-weight:500;">${e.student_name}</div>
-          <div style="font-size:12px;color:var(--text2);">${e.subject_name}<br><span style="color:var(--text3);font-size:11px;">${e.class_name}</span></div>
+          <div style="font-size:12px;color:var(--text2);">${e.subject_name}<br>
+            <span style="color:var(--text3);font-size:11px;">${e.class_name}</span></div>
           <div class="${ptsCls}">${ptsStr}</div>
           <div><span class="cat-badge cat-${e.category}">${e.category}</span></div>
-          <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${e.reason}">${e.reason || '—'}</div>
+          <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+               title="${e.reason}">${e.reason || '—'}</div>
           <div style="font-size:12px;color:var(--text3);">${fmtDate(e.date)}</div>
         </div>`;
       }).join('')}
     </div>
-    <div style="font-size:11px;color:var(--text3);margin-top:10px;">Showing ${filtered.length} of ${events.length} events (latest 200)</div>`;
+    <div style="font-size:11px;color:var(--text3);margin-top:10px;">
+      Showing ${filtered.length} of ${events.length} events
+    </div>`;
 }
+window.renderTable = renderTable;
 
 async function boot() {
-  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
-  
-  
-  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
-  
-
   events = await fetch('/api/teacher/conduct-log').then(r => r.json()).catch(() => []);
   renderTable();
 }
 
 boot();
-
 </script>

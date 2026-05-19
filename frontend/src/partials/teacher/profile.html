@@ -1,132 +1,120 @@
-
 <div class="topbar">
-<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-profile"></use></svg>
-<span class="topbar-title">Profile</span>
-<div class="topbar-right">
-<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
-<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-profile"/></svg>
+  <span class="topbar-title">Profile</span>
+  <div class="topbar-right">
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+      <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+    </div>
+  </div>
 </div>
-</div>
-</div>
+
 <div class="content">
-<!-- Hero -->
-<div class="profile-hero">
-<div class="profile-avatar" id="bigAvatar">?</div>
-<div class="profile-hero-info">
-<div class="profile-name-row" id="nameRow">
-<span class="profile-name" id="profileName">—</span>
-<button class="edit-name-btn" onclick="startEditName()" title="Edit name">
-<svg class="icon icon-14"><use href="#ic-edit"></use></svg>
-</button>
-</div>
-<div class="name-edit-row" id="nameEditRow">
-<input class="name-input" id="nameInput" placeholder="Your name" type="text"/>
-<button class="edit-name-btn" onclick="saveName()" style="border-color:var(--border-accent);" title="Save">
-<svg class="icon icon-14"><use href="#ic-check"></use></svg>
-</button>
-<button class="edit-name-btn" onclick="cancelEditName()" title="Cancel">
-<svg class="icon icon-14"><use href="#ic-x"></use></svg>
-</button>
-</div>
-<span class="role-badge" id="roleBadge">—</span>
-<div class="profile-meta" id="profileMeta" style="margin-top:6px;"></div>
-</div>
-</div>
-<!-- Details -->
-<div class="card">
-<div class="card-title">Account Details</div>
-<div class="field-row">
-<span class="field-label">Email</span>
-<span class="field-value" id="detailEmail">—</span>
-</div>
-<div class="field-row">
-<span class="field-label">School</span>
-<span class="field-value" id="detailSchool">—</span>
-</div>
-<div class="field-row">
-<span class="field-label">Class</span>
-<span class="field-value" id="detailClass">—</span>
-</div>
-<div class="field-row">
-<span class="field-label">Member since</span>
-<span class="field-muted" id="detailSince">—</span>
-</div>
-</div>
-<!-- Stats -->
-<div class="card">
-<div class="card-title">Activity</div>
-<div class="stats-grid">
-<div class="stat-card">
-<div class="stat-num" id="statSessions">—</div>
-<div class="stat-label">AI Sessions</div>
-</div>
-<div class="stat-card">
-<div class="stat-num" id="statGroups">—</div>
-<div class="stat-label">Groups</div>
-</div>
-<div class="stat-card">
-<div class="stat-num" id="statDays">—</div>
-<div class="stat-label">Days active</div>
-</div>
-</div>
-</div>
-<!-- Password -->
-<div class="card">
-<div class="card-title">Change Password</div>
-<div class="pw-form">
-<div class="pw-field">
-<label class="pw-label">Current password</label>
-<input autocomplete="current-password" class="pw-input" id="pwCurrent" placeholder="••••••••" type="password"/>
-</div>
-<div class="pw-field">
-<label class="pw-label">New password</label>
-<input autocomplete="new-password" class="pw-input" id="pwNew" placeholder="Min 8 characters" type="password"/>
-</div>
-<div class="pw-field">
-<label class="pw-label">Confirm new password</label>
-<input autocomplete="new-password" class="pw-input" id="pwConfirm" placeholder="Repeat new password" type="password"/>
-</div>
-<div class="pw-actions">
-<button class="btn btn-primary" onclick="changePassword()">
-<svg class="icon icon-14"><use href="#ic-lock"></use></svg> Update password
-          </button>
-<span class="form-msg" id="pwMsg"></span>
-</div>
-</div>
-</div>
+  <div class="profile-hero">
+    <div class="profile-avatar" id="bigAvatar">?</div>
+    <div class="profile-hero-info">
+      <div class="profile-name-row" id="nameRow">
+        <span class="profile-name" id="profileName">—</span>
+        <button class="edit-name-btn" onclick="startEditName()" title="Edit name">
+          <svg class="icon icon-14"><use href="#ic-edit"/></svg>
+        </button>
+      </div>
+      <div class="name-edit-row" id="nameEditRow" style="display:none;">
+        <input class="name-input" id="nameInput" placeholder="Your name" type="text"/>
+        <button class="edit-name-btn" onclick="saveName()" style="border-color:var(--border-accent);" title="Save">
+          <svg class="icon icon-14"><use href="#ic-check"/></svg>
+        </button>
+        <button class="edit-name-btn" onclick="cancelEditName()" title="Cancel">
+          <svg class="icon icon-14"><use href="#ic-x"/></svg>
+        </button>
+      </div>
+      <span class="role-badge" id="roleBadge">—</span>
+      <div class="profile-meta" id="profileMeta" style="margin-top:6px;"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Account Details</div>
+    <div class="field-row"><span class="field-label">Email</span><span class="field-value" id="detailEmail">—</span></div>
+    <div class="field-row"><span class="field-label">School</span><span class="field-value" id="detailSchool">—</span></div>
+    <div class="field-row"><span class="field-label">Member since</span><span class="field-muted" id="detailSince">—</span></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Activity</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="statSessions">—</div><div class="stat-label">AI Sessions</div></div>
+      <div class="stat-card"><div class="stat-num" id="statGroups">—</div><div class="stat-label">Groups</div></div>
+      <div class="stat-card"><div class="stat-num" id="statDays">—</div><div class="stat-label">Days active</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Change Password</div>
+    <div class="pw-form">
+      <div class="pw-field">
+        <label class="pw-label">Current password</label>
+        <input autocomplete="current-password" class="pw-input" id="pwCurrent" placeholder="••••••••" type="password"/>
+      </div>
+      <div class="pw-field">
+        <label class="pw-label">New password</label>
+        <input autocomplete="new-password" class="pw-input" id="pwNew" placeholder="Min 8 characters" type="password"/>
+      </div>
+      <div class="pw-field">
+        <label class="pw-label">Confirm new password</label>
+        <input autocomplete="new-password" class="pw-input" id="pwConfirm" placeholder="Repeat new password" type="password"/>
+      </div>
+      <div class="pw-actions">
+        <button class="btn btn-primary" onclick="changePassword()">
+          <svg class="icon icon-14"><use href="#ic-lock"/></svg> Update password
+        </button>
+        <span class="form-msg" id="pwMsg"></span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-
 (function(){
   const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
   const btn = document.getElementById('themeBtn');
-  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
 })();
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
-}
 
 let me = null;
 
 function initials(name) {
-  return (name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+function renderProfile() {
+  document.getElementById('bigAvatar').textContent   = initials(me.name);
+  document.getElementById('profileName').textContent = me.name;
+  document.getElementById('detailEmail').textContent = me.email;
+  document.getElementById('detailSchool').textContent = me.school_name || '—';
+
+  const badge = document.getElementById('roleBadge');
+  badge.textContent = me.role;
+  badge.className = 'role-badge ' + me.role;
+
+  const meta = [];
+  if (me.school_name) meta.push(me.school_name);
+  document.getElementById('profileMeta').textContent = meta.join(' · ');
+
+  if (me.created_at) {
+    const d = new Date(me.created_at);
+    document.getElementById('detailSince').textContent =
+      d.toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+    document.getElementById('statDays').textContent =
+      Math.floor((Date.now() - d) / 86400000);
+  }
 }
 
 function startEditName() {
   document.getElementById('nameRow').style.display = 'none';
-  const row = document.getElementById('nameEditRow');
-  row.style.display = 'flex';
+  document.getElementById('nameEditRow').style.display = 'flex';
   const inp = document.getElementById('nameInput');
   inp.value = me.name;
-  inp.focus();
-  inp.select();
+  inp.focus(); inp.select();
 }
 
 function cancelEditName() {
@@ -155,12 +143,12 @@ document.addEventListener('keydown', e => {
 
 async function changePassword() {
   const current = document.getElementById('pwCurrent').value;
-  const newPw = document.getElementById('pwNew').value;
+  const newPw   = document.getElementById('pwNew').value;
   const confirm = document.getElementById('pwConfirm').value;
-  const msg = document.getElementById('pwMsg');
+  const msg     = document.getElementById('pwMsg');
 
   if (newPw !== confirm) { msg.className = 'form-msg err'; msg.textContent = 'Passwords do not match'; return; }
-  if (newPw.length < 8) { msg.className = 'form-msg err'; msg.textContent = 'Minimum 8 characters'; return; }
+  if (newPw.length < 8)  { msg.className = 'form-msg err'; msg.textContent = 'Minimum 8 characters'; return; }
 
   const res = await fetch('/api/auth/password', {
     method: 'POST',
@@ -168,51 +156,19 @@ async function changePassword() {
     body: JSON.stringify({current, new: newPw}),
   }).then(r => r.json()).catch(() => null);
 
-  if (res && res.ok) {
+  if (res?.ok) {
     msg.className = 'form-msg ok'; msg.textContent = 'Password updated';
-    document.getElementById('pwCurrent').value = '';
-    document.getElementById('pwNew').value = '';
-    document.getElementById('pwConfirm').value = '';
+    ['pwCurrent', 'pwNew', 'pwConfirm'].forEach(id => document.getElementById(id).value = '');
     setTimeout(() => msg.textContent = '', 3000);
   } else {
     msg.className = 'form-msg err'; msg.textContent = res?.error || 'Something went wrong';
   }
 }
 
-function renderProfile() {
-  const ini = initials(me.name);
-  document.getElementById('bigAvatar').textContent = ini;
-  
-  
-  document.getElementById('profileName').textContent = me.name;
-  document.getElementById('detailEmail').textContent = me.email;
-  document.getElementById('detailSchool').textContent = me.school_name || '—';
-  document.getElementById('detailClass').textContent = me.class_name || '—';
-
-  
-
-  const badge = document.getElementById('roleBadge');
-  badge.textContent = me.role;
-  badge.className = 'role-badge ' + me.role;
-
-  const meta = [];
-  if (me.school_name) meta.push(me.school_name);
-  if (me.class_name) meta.push(me.class_name);
-  document.getElementById('profileMeta').textContent = meta.join(' · ');
-
-  if (me.created_at) {
-    const d = new Date(me.created_at);
-    document.getElementById('detailSince').textContent = d.toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
-    const days = Math.floor((Date.now() - d) / 86400000);
-    document.getElementById('statDays').textContent = days;
-  }
-}
-
-
-
-
-
-
+window.startEditName  = startEditName;
+window.cancelEditName = cancelEditName;
+window.saveName       = saveName;
+window.changePassword = changePassword;
 
 async function boot() {
   const [meData, sessions, groups] = await Promise.all([
@@ -220,15 +176,12 @@ async function boot() {
     fetch('/api/ai/sessions').then(r => r.json()).catch(() => []),
     fetch('/api/groups').then(r => r.json()).catch(() => []),
   ]);
-
   if (!meData || meData.error) { location.href = '/login'; return; }
   me = meData;
   renderProfile();
-
   document.getElementById('statSessions').textContent = Array.isArray(sessions) ? sessions.length : 0;
-  document.getElementById('statGroups').textContent = Array.isArray(groups) ? groups.length : 0;
+  document.getElementById('statGroups').textContent   = Array.isArray(groups)   ? groups.length   : 0;
 }
 
 boot();
-
 </script>
