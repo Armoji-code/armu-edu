@@ -113,6 +113,9 @@
   .prompt-reset{font-size:12px;color:var(--g2);cursor:pointer;background:none;border:none;padding:0;margin-top:6px;font-family:inherit;}
   .prompt-reset:hover{text-decoration:underline;}
 
+  /* ── Privacy warning ────────────────────────────────────────────────── */
+  .privacy-warn{background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.25);border-radius:var(--radius-sm);padding:10px 14px;font-size:12px;color:#f59e0b;line-height:1.55;margin-bottom:16px;}
+
   /* ── Save bar ────────────────────────────────────────────────────────── */
   .save-bar{position:sticky;bottom:0;background:var(--bg);border-top:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;gap:12px;margin:-28px -28px 0;}
   .btn{display:inline-flex;align-items:center;gap:8px;padding:9px 20px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600;cursor:pointer;border:none;transition:all var(--transition);font-family:inherit;}
@@ -330,6 +333,7 @@ function renderAll(s) {
 
       <!-- OpenAI config -->
       <div id="cfg-openai" style="display:${s.ai_provider==='openai'?'block':'none'}">
+        <div class="privacy-warn">⚠ Student chat messages will be sent to OpenAI's servers to generate responses. Review OpenAI's <a href="https://openai.com/enterprise-privacy" target="_blank" style="color:inherit">data privacy policy</a> before enabling this in a school environment.</div>
         <div class="field-row">
           <div class="field-label">API Key</div>
           <input class="field-input" id="ai_api_key_openai" type="password" placeholder="${s.ai_api_key_set?'Key saved — enter new to replace':'sk-...'}">
@@ -342,6 +346,7 @@ function renderAll(s) {
 
       <!-- Anthropic config -->
       <div id="cfg-anthropic" style="display:${s.ai_provider==='anthropic'?'block':'none'}">
+        <div class="privacy-warn">⚠ Student chat messages will be sent to Anthropic's servers to generate responses. Review Anthropic's <a href="https://www.anthropic.com/privacy" target="_blank" style="color:inherit">data privacy policy</a> before enabling this in a school environment.</div>
         <div class="field-row">
           <div class="field-label">API Key</div>
           <input class="field-input" id="ai_api_key_anthropic" type="password" placeholder="${s.ai_api_key_set?'Key saved — enter new to replace':'sk-ant-...'}">
