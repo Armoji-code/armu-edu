@@ -182,7 +182,6 @@
   <div class="content" id="mainContent">
     <div style="padding:48px;text-align:center;color:var(--text3);">Loading…</div>
   </div>
-</div>
 
 <!-- Start Meeting Modal -->
 <div class="modal-overlay" id="newMeetingModal">
@@ -239,6 +238,8 @@
     </div>
   </div>
 </div>
+
+</div><!-- end .main -->
 
 <script src="/static/notif.js"></script>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
@@ -531,6 +532,16 @@ async function leaveMeeting() {
   refreshMeetings();
 }
 
+// Pjax cleanup: stop media + disconnect socket when navigating away
+window.__pjaxCleanup = function () {
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+  Object.values(peerConnections).forEach(pc => pc.close());
+  peerConnections = {};
+  clearInterval(durationInterval);
+  if (socket) { socket.disconnect(); socket = null; }
+};
+
 // ── Controls ──────────────────────────────────────────────────────────────────
 function toggleMic() {
   micOn = !micOn;
@@ -684,5 +695,6 @@ document.addEventListener('keydown', e => {
 
 boot();
 </script>
+<script src="/static/pjax.js"></script>
 </body>
 </html>
