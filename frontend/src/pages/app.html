@@ -935,6 +935,15 @@
   .stat-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:8px;}
   .stat-val{font-size:30px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;}
   .stat-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+  /* Teacher subject grid */
+  .subject-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:24px;}
+  .subject-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;cursor:pointer;transition:all var(--transition);text-decoration:none;display:block;}
+  .subject-card:hover{border-color:var(--border-accent);transform:translateY(-2px);box-shadow:var(--shadow);}
+  .subject-name{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;}
+  .subject-class{font-size:12px;color:var(--text3);margin-bottom:10px;}
+  .subject-meta{display:flex;gap:12px;}
+  .subject-meta-item{font-size:12px;color:var(--text2);}
+  .subject-meta-item span{font-weight:600;color:var(--g1);}
   .quick-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:28px;}
   .quick-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-decoration:none;display:block;transition:all var(--transition);}
   .quick-card:hover{border-color:var(--border-accent);background:var(--bg3);}
@@ -1309,6 +1318,7 @@ const ROUTES = {
   '/groups':              'groups',
   '/library':             'library',
   '/messages':            'messages',
+  '/meeting':             'meeting',
   '/tutor':               'tutor',
   '/profile':             'profile',
   '/settings':            'settings',
@@ -1333,7 +1343,14 @@ function resolvePartialKey(path) {
 }
 
 /* ── Router ───────────────────────────────────────────── */
+let __navAbort = null;
+
 async function navigate(path, push = true) {
+  // Cancel any in-flight navigation
+  if (__navAbort) { __navAbort.abort(); }
+  __navAbort = new AbortController();
+  const signal = __navAbort.signal;
+
   if (typeof window.__cleanup === 'function') {
     try { window.__cleanup(); } catch(e) {}
     delete window.__cleanup;
@@ -1350,7 +1367,8 @@ async function navigate(path, push = true) {
   main.style.flexDirection = 'column';
 
   try {
-    const resp = await fetch('/partials/' + key + '.html');
+    const resp = await fetch('/partials/' + key + '.html', { signal });
+    if (signal.aborted) return;
     if (!resp.ok) throw new Error(resp.status);
     const html = await resp.text();
 
@@ -1415,7 +1433,7 @@ async function navigate(path, push = true) {
     if (path === '/tests' && typeof window.switchTab === 'function') window.switchTab('tests');
 
   } catch(e) {
-    showError(path);
+    if (e?.name !== 'AbortError') showError(path);
   }
 }
 

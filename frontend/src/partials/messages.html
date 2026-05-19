@@ -1,63 +1,50 @@
-
 <div class="topbar">
-<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-messages"></use></svg>
-<span class="topbar-title">Messages</span>
-<div class="topbar-right">
-<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
-<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-messages"/></svg>
+  <span class="topbar-title">Messages</span>
+  <div class="topbar-right">
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+      <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+    </div>
+  </div>
 </div>
-</div>
-</div>
+
 <div class="msg-body">
-<!-- Conversation list -->
-<div class="conv-panel">
-<div class="conv-panel-head">Conversations</div>
-<div class="conv-list" id="convList">
-<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>
-</div>
-</div>
-<!-- Thread -->
-<div class="thread-panel" id="threadPanel">
-<div class="no-conv" id="noConv">
-<svg class="icon" style="width:40px;height:40px;opacity:0.25;"><use href="#ic-messages"></use></svg>
-<span style="font-size:13px;">Select a conversation</span>
-</div>
-</div>
+  <div class="conv-panel">
+    <div class="conv-panel-head">Conversations</div>
+    <div class="conv-list" id="convList">
+      <div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>
+    </div>
+  </div>
+  <div class="thread-panel" id="threadPanel">
+    <div class="no-conv" id="noConv">
+      <svg class="icon" style="width:40px;height:40px;opacity:0.25;"><use href="#ic-messages"/></svg>
+      <span style="font-size:13px;">Select a conversation</span>
+    </div>
+  </div>
 </div>
 
 <script>
-
-
 (function(){
   const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
   const btn = document.getElementById('themeBtn');
-  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
 })();
 
-function toggleTheme() {
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
-}
-
 let myId = null;
-let conversations = [];  // [{otherId, otherName, messages:[]}]
+let conversations = [];
 let activeIdx = -1;
 
 function initials(name) {
   if (!name) return '?';
-  return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 }
 
 function fmtTime(iso) {
   if (!iso) return '';
   const d = new Date(iso);
   const now = new Date();
-  const sameDay = d.toDateString() === now.toDateString();
-  if (sameDay) return d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:false});
+  if (d.toDateString() === now.toDateString())
+    return d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:false});
   return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
 }
 
@@ -65,35 +52,34 @@ function buildConversations(messages) {
   const map = {};
   for (const m of messages) {
     const otherId   = m.sender_id === myId ? m.recipient_id : m.sender_id;
-    const otherName = m.sender_id === myId ? (m.recipient_name || 'User #' + otherId) : (m.sender_name || 'User #' + otherId);
+    const otherName = m.sender_id === myId
+      ? (m.recipient_name || 'User #' + otherId)
+      : (m.sender_name    || 'User #' + otherId);
     if (!map[otherId]) map[otherId] = {otherId, otherName, messages: []};
     map[otherId].messages.push(m);
-    if (!map[otherId].otherName || map[otherId].otherName.startsWith('User #')) {
+    if (!map[otherId].otherName || map[otherId].otherName.startsWith('User #'))
       map[otherId].otherName = otherName;
-    }
   }
-  // sort each thread oldest→newest
-  for (const c of Object.values(map)) {
-    c.messages.sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-  }
-  // sort conversations by latest message
-  return Object.values(map).sort((a,b) => {
-    const aLast = a.messages[a.messages.length-1]?.created_at || '';
-    const bLast = b.messages[b.messages.length-1]?.created_at || '';
+  for (const c of Object.values(map))
+    c.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  return Object.values(map).sort((a, b) => {
+    const aLast = a.messages[a.messages.length - 1]?.created_at || '';
+    const bLast = b.messages[b.messages.length - 1]?.created_at || '';
     return bLast.localeCompare(aLast);
   });
 }
 
 function renderConvList() {
   const el = document.getElementById('convList');
+  if (!el) return;
   if (!conversations.length) {
     el.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px;">No messages yet.</div>';
     return;
   }
   el.innerHTML = conversations.map((c, i) => {
-    const last = c.messages[c.messages.length - 1];
+    const last    = c.messages[c.messages.length - 1];
     const preview = last ? (last.sender_id === myId ? 'You: ' : '') + last.content : '';
-    const unread = c.messages.some(m => m.sender_id !== myId && !m.is_read);
+    const unread  = c.messages.some(m => m.sender_id !== myId && !m.is_read);
     return `<div class="conv-item${i === activeIdx ? ' active' : ''}" onclick="openConv(${i})">
       <div class="avatar-sm">${initials(c.otherName)}</div>
       <div style="flex:1;min-width:0;">
@@ -110,6 +96,7 @@ function renderConvList() {
 
 function renderThread(conv) {
   const panel = document.getElementById('threadPanel');
+  if (!panel) return;
   panel.innerHTML = `
     <div class="thread-head">
       <div class="avatar-sm">${initials(conv.otherName)}</div>
@@ -124,8 +111,7 @@ function renderThread(conv) {
               <div class="bubble-text">${m.content}</div>
               <div class="bubble-time">${fmtTime(m.created_at)}</div>
             </div>`;
-          }).join('')
-      }
+          }).join('')}
     </div>
     <div class="thread-compose">
       <textarea class="compose-input" id="composeInput" placeholder="Type a message…" rows="1"></textarea>
@@ -135,12 +121,14 @@ function renderThread(conv) {
     </div>`;
 
   const msgs = document.getElementById('threadMsgs');
-  msgs.scrollTop = msgs.scrollHeight;
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
   const input = document.getElementById('composeInput');
-  input.addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
-  });
+  if (input) {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+    });
+  }
 }
 
 function openConv(i) {
@@ -152,25 +140,20 @@ function openConv(i) {
 async function sendMsg() {
   if (activeIdx < 0) return;
   const input = document.getElementById('composeInput');
-  const content = input.value.trim();
+  const content = input?.value.trim();
   if (!content) return;
-
   const btn = document.getElementById('sendBtn');
-  btn.disabled = true;
+  if (btn) btn.disabled = true;
   input.value = '';
-
   const conv = conversations[activeIdx];
   const res = await fetch('/api/messages/personal', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({recipient_id: conv.otherId, content}),
   }).then(r => r.json()).catch(() => null);
-
-  btn.disabled = false;
-
+  if (btn) btn.disabled = false;
   if (res && !res.error) {
     conv.messages.push(res);
-    // Move conversation to top
     conversations.splice(activeIdx, 1);
     conversations.unshift(conv);
     activeIdx = 0;
@@ -179,84 +162,19 @@ async function sendMsg() {
   }
 }
 
-function applyTeacherNav(activePage) {
-  document.getElementById('logoSub').textContent = 'teacher portal';
-  document.getElementById('sidebarNav').innerHTML = `
-    <div class="nav-section">
-      <div class="nav-label">Manage</div>
-      <a class="nav-item" href="/teacher"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
-      <a class="nav-item" href="/teacher/classes"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Classes</span></a>
-      <a class="nav-item" href="/teacher/assignments"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Assignments</span></a>
-      <a class="nav-item" href="/teacher/analytics"><span class="nav-icon">📊</span><span>Analytics</span></a>
-      <a class="nav-item" href="/teacher/schedule"><span class="nav-icon">📅</span><span>Schedule</span></a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-label">Insights</div>
-      <a class="nav-item" href="/teacher/conduct"><span class="nav-icon">🚩</span><span>Conduct Log</span></a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-label">Other</div>
-      <a class="nav-item${activePage==='/messages'?' active':''}" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
-      <a class="nav-item${activePage==='/settings'?' active':''}" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
-    </div>`;
-}
-
-function applyAdminNav() {
-  document.getElementById('logoSub').textContent = 'admin panel';
-  document.getElementById('sidebarNav').innerHTML = `
-    <div class="nav-section">
-      <div class="nav-label">Admin</div>
-      <a class="nav-item" href="/admin"><span class="nav-icon">▦</span><span>Overview</span></a>
-      <a class="nav-item" href="/admin/users"><span class="nav-icon">👥</span><span>Users</span></a>
-      <a class="nav-item" href="/admin/school"><span class="nav-icon">🏫</span><span>School</span></a>
-      <a class="nav-item" href="/admin/settings"><span class="nav-icon">⚙</span><span>Settings</span></a>
-      <a class="nav-item" href="/admin/performance"><span class="nav-icon">📈</span><span>Performance</span></a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-label">Other</div>
-      <a class="nav-item active" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
-      <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
-    </div>`;
-}
-
-function applyLibrarianNav(activePage) {
-  document.getElementById('logoSub').textContent = 'library panel';
-  document.getElementById('sidebarNav').innerHTML = `
-    <div class="nav-section">
-      <div class="nav-label">Library</div>
-      <a class="nav-item" href="/librarian"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
-      <a class="nav-item" href="/librarian/books"><span class="nav-icon"><svg class="icon"><use href="#ic-library"/></svg></span><span>Books</span></a>
-      <a class="nav-item" href="/librarian/loans"><span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span><span>Loans</span></a>
-    </div>
-    <div class="nav-section">
-      <div class="nav-label">Other</div>
-      <a class="nav-item${activePage==='/messages'?' active':''}" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
-      <a class="nav-item${activePage==='/settings'?' active':''}" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
-    </div>`;
-}
+window.openConv = openConv;
+window.sendMsg  = sendMsg;
 
 async function boot() {
   const [me, messages] = await Promise.all([
     fetch('/api/auth/me').then(r => r.json()).catch(() => null),
     fetch('/api/messages/personal').then(r => r.json()).catch(() => []),
   ]);
-
   if (!me || me.error) { location.href = '/login'; return; }
-
-  if (me.role === 'teacher')        applyTeacherNav('/messages');
-  else if (me.role === 'admin')     applyAdminNav();
-  else if (me.role === 'librarian') applyLibrarianNav('/messages');
-
   myId = me.id;
-  
-  
-  
-
   conversations = buildConversations(Array.isArray(messages) ? messages : []);
   renderConvList();
 }
 
 boot();
-
-
 </script>
