@@ -1,0 +1,239 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-settings"></use></svg>
+<span class="topbar-title">Settings</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<!-- Appearance -->
+<div class="card">
+<div class="card-title">Appearance</div>
+<div class="setting-row">
+<div class="setting-info">
+<div class="setting-label">Dark mode</div>
+<div class="setting-desc">Switch between dark and light theme</div>
+</div>
+<label class="toggle">
+<input id="darkToggle" onchange="onThemeToggle(this)" type="checkbox"/>
+<div class="toggle-track"></div>
+<div class="toggle-thumb"></div>
+</label>
+</div>
+</div>
+<!-- AI Tutor -->
+<div class="card">
+<div class="card-title">AI Tutor</div>
+<div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:12px;">
+<div class="setting-info">
+<div class="setting-label">Default model</div>
+<div class="setting-desc">Affects new chats. Advanced uses a more capable model but may be slower.</div>
+</div>
+<div class="tile-group" style="width:100%;">
+<div class="tile" id="tileStandard" onclick="setModelTier('standard')">
+<div class="tile-title">Standard</div>
+<div class="tile-desc" id="modelNameStandard">Loading…</div>
+</div>
+<div class="tile" id="tileAdvanced" onclick="setModelTier('advanced')">
+<div class="tile-title">Advanced</div>
+<div class="tile-desc" id="modelNameAdvanced">Loading…</div>
+</div>
+</div>
+</div>
+<div class="setting-row">
+<div class="setting-info">
+<div class="setting-label">Show typing indicator</div>
+<div class="setting-desc">Animated dots while the AI is thinking</div>
+</div>
+<label class="toggle">
+<input id="typingToggle" onchange="saveBool('armu_typing', this.checked)" type="checkbox"/>
+<div class="toggle-track"></div>
+<div class="toggle-thumb"></div>
+</label>
+</div>
+<div class="setting-row">
+<div class="setting-info">
+<div class="setting-label">Auto-title conversations</div>
+<div class="setting-desc">Generate a short title after the first exchange</div>
+</div>
+<label class="toggle">
+<input id="autoTitleToggle" onchange="saveBool('armu_autotitle', this.checked)" type="checkbox"/>
+<div class="toggle-track"></div>
+<div class="toggle-thumb"></div>
+</label>
+</div>
+</div>
+<!-- Account -->
+<div class="card">
+<div class="card-title">Account</div>
+<div class="setting-row">
+<div class="setting-info">
+<div class="setting-label">Profile</div>
+<div class="setting-desc">Edit your name and change your password</div>
+</div>
+<a class="btn" href="/profile">Go to Profile</a>
+</div>
+<div class="setting-row">
+<div class="setting-info">
+<div class="setting-label">Sign out</div>
+<div class="setting-desc">You will be redirected to the login page</div>
+</div>
+<button class="btn btn-danger" onclick="logout()">
+<svg class="icon icon-14"><use href="#ic-logout"></use></svg> Sign out
+        </button>
+</div>
+</div>
+<!-- About -->
+<div class="card">
+<div class="card-title">About</div>
+<div class="about-line">Armu · Free, self-hosted school platform</div>
+<div class="about-line">Licensed under the <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank">GNU AGPL-3.0</a></div>
+<div class="about-line" style="margin-top:4px;color:var(--text3);">AI powered by <a href="https://ollama.com" target="_blank">Ollama</a> running locally</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+}
+
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('theme', t);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+  document.getElementById('darkToggle').checked = (t === 'dark');
+}
+
+function onThemeToggle(cb) {
+  applyTheme(cb.checked ? 'dark' : 'light');
+}
+
+function saveBool(key, val) {
+  localStorage.setItem(key, val ? '1' : '0');
+}
+
+function loadBool(key, def = true) {
+  const v = localStorage.getItem(key);
+  return v === null ? def : v === '1';
+}
+
+function setModelTier(tier) {
+  localStorage.setItem('armu_model_tier', tier);
+  document.getElementById('tileStandard').classList.toggle('selected', tier === 'standard');
+  document.getElementById('tileAdvanced').classList.toggle('selected', tier === 'advanced');
+}
+
+async function logout() {
+  await fetch('/api/auth/logout', {method: 'POST'}).catch(() => {});
+  location.href = '/login';
+}
+
+function applyTeacherNav(activePage) {
+  document.getElementById('logoSub').textContent = 'teacher portal';
+  document.getElementById('sidebarNav').innerHTML = `
+    <div class="nav-section">
+      <div class="nav-label">Manage</div>
+      <a class="nav-item" href="/teacher"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+      <a class="nav-item" href="/teacher/classes"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Classes</span></a>
+      <a class="nav-item" href="/teacher/assignments"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Assignments</span></a>
+      <a class="nav-item" href="/teacher/analytics"><span class="nav-icon">📊</span><span>Analytics</span></a>
+      <a class="nav-item" href="/teacher/schedule"><span class="nav-icon">📅</span><span>Schedule</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Insights</div>
+      <a class="nav-item" href="/teacher/conduct"><span class="nav-icon">🚩</span><span>Conduct Log</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Other</div>
+      <a class="nav-item${activePage==='/meeting'?' active':''}" href="/meeting"><span class="nav-icon"><svg class="icon"><use href="#ic-meeting"/></svg></span><span>Meeting</span></a>
+      <a class="nav-item${activePage==='/messages'?' active':''}" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item${activePage==='/settings'?' active':''}" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+    </div>`;
+}
+
+function applyAdminNav() {
+  document.getElementById('logoSub').textContent = 'admin panel';
+  document.getElementById('sidebarNav').innerHTML = `
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <a class="nav-item" href="/admin"><span class="nav-icon">▦</span><span>Overview</span></a>
+      <a class="nav-item" href="/admin/users"><span class="nav-icon">👥</span><span>Users</span></a>
+      <a class="nav-item" href="/admin/school"><span class="nav-icon">🏫</span><span>School</span></a>
+      <a class="nav-item" href="/admin/settings"><span class="nav-icon">⚙</span><span>Settings</span></a>
+      <a class="nav-item" href="/admin/performance"><span class="nav-icon">📈</span><span>Performance</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Other</div>
+      <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item active" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+    </div>`;
+}
+
+function applyLibrarianNav(activePage) {
+  document.getElementById('logoSub').textContent = 'library panel';
+  document.getElementById('sidebarNav').innerHTML = `
+    <div class="nav-section">
+      <div class="nav-label">Library</div>
+      <a class="nav-item" href="/librarian"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+      <a class="nav-item" href="/librarian/books"><span class="nav-icon"><svg class="icon"><use href="#ic-library"/></svg></span><span>Books</span></a>
+      <a class="nav-item" href="/librarian/loans"><span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span><span>Loans</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Other</div>
+      <a class="nav-item${activePage==='/messages'?' active':''}" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item${activePage==='/settings'?' active':''}" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+    </div>`;
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  if (me.role === 'teacher')   { location.href = '/teacher/settings'; return; }
+  else if (me.role === 'admin')      applyAdminNav();
+  else if (me.role === 'librarian')  applyLibrarianNav('/settings');
+
+  const ini = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  
+  
+  
+
+  // Load saved preferences
+  applyTheme(localStorage.getItem('theme') || 'dark');
+  setModelTier(localStorage.getItem('armu_model_tier') || 'standard');
+
+  // Fetch real model names from backend
+  try {
+    const m = await fetch('/api/ai/models').then(r => r.json());
+    const elStd = document.getElementById('modelNameStandard');
+    const elAdv = document.getElementById('modelNameAdvanced');
+    if (elStd) elStd.textContent = m.standard || 'Standard';
+    if (elAdv) elAdv.textContent = m.advanced !== m.standard
+      ? m.advanced : m.advanced + ' · same as standard';
+  } catch {
+    const elStd = document.getElementById('modelNameStandard');
+    const elAdv = document.getElementById('modelNameAdvanced');
+    if (elStd) elStd.textContent = 'Standard model';
+    if (elAdv) elAdv.textContent = 'Advanced model';
+  }
+  document.getElementById('typingToggle').checked = loadBool('armu_typing', true);
+  document.getElementById('autoTitleToggle').checked = loadBool('armu_autotitle', true);
+}
+
+boot();
+
+
+</script>

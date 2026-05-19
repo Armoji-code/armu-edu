@@ -1,0 +1,290 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-profile"></use></svg>
+<span class="topbar-title">Profile</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<!-- Hero -->
+<div class="profile-hero">
+<div class="profile-avatar" id="bigAvatar">?</div>
+<div class="profile-hero-info">
+<div class="profile-name-row" id="nameRow">
+<span class="profile-name" id="profileName">—</span>
+<button class="edit-name-btn" onclick="startEditName()" title="Edit name">
+<svg class="icon icon-14"><use href="#ic-edit"></use></svg>
+</button>
+</div>
+<div class="name-edit-row" id="nameEditRow">
+<input class="name-input" id="nameInput" placeholder="Your name" type="text"/>
+<button class="edit-name-btn" onclick="saveName()" style="border-color:var(--border-accent);" title="Save">
+<svg class="icon icon-14"><use href="#ic-check"></use></svg>
+</button>
+<button class="edit-name-btn" onclick="cancelEditName()" title="Cancel">
+<svg class="icon icon-14"><use href="#ic-x"></use></svg>
+</button>
+</div>
+<span class="role-badge" id="roleBadge">—</span>
+<div class="profile-meta" id="profileMeta" style="margin-top:6px;"></div>
+</div>
+</div>
+<!-- Details -->
+<div class="card">
+<div class="card-title">Account Details</div>
+<div class="field-row">
+<span class="field-label">Email</span>
+<span class="field-value" id="detailEmail">—</span>
+</div>
+<div class="field-row">
+<span class="field-label">School</span>
+<span class="field-value" id="detailSchool">—</span>
+</div>
+<div class="field-row">
+<span class="field-label">Class</span>
+<span class="field-value" id="detailClass">—</span>
+</div>
+<div class="field-row">
+<span class="field-label">Member since</span>
+<span class="field-muted" id="detailSince">—</span>
+</div>
+</div>
+<!-- Stats -->
+<div class="card">
+<div class="card-title">Activity</div>
+<div class="stats-grid">
+<div class="stat-card">
+<div class="stat-num" id="statSessions">—</div>
+<div class="stat-label">AI Sessions</div>
+</div>
+<div class="stat-card">
+<div class="stat-num" id="statGroups">—</div>
+<div class="stat-label">Groups</div>
+</div>
+<div class="stat-card">
+<div class="stat-num" id="statDays">—</div>
+<div class="stat-label">Days active</div>
+</div>
+</div>
+</div>
+<!-- Password -->
+<div class="card">
+<div class="card-title">Change Password</div>
+<div class="pw-form">
+<div class="pw-field">
+<label class="pw-label">Current password</label>
+<input autocomplete="current-password" class="pw-input" id="pwCurrent" placeholder="••••••••" type="password"/>
+</div>
+<div class="pw-field">
+<label class="pw-label">New password</label>
+<input autocomplete="new-password" class="pw-input" id="pwNew" placeholder="Min 8 characters" type="password"/>
+</div>
+<div class="pw-field">
+<label class="pw-label">Confirm new password</label>
+<input autocomplete="new-password" class="pw-input" id="pwConfirm" placeholder="Repeat new password" type="password"/>
+</div>
+<div class="pw-actions">
+<button class="btn btn-primary" onclick="changePassword()">
+<svg class="icon icon-14"><use href="#ic-lock"></use></svg> Update password
+          </button>
+<span class="form-msg" id="pwMsg"></span>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+let me = null;
+
+function initials(name) {
+  return (name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+function startEditName() {
+  document.getElementById('nameRow').style.display = 'none';
+  const row = document.getElementById('nameEditRow');
+  row.style.display = 'flex';
+  const inp = document.getElementById('nameInput');
+  inp.value = me.name;
+  inp.focus();
+  inp.select();
+}
+
+function cancelEditName() {
+  document.getElementById('nameEditRow').style.display = 'none';
+  document.getElementById('nameRow').style.display = 'flex';
+}
+
+async function saveName() {
+  const name = document.getElementById('nameInput').value.trim();
+  if (!name) return;
+  const res = await fetch('/api/auth/me', {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name}),
+  }).then(r => r.json()).catch(() => null);
+  if (!res || res.error) return;
+  me = res;
+  renderProfile();
+  cancelEditName();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('nameEditRow').style.display === 'flex') saveName();
+  if (e.key === 'Escape') cancelEditName();
+});
+
+async function changePassword() {
+  const current = document.getElementById('pwCurrent').value;
+  const newPw = document.getElementById('pwNew').value;
+  const confirm = document.getElementById('pwConfirm').value;
+  const msg = document.getElementById('pwMsg');
+
+  if (newPw !== confirm) { msg.className = 'form-msg err'; msg.textContent = 'Passwords do not match'; return; }
+  if (newPw.length < 8) { msg.className = 'form-msg err'; msg.textContent = 'Minimum 8 characters'; return; }
+
+  const res = await fetch('/api/auth/password', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({current, new: newPw}),
+  }).then(r => r.json()).catch(() => null);
+
+  if (res && res.ok) {
+    msg.className = 'form-msg ok'; msg.textContent = 'Password updated';
+    document.getElementById('pwCurrent').value = '';
+    document.getElementById('pwNew').value = '';
+    document.getElementById('pwConfirm').value = '';
+    setTimeout(() => msg.textContent = '', 3000);
+  } else {
+    msg.className = 'form-msg err'; msg.textContent = res?.error || 'Something went wrong';
+  }
+}
+
+function renderProfile() {
+  const ini = initials(me.name);
+  document.getElementById('bigAvatar').textContent = ini;
+  
+  
+  document.getElementById('profileName').textContent = me.name;
+  document.getElementById('detailEmail').textContent = me.email;
+  document.getElementById('detailSchool').textContent = me.school_name || '—';
+  document.getElementById('detailClass').textContent = me.class_name || '—';
+
+  
+
+  const badge = document.getElementById('roleBadge');
+  badge.textContent = me.role;
+  badge.className = 'role-badge ' + me.role;
+
+  const meta = [];
+  if (me.school_name) meta.push(me.school_name);
+  if (me.class_name) meta.push(me.class_name);
+  document.getElementById('profileMeta').textContent = meta.join(' · ');
+
+  if (me.created_at) {
+    const d = new Date(me.created_at);
+    document.getElementById('detailSince').textContent = d.toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+    const days = Math.floor((Date.now() - d) / 86400000);
+    document.getElementById('statDays').textContent = days;
+  }
+}
+
+function applyTeacherNav() {
+  document.getElementById('logoSub').textContent = 'teacher portal';
+  document.getElementById('sidebarNav').innerHTML = `
+    <div class="nav-section">
+      <div class="nav-label">Manage</div>
+      <a class="nav-item" href="/teacher"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+      <a class="nav-item" href="/teacher/classes"><span class="nav-icon"><svg class="icon"><use href="#ic-groups"/></svg></span><span>Classes</span></a>
+      <a class="nav-item" href="/teacher/assignments"><span class="nav-icon"><svg class="icon"><use href="#ic-homework"/></svg></span><span>Assignments</span></a>
+      <a class="nav-item" href="/teacher/analytics"><span class="nav-icon">📊</span><span>Analytics</span></a>
+      <a class="nav-item" href="/teacher/schedule"><span class="nav-icon">📅</span><span>Schedule</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Insights</div>
+      <a class="nav-item" href="/teacher/conduct"><span class="nav-icon">🚩</span><span>Conduct Log</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Other</div>
+      <a class="nav-item" href="/meeting"><span class="nav-icon"><svg class="icon"><use href="#ic-meeting"/></svg></span><span>Meeting</span></a>
+      <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+    </div>`;
+}
+
+function applyAdminNav() {
+  document.getElementById('logoSub').textContent = 'admin panel';
+  document.getElementById('sidebarNav').innerHTML = `
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
+      <a class="nav-item" href="/admin"><span class="nav-icon">▦</span><span>Overview</span></a>
+      <a class="nav-item" href="/admin/users"><span class="nav-icon">👥</span><span>Users</span></a>
+      <a class="nav-item" href="/admin/school"><span class="nav-icon">🏫</span><span>School</span></a>
+      <a class="nav-item" href="/admin/settings"><span class="nav-icon">⚙</span><span>Settings</span></a>
+      <a class="nav-item" href="/admin/performance"><span class="nav-icon">📈</span><span>Performance</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Other</div>
+      <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+    </div>`;
+}
+
+function applyLibrarianNav() {
+  document.getElementById('logoSub').textContent = 'library panel';
+  document.getElementById('sidebarNav').innerHTML = `
+    <div class="nav-section">
+      <div class="nav-label">Library</div>
+      <a class="nav-item" href="/librarian"><span class="nav-icon"><svg class="icon"><use href="#ic-dashboard"/></svg></span><span>Overview</span></a>
+      <a class="nav-item" href="/librarian/books"><span class="nav-icon"><svg class="icon"><use href="#ic-library"/></svg></span><span>Books</span></a>
+      <a class="nav-item" href="/librarian/loans"><span class="nav-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></span><span>Loans</span></a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Other</div>
+      <a class="nav-item" href="/messages"><span class="nav-icon"><svg class="icon"><use href="#ic-messages"/></svg></span><span>Messages</span></a>
+      <a class="nav-item" href="/settings"><span class="nav-icon"><svg class="icon"><use href="#ic-settings"/></svg></span><span>Settings</span></a>
+    </div>`;
+}
+
+async function boot() {
+  const [meData, sessions, groups] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    fetch('/api/ai/sessions').then(r => r.json()).catch(() => []),
+    fetch('/api/groups').then(r => r.json()).catch(() => []),
+  ]);
+
+  if (!meData || meData.error) { location.href = '/login'; return; }
+  me = meData;
+  if (me.role === 'teacher')        { location.href = '/teacher/profile'; return; }
+  else if (me.role === 'admin')     applyAdminNav();
+  else if (me.role === 'librarian') applyLibrarianNav();
+  renderProfile();
+
+  document.getElementById('statSessions').textContent = Array.isArray(sessions) ? sessions.length : 0;
+  document.getElementById('statGroups').textContent = Array.isArray(groups) ? groups.length : 0;
+}
+
+boot();
+
+
+</script>

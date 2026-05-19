@@ -1,0 +1,162 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-users"></use></svg>
+<span class="topbar-title">Users</span>
+<div class="topbar-right">
+<button onclick="openCreate()" style="padding:7px 14px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--g1),var(--g2));color:#000;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;">
+<svg class="icon icon-14"><use href="#ic-plus"></use></svg> Add User
+      </button>
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"></use></svg></div>
+</div>
+</div>
+<div class="content">
+<div class="filter-tabs" id="filterTabs">
+<div class="filter-tab active" data-role="" onclick="setFilter(this,'')">All</div>
+<div class="filter-tab" data-role="student" onclick="setFilter(this,'student')">Students</div>
+<div class="filter-tab" data-role="teacher" onclick="setFilter(this,'teacher')">Teachers</div>
+<div class="filter-tab" data-role="admin" onclick="setFilter(this,'admin')">Admins</div>
+<div class="filter-tab" data-role="librarian" onclick="setFilter(this,'librarian')">Librarians</div>
+</div>
+<div class="user-table">
+<div class="user-row header">
+<div>Name</div><div>Email</div><div>Role</div><div>Class</div><div style="text-align:right;">Actions</div>
+</div>
+<div id="userList"><div style="padding:24px;color:var(--text3);font-size:13px;">Loading…</div></div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t==='dark'?'#ic-sun':'#ic-moon');
+})();
+function toggleTheme(){
+  const next = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('theme',next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href',next==='dark'?'#ic-sun':'#ic-moon');
+}
+
+let allUsers = [];
+let classes  = [];
+let activeFilter = '';
+
+function setFilter(el, role) {
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  activeFilter = role;
+  renderUsers();
+}
+
+function renderUsers() {
+  const list = document.getElementById('userList');
+  const filtered = activeFilter ? allUsers.filter(u => u.role === activeFilter) : allUsers;
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:24px;color:var(--text3);font-size:13px;">No users found.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(u => `
+    <div class="user-row">
+      <div>
+        <div style="font-size:13px;font-weight:500;">${u.name}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.email}</div>
+      <div><span class="role-badge role-${u.role}">${u.role}</span></div>
+      <div style="font-size:12px;color:var(--text3);">${u.class_name || '—'}</div>
+      <div class="action-btns">
+        <div class="action-btn" onclick="openEdit(${u.id})" title="Edit"><svg class="icon icon-14"><use href="#ic-edit"/></svg></div>
+        <div class="action-btn danger" onclick="deleteUser(${u.id},'${u.name.replace(/'/g,"\\'")}')"><svg class="icon icon-14"><use href="#ic-trash"/></svg></div>
+      </div>
+    </div>`).join('');
+}
+
+function openCreate() {
+  document.getElementById('modalTitle').textContent = 'Add User';
+  document.getElementById('editId').value = '';
+  document.getElementById('fName').value = '';
+  document.getElementById('fEmail').value = '';
+  document.getElementById('fRole').value = 'student';
+  document.getElementById('fClass').value = '';
+  document.getElementById('fPassword').value = '';
+  document.getElementById('pwLabel').textContent = 'Password';
+  toggleClassField();
+  document.getElementById('userModal').classList.add('open');
+}
+
+function openEdit(id) {
+  const u = allUsers.find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('modalTitle').textContent = 'Edit User';
+  document.getElementById('editId').value = id;
+  document.getElementById('fName').value = u.name;
+  document.getElementById('fEmail').value = u.email;
+  document.getElementById('fRole').value = u.role;
+  document.getElementById('fClass').value = u.class_id || '';
+  document.getElementById('fPassword').value = '';
+  document.getElementById('pwLabel').textContent = 'New Password (leave blank to keep)';
+  toggleClassField();
+  document.getElementById('userModal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('userModal').classList.remove('open'); }
+
+function toggleClassField() {
+  const role = document.getElementById('fRole').value;
+  document.getElementById('classRow').style.display = role === 'student' ? '' : 'none';
+}
+
+async function submitUser() {
+  const id = document.getElementById('editId').value;
+  const payload = {
+    name:     document.getElementById('fName').value.trim(),
+    email:    document.getElementById('fEmail').value.trim(),
+    role:     document.getElementById('fRole').value,
+    class_id: document.getElementById('fClass').value || null,
+    password: document.getElementById('fPassword').value,
+  };
+  if (!payload.password) delete payload.password;
+  if (!id && !payload.password) { alert('Password is required for new users.'); return; }
+
+  const res = id
+    ? await fetch(`/api/admin/users/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+    : await fetch('/api/admin/users',        {method:'POST',  headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+
+  if (res.ok) { closeModal(); await reload(); }
+  else { const e = await res.json().catch(()=>{}); alert(e?.error || 'Error saving user.'); }
+}
+
+async function deleteUser(id, name) {
+  if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+  const res = await fetch(`/api/admin/users/${id}`, {method:'DELETE'});
+  if (res.ok) await reload();
+  else { const e = await res.json().catch(()=>{}); alert(e?.error || 'Error deleting user.'); }
+}
+
+async function reload() {
+  allUsers = await fetch('/api/admin/users').then(r => r.json()).catch(() => []);
+  renderUsers();
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  
+
+  [allUsers, classes] = await Promise.all([
+    fetch('/api/admin/users').then(r => r.json()).catch(() => []),
+    fetch('/api/admin/classes').then(r => r.json()).catch(() => []),
+  ]);
+
+  const sel = document.getElementById('fClass');
+  classes.forEach(c => sel.add(new Option(`${c.name} (Year ${c.grade_year})`, c.id)));
+
+  renderUsers();
+}
+boot();
+
+
+</script>

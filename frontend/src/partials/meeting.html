@@ -1,0 +1,499 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-meeting"></use></svg>
+<span class="topbar-title">Meeting</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"></use></svg></div>
+</div>
+</div>
+<div class="content" id="mainContent">
+<div style="padding:48px;text-align:center;color:var(--text3);">Loading…</div>
+</div>
+<!-- Start Meeting Modal -->
+<div class="modal-overlay" id="newMeetingModal">
+<div class="modal">
+<div class="modal-title">Start a Meeting</div>
+<div class="field-row">
+<div class="field-label">Title</div>
+<input class="field-input" id="newMeetingTitle" placeholder="e.g. Math Study Session" type="text"/>
+</div>
+<div class="field-row" id="classFieldRow">
+<div class="field-label">Class <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></div>
+<select class="field-input" id="newMeetingClass">
+<option value="">No class — share the link manually</option>
+</select>
+</div>
+<div class="modal-actions">
+<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+<button class="btn btn-primary" onclick="confirmNewMeeting()">Start</button>
+</div>
+</div>
+</div>
+<!-- In-call overlay -->
+<div class="call-overlay" id="callOverlay">
+<div class="call-topbar">
+<svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-meeting"></use></svg>
+<span class="call-title" id="callTitle">Meeting</span>
+<span class="call-duration" id="callDuration"></span>
+<div class="call-spacer"></div>
+</div>
+<div class="call-body">
+<div class="video-grid" id="videoGrid"></div>
+<div class="call-sidebar" id="callSidebar">
+<div class="call-sidebar-title">Participants</div>
+<div id="participantList"></div>
+</div>
+</div>
+<div class="call-controls">
+<div class="ctrl-wrap">
+<button class="ctrl-btn on" id="btnMic" onclick="toggleMic()">🎤</button>
+<div class="ctrl-label">Mic</div>
+</div>
+<div class="ctrl-wrap">
+<button class="ctrl-btn on" id="btnCam" onclick="toggleCam()">📷</button>
+<div class="ctrl-label">Camera</div>
+</div>
+<div class="ctrl-wrap">
+<button class="ctrl-btn on" id="btnScreen" onclick="toggleScreen()">🖥</button>
+<div class="ctrl-label">Share</div>
+</div>
+<div class="ctrl-wrap">
+<button class="ctrl-btn leave" onclick="leaveMeeting()">📵</button>
+<div class="ctrl-label" style="color:#ef4444">Leave</div>
+</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t==='dark'?'#ic-sun':'#ic-moon');
+})();
+function toggleTheme(){
+  const n = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',n);
+  localStorage.setItem('theme',n);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href',n==='dark'?'#ic-sun':'#ic-moon');
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let me = null;
+let meetings = [];
+let iceServers = [];
+let socket = null;
+let localStream = null;
+let screenStream = null;
+let peerConnections = {};   // peer_id -> RTCPeerConnection
+let peerNames = {};          // peer_id -> name
+let currentMeeting = null;
+let callStartTime = null;
+let durationInterval = null;
+let micOn = true, camOn = true, screenOn = false;
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function boot() {
+  me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+  if (!me || me.error) { location.href='/login'; return; }
+  
+  
+  
+
+  // Fetch ICE config + meetings
+  const [iceResp, mtgResp] = await Promise.all([
+    fetch('/api/meetings/ice-config').then(r=>r.json()).catch(()=>({ice_servers:[]})),
+    fetch('/api/meetings').then(r=>r.json()).catch(()=>[]),
+  ]);
+  iceServers = iceResp.ice_servers || [];
+  meetings   = mtgResp;
+
+  renderLobby();
+  initSocket();
+  setInterval(refreshMeetings, 8000);
+}
+
+function initials(name) {
+  return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+}
+
+// ── Socket ────────────────────────────────────────────────────────────────────
+function initSocket() {
+  socket = io();
+  socket.emit('user_join', {user_id: me.id});
+
+  socket.on('meeting:peers', ({peers}) => {
+    peers.forEach(p => {
+      peerNames[p.id] = p.name;
+      createOffer(p.id);
+    });
+    renderParticipants();
+  });
+
+  socket.on('meeting:peer-joined', ({id, name}) => {
+    peerNames[id] = name;
+    ensurePeerConnection(id, false);
+    renderParticipants();
+  });
+
+  socket.on('meeting:peer-left', ({id}) => {
+    closePeer(id);
+    renderParticipants();
+  });
+
+  socket.on('meeting:signal', async ({from, data}) => {
+    if (data.type === 'offer') {
+      await handleOffer(from, data);
+    } else if (data.type === 'answer') {
+      const pc = peerConnections[from];
+      if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data));
+    } else if (data.candidate) {
+      const pc = peerConnections[from];
+      if (pc) await pc.addIceCandidate(new RTCIceCandidate(data)).catch(()=>{});
+    }
+  });
+}
+
+// ── WebRTC ────────────────────────────────────────────────────────────────────
+function ensurePeerConnection(peerId, isInitiator) {
+  if (peerConnections[peerId]) return peerConnections[peerId];
+  const pc = new RTCPeerConnection({iceServers});
+  peerConnections[peerId] = pc;
+
+  // Add local tracks
+  if (localStream) localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+
+  // Handle remote stream
+  const remoteStream = new MediaStream();
+  pc.ontrack = e => {
+    remoteStream.addTrack(e.track);
+    updateRemoteVideo(peerId, remoteStream);
+  };
+
+  // ICE candidates
+  pc.onicecandidate = e => {
+    if (e.candidate) signal(peerId, e.candidate.toJSON());
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (['failed','disconnected','closed'].includes(pc.connectionState)) {
+      closePeer(peerId);
+      renderParticipants();
+    }
+  };
+
+  addRemoteTile(peerId);
+  return pc;
+}
+
+async function createOffer(peerId) {
+  const pc = ensurePeerConnection(peerId, true);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  signal(peerId, {type: offer.type, sdp: offer.sdp});
+}
+
+async function handleOffer(peerId, offerData) {
+  peerNames[peerId] = peerNames[peerId] || 'Peer';
+  const pc = ensurePeerConnection(peerId, false);
+  await pc.setRemoteDescription(new RTCSessionDescription(offerData));
+  const answer = await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  signal(peerId, {type: answer.type, sdp: answer.sdp});
+}
+
+function signal(toId, data) {
+  socket.emit('meeting:signal', {to: toId, room_code: currentMeeting.room_code, data});
+}
+
+function closePeer(peerId) {
+  const pc = peerConnections[peerId];
+  if (pc) { pc.close(); delete peerConnections[peerId]; }
+  delete peerNames[peerId];
+  const tile = document.getElementById(`tile-${peerId}`);
+  if (tile) tile.remove();
+  updateGridLayout();
+}
+
+// ── Video tiles ───────────────────────────────────────────────────────────────
+function addLocalTile() {
+  const grid = document.getElementById('videoGrid');
+  const tile = document.createElement('div');
+  tile.className = 'video-tile local';
+  tile.id = 'tile-local';
+  const video = document.createElement('video');
+  video.autoplay = true; video.muted = true; video.playsInline = true;
+  video.srcObject = localStream;
+  tile.appendChild(video);
+  const label = document.createElement('div');
+  label.className = 'tile-label';
+  label.textContent = (me.name || 'You') + ' (You)';
+  tile.appendChild(label);
+  grid.appendChild(tile);
+  updateGridLayout();
+}
+
+function addRemoteTile(peerId) {
+  if (document.getElementById(`tile-${peerId}`)) return;
+  const grid = document.getElementById('videoGrid');
+  const tile = document.createElement('div');
+  tile.className = 'video-tile';
+  tile.id = `tile-${peerId}`;
+  const avatar = document.createElement('div');
+  avatar.className = 'tile-avatar';
+  avatar.textContent = initials(peerNames[peerId] || '?');
+  tile.appendChild(avatar);
+  const label = document.createElement('div');
+  label.className = 'tile-label';
+  label.textContent = peerNames[peerId] || 'Connecting…';
+  tile.appendChild(label);
+  grid.appendChild(tile);
+  updateGridLayout();
+}
+
+function updateRemoteVideo(peerId, stream) {
+  const tile = document.getElementById(`tile-${peerId}`);
+  if (!tile) return;
+  let video = tile.querySelector('video');
+  if (!video) {
+    video = document.createElement('video');
+    video.autoplay = true; video.playsInline = true;
+    tile.insertBefore(video, tile.firstChild);
+    tile.querySelector('.tile-avatar')?.remove();
+  }
+  video.srcObject = stream;
+}
+
+function updateGridLayout() {
+  const grid = document.getElementById('videoGrid');
+  const n = grid.children.length;
+  if (n <= 1)      { grid.style.gridTemplateColumns = '1fr'; grid.style.gridTemplateRows = '1fr'; }
+  else if (n <= 2) { grid.style.gridTemplateColumns = '1fr 1fr'; grid.style.gridTemplateRows = '1fr'; }
+  else if (n <= 4) { grid.style.gridTemplateColumns = '1fr 1fr'; grid.style.gridTemplateRows = '1fr 1fr'; }
+  else if (n <= 6) { grid.style.gridTemplateColumns = '1fr 1fr 1fr'; grid.style.gridTemplateRows = '1fr 1fr'; }
+  else             { grid.style.gridTemplateColumns = 'repeat(3,1fr)'; grid.style.gridTemplateRows = 'auto'; }
+}
+
+function renderParticipants() {
+  const list = document.getElementById('participantList');
+  const all = [{id: 'local', name: (me.name||'You') + ' (You)'}];
+  Object.entries(peerNames).forEach(([id, name]) => all.push({id, name}));
+  list.innerHTML = all.map(p => `
+    <div class="participant-item">
+      <div class="participant-avatar">${initials(p.name)}</div>
+      <div class="participant-name">${p.name}</div>
+    </div>`).join('');
+}
+
+// ── Join / Leave ──────────────────────────────────────────────────────────────
+async function joinMeeting(meeting) {
+  currentMeeting = meeting;
+  document.getElementById('callTitle').textContent = meeting.title;
+  document.getElementById('videoGrid').innerHTML = '';
+  peerConnections = {}; peerNames = {};
+
+  try {
+    localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
+  } catch (e) {
+    alert('Could not access camera/microphone: ' + e.message);
+    return;
+  }
+
+  document.getElementById('callOverlay').classList.add('active');
+  addLocalTile();
+  renderParticipants();
+
+  callStartTime = Date.now();
+  durationInterval = setInterval(() => {
+    const s = Math.floor((Date.now()-callStartTime)/1000);
+    const m = Math.floor(s/60), sec = s%60;
+    document.getElementById('callDuration').textContent = `${m}:${String(sec).padStart(2,'0')}`;
+  }, 1000);
+
+  socket.emit('meeting:join', {room_code: meeting.room_code});
+}
+
+async function leaveMeeting() {
+  if (currentMeeting) {
+    socket.emit('meeting:leave', {room_code: currentMeeting.room_code});
+  }
+  Object.values(peerConnections).forEach(pc => pc.close());
+  peerConnections = {}; peerNames = {};
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+  clearInterval(durationInterval);
+  document.getElementById('callOverlay').classList.remove('active');
+  document.getElementById('videoGrid').innerHTML = '';
+  currentMeeting = null; micOn = true; camOn = true; screenOn = false;
+  document.getElementById('btnMic').className = 'ctrl-btn on';
+  document.getElementById('btnCam').className = 'ctrl-btn on';
+  document.getElementById('btnScreen').className = 'ctrl-btn on';
+  refreshMeetings();
+}
+
+// Pjax cleanup: stop media + disconnect socket when navigating away
+window.__cleanup = function () {
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+  if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+  Object.values(peerConnections).forEach(pc => pc.close());
+  peerConnections = {};
+  clearInterval(durationInterval);
+  if (socket) { socket.disconnect(); socket = null; }
+};
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+function toggleMic() {
+  micOn = !micOn;
+  localStream?.getAudioTracks().forEach(t => t.enabled = micOn);
+  document.getElementById('btnMic').className = `ctrl-btn ${micOn?'on':'off'}`;
+}
+
+function toggleCam() {
+  camOn = !camOn;
+  localStream?.getVideoTracks().forEach(t => t.enabled = camOn);
+  const video = document.querySelector('#tile-local video');
+  if (video) video.style.display = camOn ? '' : 'none';
+  document.getElementById('btnCam').className = `ctrl-btn ${camOn?'on':'off'}`;
+}
+
+async function toggleScreen() {
+  if (!screenOn) {
+    try {
+      screenStream = await navigator.mediaDevices.getDisplayMedia({video: true});
+      const screenTrack = screenStream.getVideoTracks()[0];
+      Object.values(peerConnections).forEach(pc => {
+        const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) sender.replaceTrack(screenTrack);
+      });
+      const localVideo = document.querySelector('#tile-local video');
+      if (localVideo) localVideo.srcObject = screenStream;
+      screenTrack.onended = () => { screenOn = true; toggleScreen(); };
+      screenOn = true;
+      document.getElementById('btnScreen').className = 'ctrl-btn off';
+    } catch (e) { return; }
+  } else {
+    const camTrack = localStream?.getVideoTracks()[0];
+    if (camTrack) {
+      Object.values(peerConnections).forEach(pc => {
+        const sender = pc.getSenders().find(s => s.track?.kind === 'video');
+        if (sender) sender.replaceTrack(camTrack);
+      });
+    }
+    screenStream?.getTracks().forEach(t => t.stop()); screenStream = null;
+    const localVideo = document.querySelector('#tile-local video');
+    if (localVideo) localVideo.srcObject = localStream;
+    screenOn = false;
+    document.getElementById('btnScreen').className = 'ctrl-btn on';
+  }
+}
+
+// ── Lobby render ──────────────────────────────────────────────────────────────
+function renderLobby() {
+  const c = document.getElementById('mainContent');
+  const canEnd = mid => {
+    const m = meetings.find(x=>x.id===mid);
+    return m && (m.host_id===me.id || me.role==='admin' || me.role==='teacher');
+  };
+
+  c.innerHTML = `
+    <div class="lobby-header">
+      <div class="lobby-title">Active Meetings</div>
+      <button class="btn btn-primary" onclick="openModal()">
+        <svg class="icon icon-14"><use href="#ic-plus"/></svg> Start Meeting
+      </button>
+    </div>
+    <div class="meeting-grid" id="meetingGrid"></div>`;
+
+  const grid = document.getElementById('meetingGrid');
+  if (!meetings.length) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">📹</div>
+      <div class="empty-title">No active meetings</div>
+      <div style="font-size:13px;margin-top:4px">Start one and share the link with your class.</div>
+    </div>`;
+    return;
+  }
+
+  meetings.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'meeting-card';
+    card.innerHTML = `
+      <div class="meeting-card-title">
+        <span class="meeting-card-dot"></span>${m.title}
+      </div>
+      <div class="meeting-card-meta">
+        <span>Host: ${m.host_name}</span>
+        <span>${m.participant_count} online</span>
+      </div>
+      <div class="meeting-card-actions">
+        <button class="btn btn-primary" onclick="joinMeeting(${JSON.stringify(m).replace(/"/g,'&quot;')})">Join</button>
+        ${canEnd(m.id) ? `<button class="btn btn-ghost" onclick="endMeeting(${m.id})">End</button>` : ''}
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+
+async function refreshMeetings() {
+  meetings = await fetch('/api/meetings').then(r=>r.json()).catch(()=>[]);
+  if (!document.getElementById('callOverlay').classList.contains('active')) renderLobby();
+}
+
+// ── Start meeting modal ───────────────────────────────────────────────────────
+async function openModal() {
+  // Populate class dropdown for teachers/admins
+  const sel = document.getElementById('newMeetingClass');
+  if (me.role === 'teacher' || me.role === 'admin') {
+    const classes = await fetch('/api/teacher/classes').then(r=>r.ok?r.json():[]).catch(()=>[]);
+    classes.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id; opt.textContent = c.name;
+      sel.appendChild(opt);
+    });
+  } else {
+    document.getElementById('classFieldRow').style.display = 'none';
+  }
+  document.getElementById('newMeetingModal').classList.add('open');
+  document.getElementById('newMeetingTitle').focus();
+}
+
+function closeModal() {
+  document.getElementById('newMeetingModal').classList.remove('open');
+}
+
+async function confirmNewMeeting() {
+  const title    = document.getElementById('newMeetingTitle').value.trim() || 'Meeting';
+  const class_id = document.getElementById('newMeetingClass').value || null;
+  const m = await fetch('/api/meetings', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({title, class_id: class_id ? parseInt(class_id) : null}),
+  }).then(r=>r.json()).catch(()=>null);
+  closeModal();
+  if (m && m.id) {
+    await refreshMeetings();
+    joinMeeting(m);
+  }
+}
+
+async function endMeeting(id) {
+  await fetch(`/api/meetings/${id}`, {method:'DELETE'});
+  refreshMeetings();
+}
+
+// Close modal on overlay click
+document.getElementById('newMeetingModal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeModal();
+});
+
+// Keyboard shortcuts in call
+document.addEventListener('keydown', e => {
+  if (!currentMeeting) return;
+  if (e.key === 'm') toggleMic();
+  if (e.key === 'c') toggleCam();
+  if (e.key === 'Escape') leaveMeeting();
+});
+
+boot();
+
+
+</script>

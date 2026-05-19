@@ -1,0 +1,209 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-groups"></use></svg>
+<span class="topbar-title">Groups</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<div class="section-header">
+<div class="section-title">My Groups</div>
+<button class="create-btn" onclick="openCreateModal()">
+<svg class="icon icon-14"><use href="#ic-plus"></use></svg>
+        New Group
+      </button>
+</div>
+<div class="groups-grid" id="groups-grid"></div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+let groups = [];
+let activeGroupId = null;
+
+function initials(name) {
+  return (name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+}
+
+function renderGroups() {
+  const el = document.getElementById('groups-grid');
+  if (!groups.length) {
+    el.innerHTML = `<div class="empty" style="grid-column:1/-1;">
+      <svg class="icon"><use href="#ic-groups"/></svg>
+      <p>You're not in any groups yet.</p>
+      <button class="create-btn" onclick="openCreateModal()">
+        <svg class="icon icon-14"><use href="#ic-plus"/></svg> Create your first group
+      </button>
+    </div>`;
+    return;
+  }
+  el.innerHTML = groups.map(g => {
+    const shown = g.members.slice(0, 4);
+    const overflow = g.member_count - shown.length;
+    const pips = shown.map(m =>
+      `<div class="member-pip" title="${m.name}">${initials(m.name)}</div>`
+    ).join('') + (overflow > 0 ? `<div class="member-pip member-overflow">+${overflow}</div>` : '');
+    return `<div class="group-card" onclick="openDetail(${g.id})">
+      <div class="group-card-head">
+        <div class="group-icon">
+          <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-groups"/></svg>
+        </div>
+        <div>
+          <div class="group-name">${g.name}</div>
+          <div class="group-meta">${g.member_count} member${g.member_count !== 1 ? 's' : ''}</div>
+        </div>
+      </div>
+      <div class="member-stack">${pips}</div>
+    </div>`;
+  }).join('');
+}
+
+function openDetail(id) {
+  activeGroupId = id;
+  const g = groups.find(x => x.id === id);
+  if (!g) return;
+  document.getElementById('detailName').textContent = g.name;
+  document.getElementById('detailMembers').innerHTML = g.members.map(m =>
+    `<div class="member-row">
+      <div class="member-av${m.is_me ? ' me' : ''}">${initials(m.name)}</div>
+      <div>
+        <div class="member-name">${m.name}${m.is_me ? ' <span style="font-size:10px;color:var(--text3);">(you)</span>' : ''}</div>
+        <div class="member-email">${m.email}</div>
+      </div>
+    </div>`
+  ).join('');
+  document.getElementById('addMemberInput').value = '';
+  document.getElementById('addMemberErr').textContent = '';
+  document.getElementById('detailBackdrop').classList.add('open');
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detailBackdrop').classList.remove('open');
+  document.getElementById('detailPanel').classList.remove('open');
+  activeGroupId = null;
+}
+
+function openCreateModal() {
+  document.getElementById('groupNameInput').value = '';
+  document.getElementById('createErr').textContent = '';
+  document.getElementById('createSubmit').disabled = false;
+  document.getElementById('createModal').style.display = 'flex';
+  setTimeout(() => document.getElementById('groupNameInput').focus(), 50);
+}
+
+function closeCreateModal(e) {
+  if (e && e.target !== document.getElementById('createModal')) return;
+  document.getElementById('createModal').style.display = 'none';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    closeDetail();
+    document.getElementById('createModal').style.display = 'none';
+  }
+});
+
+document.getElementById('groupNameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') createGroup();
+});
+
+async function createGroup() {
+  const name = document.getElementById('groupNameInput').value.trim();
+  if (!name) { document.getElementById('createErr').textContent = 'Enter a group name.'; return; }
+  const btn = document.getElementById('createSubmit');
+  btn.disabled = true;
+  const res = await fetch('/api/groups', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name}),
+  }).then(r => r.json()).catch(() => null);
+
+  btn.disabled = false;
+  if (!res || res.error) {
+    document.getElementById('createErr').textContent = res?.error || 'Failed to create group.';
+    return;
+  }
+  groups.unshift(res);
+  renderGroups();
+  document.getElementById('createModal').style.display = 'none';
+  openDetail(res.id);
+}
+
+async function addMember() {
+  if (!activeGroupId) return;
+  const input = document.getElementById('addMemberInput');
+  const email = input.value.trim();
+  if (!email) return;
+  const btn = document.getElementById('addMemberBtn');
+  btn.disabled = true;
+  const res = await fetch('/api/groups/' + activeGroupId + '/members', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({email}),
+  }).then(r => r.json()).catch(() => null);
+
+  btn.disabled = false;
+  if (!res || res.error) {
+    document.getElementById('addMemberErr').textContent = res?.error || 'Failed to add member.';
+    return;
+  }
+  // Update local state
+  const idx = groups.findIndex(g => g.id === activeGroupId);
+  if (idx >= 0) groups[idx] = res;
+  document.getElementById('addMemberErr').textContent = '';
+  input.value = '';
+  renderGroups();
+  openDetail(activeGroupId);
+}
+
+async function leaveGroup() {
+  if (!activeGroupId) return;
+  if (!confirm('Leave this group?')) return;
+  const res = await fetch('/api/groups/' + activeGroupId + '/leave', {method: 'DELETE'})
+    .then(r => r.json()).catch(() => null);
+  if (!res || res.error) return;
+  groups = groups.filter(g => g.id !== activeGroupId);
+  closeDetail();
+  renderGroups();
+}
+
+async function boot() {
+  const [me, groupsData] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    fetch('/api/groups').then(r => r.json()).catch(() => []),
+  ]);
+
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  
+  
+  if (me.class_name) 
+
+  groups = Array.isArray(groupsData) ? groupsData : [];
+  renderGroups();
+}
+
+boot();
+
+
+</script>

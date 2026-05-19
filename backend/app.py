@@ -1,16 +1,16 @@
 import os
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, abort
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from config import Config
 from models import db
 
-STATIC_DIR = os.path.join(os.path.dirname(__file__), 'static')
-
+STATIC_DIR   = os.path.join(os.path.dirname(__file__), 'static')
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'src', 'pages')
+PARTIALS_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'src', 'partials')
 
 socketio = SocketIO()
-migrate = Migrate()
+migrate  = Migrate()
 
 def create_app(config=Config):
     app = Flask(__name__)
@@ -31,156 +31,30 @@ def create_app(config=Config):
     from api import blueprint as api_bp
     app.register_blueprint(api_bp, url_prefix="/api")
 
-    import websocket          # registers SocketIO event handlers
-    import websocket.meeting   # registers meeting signaling handlers
+    import websocket
+    import websocket.meeting
 
-    @app.route("/")
     @app.route("/login")
     def login_page():
         return send_from_directory(FRONTEND_DIR, "login.html")
 
-    @app.route("/dashboard")
-    def dashboard_page():
-        return send_from_directory(FRONTEND_DIR, "dashboard.html")
-
-    @app.route("/calendar")
-    def calendar_page():
-        return send_from_directory(FRONTEND_DIR, "calendar.html")
-
-    @app.route("/homework")
-    def homework_page():
-        return send_from_directory(FRONTEND_DIR, "homework.html")
-
-    @app.route("/tests")
-    def tests_page():
-        return send_from_directory(FRONTEND_DIR, "tests.html")
-
-    @app.route("/schedule")
-    def schedule_page():
-        return send_from_directory(FRONTEND_DIR, "schedule.html")
-
-    @app.route("/grades")
-    def grades_page():
-        return send_from_directory(FRONTEND_DIR, "grades.html")
-
-    @app.route("/leaderboard")
-    def leaderboard_page():
-        return send_from_directory(FRONTEND_DIR, "leaderboard.html")
-
-    @app.route("/conduct")
-    def conduct_page():
-        return send_from_directory(FRONTEND_DIR, "conduct.html")
-
-    @app.route("/activities")
-    def activities_page():
-        return send_from_directory(FRONTEND_DIR, "activities.html")
-
-    @app.route("/whiteboard")
-    def whiteboard_page():
-        return send_from_directory(FRONTEND_DIR, "whiteboard.html")
-
-    @app.route("/groups")
-    def groups_page():
-        return send_from_directory(FRONTEND_DIR, "groups.html")
-
-    @app.route("/library")
-    def library_page():
-        return send_from_directory(FRONTEND_DIR, "library.html")
-
-    @app.route("/messages")
-    def messages_page():
-        return send_from_directory(FRONTEND_DIR, "messages.html")
-
-    @app.route("/tutor")
-    def tutor_page():
-        return send_from_directory(FRONTEND_DIR, "tutor.html")
-
-    @app.route("/profile")
-    def profile_page():
-        return send_from_directory(FRONTEND_DIR, "profile.html")
-
-    @app.route("/settings")
-    def settings_page():
-        return send_from_directory(FRONTEND_DIR, "settings.html")
-
-    @app.route("/teacher")
-    def teacher_dashboard_page():
-        return send_from_directory(FRONTEND_DIR, "teacher_dashboard.html")
-
-    @app.route("/teacher/classes")
-    def teacher_classes_page():
-        return send_from_directory(FRONTEND_DIR, "teacher_classes.html")
-
-    @app.route("/teacher/assignments")
-    def teacher_assignments_page():
-        return send_from_directory(FRONTEND_DIR, "teacher_assignments.html")
-
-    @app.route("/teacher/analytics")
-    def teacher_analytics_page():
-        return send_from_directory(FRONTEND_DIR, "teacher_analytics.html")
-
-    @app.route("/teacher/conduct")
-    def teacher_conduct_page():
-        return send_from_directory(FRONTEND_DIR, "teacher_conduct.html")
-
-    @app.route("/teacher/schedule")
-    def teacher_schedule_page():
-        return send_from_directory(FRONTEND_DIR, "teacher_schedule.html")
-
-    @app.route("/teacher/settings")
-    def teacher_settings_page():
-        return send_from_directory(FRONTEND_DIR, "teacher_settings.html")
-
-    @app.route("/teacher/profile")
-    def teacher_profile_page():
-        return send_from_directory(FRONTEND_DIR, "teacher_profile.html")
-
-    @app.route("/teacher/whiteboard")
-    def teacher_whiteboard_page():
-        return send_from_directory(FRONTEND_DIR, "teacher_whiteboard.html")
-
-    @app.route("/admin")
-    def admin_dashboard_page():
-        return send_from_directory(FRONTEND_DIR, "admin_dashboard.html")
-
-    @app.route("/admin/users")
-    def admin_users_page():
-        return send_from_directory(FRONTEND_DIR, "admin_users.html")
-
-    @app.route("/admin/school")
-    def admin_school_page():
-        return send_from_directory(FRONTEND_DIR, "admin_school.html")
-
-    @app.route("/admin/settings")
-    def admin_settings_page():
-        return send_from_directory(FRONTEND_DIR, "admin_settings.html")
-
-    @app.route("/admin/performance")
-    def admin_performance_page():
-        return send_from_directory(FRONTEND_DIR, "admin_performance.html")
-
-    @app.route("/librarian")
-    def librarian_dashboard_page():
-        return send_from_directory(FRONTEND_DIR, "librarian_dashboard.html")
-
-    @app.route("/librarian/books")
-    def librarian_books_page():
-        return send_from_directory(FRONTEND_DIR, "librarian_books.html")
-
-    @app.route("/librarian/loans")
-    def librarian_loans_page():
-        return send_from_directory(FRONTEND_DIR, "librarian_loans.html")
-
-    @app.route("/meeting")
-    def meeting_page():
-        return send_from_directory(FRONTEND_DIR, "meeting.html")
+    @app.route("/partials/<path:filename>")
+    def serve_partial(filename):
+        return send_from_directory(PARTIALS_DIR, filename)
 
     @app.route("/static/<path:filename>")
     def serve_static(filename):
         return send_from_directory(STATIC_DIR, filename)
 
+    @app.route("/", defaults={"path": ""})
+    @app.route("/<path:path>")
+    def shell(path):
+        # Let Flask handle /api, /static, /partials internally
+        if path.startswith(("api/", "static/", "partials/")):
+            abort(404)
+        return send_from_directory(FRONTEND_DIR, "app.html")
+
     import os
-    # Only start scheduler in the main process (not the Werkzeug reloader child)
     if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         from scheduler import init_scheduler
         init_scheduler(app, socketio)

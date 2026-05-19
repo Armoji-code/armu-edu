@@ -1,0 +1,144 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-library"></use></svg>
+<span class="topbar-title">Library</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<!-- Checked out books -->
+<div class="section-header" style="margin-bottom:14px;">
+<div class="section-title">Checked Out</div>
+</div>
+<div id="checked-out-list" style="margin-bottom:32px;"></div>
+<!-- Search -->
+<div class="section-header" style="margin-bottom:14px;">
+<div class="section-title">Browse Books</div>
+</div>
+<div class="search-wrap">
+<svg class="icon icon-18 search-icon"><use href="#ic-search"></use></svg>
+<input autocomplete="off" class="search-input" id="searchInput" placeholder="Search by title or author…" type="text"/>
+</div>
+<div class="books-grid" id="books-grid"></div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
+}
+
+function isOverdue(iso) {
+  if (!iso) return false;
+  return new Date(iso) < new Date();
+}
+
+function renderCheckedOut(checkouts) {
+  const el = document.getElementById('checked-out-list');
+  if (!checkouts.length) {
+    el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;">No books currently checked out.</div>';
+    return;
+  }
+  el.innerHTML = checkouts.map(c => {
+    const b = c.book || {};
+    const overdue = isOverdue(c.due_date);
+    const dueTxt = c.due_date ? 'Due ' + fmtDate(c.due_date) : '';
+    const dueColor = overdue ? '#f87171' : 'var(--text3)';
+    const coverHtml = b.cover_url
+      ? `<img src="${b.cover_url}" alt="">`
+      : `<svg class="icon icon-18"><use href="#ic-book"/></svg>`;
+    return `<div class="checkout-row">
+      <div class="checkout-cover">${coverHtml}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${b.title || '—'}</div>
+        <div style="font-size:12px;color:var(--text2);margin-top:2px;">${b.author || ''}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0;">
+        <div style="font-size:11px;color:${dueColor};">${overdue ? 'Overdue · ' : ''}${dueTxt}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">Checked out ${fmtDate(c.checked_out_at)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderBooks(books) {
+  const el = document.getElementById('books-grid');
+  if (!books.length) {
+    el.innerHTML = '<div style="grid-column:1/-1;padding:32px;text-align:center;color:var(--text3);">No books found.</div>';
+    return;
+  }
+  el.innerHTML = books.map(b => {
+    const avail = b.available_copies ?? b.total_copies ?? 0;
+    const total = b.total_copies ?? 0;
+    const availColor = avail > 0 ? 'var(--g1)' : '#f87171';
+    const availTxt = avail > 0 ? `${avail} of ${total} available` : 'Not available';
+    const coverHtml = b.cover_url
+      ? `<img src="${b.cover_url}" alt="${b.title}">`
+      : `<svg class="icon" style="width:36px;height:36px;"><use href="#ic-book"/></svg>`;
+    const genre = b.genre ? `<span class="book-tag">${b.genre}</span>` : '';
+    const pages = b.pages ? `<span class="book-tag">${b.pages} pp</span>` : '';
+    return `<div class="book-card">
+      <div class="book-cover">${coverHtml}</div>
+      <div class="book-title">${b.title}</div>
+      <div class="book-author">${b.author}</div>
+      <div class="book-meta">${genre}${pages}</div>
+      <div class="book-avail" style="color:${availColor};font-size:11px;font-weight:500;">${availTxt}</div>
+    </div>`;
+  }).join('');
+}
+
+let searchTimer = null;
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    const q = document.getElementById('searchInput').value.trim();
+    fetch('/api/library/books' + (q ? '?q=' + encodeURIComponent(q) : ''))
+      .then(r => r.json())
+      .then(renderBooks)
+      .catch(() => {});
+  }, 280);
+}
+
+async function boot() {
+  const [me, checkouts, books] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    fetch('/api/library/checked-out').then(r => r.json()).catch(() => []),
+    fetch('/api/library/books').then(r => r.json()).catch(() => []),
+  ]);
+
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  
+  
+  if (me.class_name) 
+
+  renderCheckedOut(Array.isArray(checkouts) ? checkouts : []);
+  renderBooks(Array.isArray(books) ? books : []);
+
+  document.getElementById('searchInput').addEventListener('input', onSearch);
+}
+
+boot();
+
+
+</script>

@@ -1,0 +1,92 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-books"></use></svg>
+<span class="topbar-title">Library Overview</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"></use></svg></div>
+</div>
+</div>
+<div class="content">
+<div class="stat-grid">
+<div class="stat-card"><div class="stat-label">Total Books</div><div class="stat-val" id="st-books">—</div></div>
+<div class="stat-card"><div class="stat-label">Total Copies</div><div class="stat-val" id="st-copies">—</div></div>
+<div class="stat-card"><div class="stat-label">Checked Out</div><div class="stat-val" id="st-out">—</div></div>
+<div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-val danger" id="st-overdue">—</div></div>
+</div>
+<div style="font-size:15px;font-weight:600;margin-bottom:14px;">Quick Actions</div>
+<div class="quick-grid">
+<a class="quick-card" href="/librarian/books">
+<div class="quick-icon" style="background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15))"><svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-book"></use></svg></div>
+<div class="quick-title">Manage Books</div>
+<div class="quick-desc">Add, edit, or remove books from the catalog</div>
+</a>
+<a class="quick-card" href="/librarian/loans">
+<div class="quick-icon" style="background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(110,231,183,0.15))"><svg class="icon icon-20" style="color:var(--g2)"><use href="#ic-list"></use></svg></div>
+<div class="quick-title">Loans</div>
+<div class="quick-desc">Check books in and out, view active loans</div>
+</a>
+<a class="quick-card" href="/librarian/loans?status=overdue">
+<div class="quick-icon" style="background:rgba(248,113,113,0.1)"><svg class="icon icon-20" style="color:#f87171"><use href="#ic-clock"></use></svg></div>
+<div class="quick-title">Overdue</div>
+<div class="quick-desc">View all overdue loans that need a follow-up</div>
+</a>
+</div>
+<div class="section-title">Overdue Loans</div>
+<div class="overdue-table" id="overdueTable">
+<div class="empty">Loading…</div>
+</div>
+</div>
+
+<script>
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  
+
+  const [ov, overdue] = await Promise.all([
+    fetch('/api/librarian/overview').then(r => r.json()).catch(() => ({})),
+    fetch('/api/librarian/loans?status=overdue').then(r => r.json()).catch(() => []),
+  ]);
+
+  document.getElementById('st-books').textContent   = ov.total_books  ?? '—';
+  document.getElementById('st-copies').textContent  = ov.total_copies ?? '—';
+  document.getElementById('st-out').textContent     = ov.checked_out  ?? '—';
+  document.getElementById('st-overdue').textContent = ov.overdue      ?? '—';
+
+  const tbl = document.getElementById('overdueTable');
+  if (!overdue.length) {
+    tbl.innerHTML = '<div class="empty">No overdue loans — all good!</div>';
+  } else {
+    tbl.innerHTML = `
+      <div class="overdue-row header"><span>Book</span><span>Borrower</span><span>Due</span></div>
+      ${overdue.map(l => `
+        <div class="overdue-row">
+          <span style="font-weight:500">${esc(l.book_title)}</span>
+          <span style="color:var(--text2)">${esc(l.user_name)}</span>
+          <span class="badge-overdue">${fmtDate(l.due_date)}</span>
+        </div>`).join('')}`;
+  }
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+boot();
+
+</script>

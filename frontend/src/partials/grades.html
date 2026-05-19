@@ -1,0 +1,392 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-grades"></use></svg>
+<span class="topbar-title">Grades</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<!-- Tabs -->
+<div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;">
+<button class="mode-btn active" id="tab-btn-all" onclick="switchTab('all')"><svg class="icon icon-14"><use href="#ic-grades"></use></svg> All Grades</button>
+<button class="mode-btn" id="tab-btn-cal" onclick="switchTab('cal')"><svg class="icon icon-14"><use href="#ic-calendar"></use></svg> Grade History</button>
+<button class="mode-btn" id="tab-btn-calc" onclick="switchTab('calc')"><svg class="icon icon-14"><use href="#ic-leaderboard"></use></svg> Calculator</button>
+</div>
+<!-- TAB: ALL GRADES -->
+<div id="tab-all">
+<div class="section-header" style="margin-bottom:14px;">
+<div class="section-title">All Subjects — Current Semester</div>
+<div style="font-size:13px;color:var(--text3);">GPA: <span id="gpa-display" style="font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">—</span></div>
+</div>
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+<div style="overflow-x:auto;">
+<div id="grades-table-header" style="display:grid;grid-template-columns:1fr 80px 80px 80px 80px 90px;min-width:520px;background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 16px;">
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;">Subject</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Q1</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Q2</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Q3</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Q4</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Average</div>
+</div>
+<div id="grades-table-body"></div>
+<div id="grades-table-footer" style="display:none;grid-template-columns:1fr 80px 80px 80px 80px 90px;min-width:520px;border-top:2px solid var(--border);padding:12px 16px;background:var(--bg3);">
+<div style="font-size:13px;font-weight:700;color:var(--text);">Overall GPA</div>
+<div></div><div></div><div></div><div></div>
+<div id="grades-gpa-footer" style="text-align:center;font-size:15px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB: GRADE HISTORY CALENDAR -->
+<div id="tab-cal" style="display:none;">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+<div style="font-size:14px;font-weight:500;color:var(--text2);">Click a day to see grades received</div>
+<div style="display:flex;align-items:center;gap:10px;">
+<div class="icon-btn" onclick="calNav(-1)" style="font-size:18px;font-weight:300;">‹</div>
+<div id="cal-month-label" style="font-size:14px;font-weight:600;">May 2026</div>
+<div class="icon-btn" onclick="calNav(1)" style="font-size:18px;font-weight:300;">›</div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">Mon</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">Tue</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">Wed</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">Thu</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">Fri</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">Sat</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">Sun</div>
+</div>
+<div id="cal-grid" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin-bottom:16px;"></div>
+<div id="cal-detail" style="display:none;">
+<div id="cal-detail-title" style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:10px;"></div>
+<div id="cal-detail-items"></div>
+</div>
+</div>
+<!-- TAB: GPA CALCULATOR -->
+<div id="tab-calc" style="display:none;">
+<div style="max-width:580px;">
+<div style="font-size:13px;color:var(--text2);margin-bottom:20px;">Add hypothetical scores to see how they'd affect your average.</div>
+<div style="margin-bottom:16px;">
+<div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.6px;">Subject</div>
+<select id="calc-subject" onchange="calcUpdate()" style="width:100%;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;outline:none;"></select>
+</div>
+<div style="display:flex;gap:12px;margin-bottom:20px;">
+<div style="flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;">
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;">Current Average</div>
+<div id="calc-current" style="font-size:28px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">—</div>
+<div id="calc-current-gpa" style="font-size:11px;color:var(--text3);">GPA: —</div>
+</div>
+<div style="flex:1;background:var(--bg2);border:1px solid var(--border-accent);border-radius:var(--radius-sm);padding:14px 16px;">
+<div style="font-size:11px;font-weight:600;color:var(--g1);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;">Projected Average</div>
+<div id="calc-projected" style="font-size:28px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">—</div>
+<div id="calc-projected-gpa" style="font-size:11px;color:var(--text3);">GPA: —</div>
+</div>
+</div>
+<div style="font-size:12px;font-weight:600;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.6px;">Hypothetical Scores</div>
+<div id="calc-scores-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+<button onclick="calcAddScore()" style="width:100%;padding:10px;border-radius:var(--radius-sm);border:1px dashed var(--border-accent);background:transparent;color:var(--g2);font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--transition);">+ Add another score</button>
+</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+let allGrades = [];
+let subjectAverages = {}; // { subjectName: avgScore }
+let currentTab = 'all';
+
+function gradeColor(pct) {
+  if (pct >= 90) return '#3dd68c';
+  if (pct >= 80) return '#38bdf8';
+  if (pct >= 70) return '#fbbf24';
+  return '#f87171';
+}
+
+function pctToGpa(pct) {
+  if (pct >= 93) return 4.0;
+  if (pct >= 90) return 3.7;
+  if (pct >= 87) return 3.3;
+  if (pct >= 83) return 3.0;
+  if (pct >= 80) return 2.7;
+  if (pct >= 77) return 2.3;
+  if (pct >= 73) return 2.0;
+  if (pct >= 70) return 1.7;
+  return 1.0;
+}
+
+function pctToLetter(pct) {
+  if (pct >= 97) return 'A+';
+  if (pct >= 93) return 'A';
+  if (pct >= 90) return 'A-';
+  if (pct >= 87) return 'B+';
+  if (pct >= 83) return 'B';
+  if (pct >= 80) return 'B-';
+  if (pct >= 77) return 'C+';
+  if (pct >= 73) return 'C';
+  if (pct >= 70) return 'C-';
+  return 'D';
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  ['all','cal','calc'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = t === tab ? 'block' : 'none';
+    document.getElementById('tab-btn-' + t).classList.toggle('active', t === tab);
+  });
+  if (tab === 'cal') renderCal();
+  if (tab === 'calc') initCalc();
+}
+
+// ── ALL GRADES TABLE ──────────────────────────────────────────
+
+function buildSubjectTable(grades) {
+  // Group by subject, then by quarter
+  const bySubject = {};
+  grades.forEach(g => {
+    const subj = g.subject_name || 'Unknown';
+    if (!bySubject[subj]) bySubject[subj] = { q: {1:[], 2:[], 3:[], 4:[]} };
+    const q = g.quarter || 1;
+    if (bySubject[subj].q[q]) bySubject[subj].q[q].push(g.score);
+  });
+
+  const subjects = Object.keys(bySubject).sort();
+  if (!subjects.length) {
+    document.getElementById('grades-table-body').innerHTML = `<div style="padding:40px;text-align:center;color:var(--text3);font-size:14px;">No grades yet</div>`;
+    return;
+  }
+
+  let overallScores = [];
+  subjects.forEach(subj => {
+    const all = Object.values(bySubject[subj].q).flat();
+    if (all.length) {
+      const avg = all.reduce((a,b)=>a+b,0) / all.length;
+      subjectAverages[subj] = avg;
+      overallScores.push(avg);
+    }
+  });
+
+  const overallAvg = overallScores.length ? overallScores.reduce((a,b)=>a+b,0)/overallScores.length : 0;
+  const overallGpa = pctToGpa(Math.round(overallAvg));
+
+  document.getElementById('gpa-display').textContent = overallGpa.toFixed(1);
+  const footer = document.getElementById('grades-table-footer');
+  footer.style.display = 'grid';
+  document.getElementById('grades-gpa-footer').textContent = overallGpa.toFixed(1);
+
+  document.getElementById('grades-table-body').innerHTML = subjects.map(subj => {
+    const qData = bySubject[subj].q;
+    const qAvgs = [1,2,3,4].map(q => {
+      if (!qData[q].length) return null;
+      return Math.round(qData[q].reduce((a,b)=>a+b,0)/qData[q].length);
+    });
+    const filled = qAvgs.filter(v => v !== null);
+    const avg = filled.length ? Math.round(filled.reduce((a,b)=>a+b,0)/filled.length) : null;
+    const col = avg !== null ? gradeColor(avg) : 'var(--text3)';
+
+    return `<div style="display:grid;grid-template-columns:1fr 80px 80px 80px 80px 90px;min-width:520px;border-bottom:1px solid var(--border);padding:12px 16px;transition:background var(--transition);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+      <div style="font-size:13px;font-weight:500;color:var(--text);">${subj}</div>
+      ${[0,1,2,3].map(i => {
+        const v = qAvgs[i];
+        return `<div style="text-align:center;font-size:13px;color:${v!==null?gradeColor(v):'var(--text3)'};font-weight:500;">${v!==null?pctToLetter(v):'—'}</div>`;
+      }).join('')}
+      <div style="text-align:center;font-size:14px;font-weight:700;color:${col};">${avg!==null?avg+'%':'—'}</div>
+    </div>`;
+  }).join('');
+
+  // Populate calculator subject selector
+  const sel = document.getElementById('calc-subject');
+  sel.innerHTML = `<option value="__all__">All Subjects (Overall)</option>` +
+    subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+}
+
+// ── GRADE HISTORY CALENDAR ────────────────────────────────────
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth();
+let calSelected = null;
+
+function calNav(dir) {
+  calMonth += dir;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  calSelected = null;
+  renderCal();
+}
+
+function renderCal() {
+  document.getElementById('cal-month-label').textContent = MONTHS[calMonth] + ' ' + calYear;
+  const grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = new Date();
+
+  for (let i = 0; i < startOffset; i++) {
+    const e = document.createElement('div');
+    e.style.minHeight = '70px';
+    grid.appendChild(e);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = today.getFullYear()===calYear && today.getMonth()===calMonth && today.getDate()===d;
+    const isSelected = calSelected === dateStr;
+    const dayGrades = allGrades.filter(g => g.created_at && g.created_at.startsWith(dateStr));
+
+    const borderC = isSelected ? 'var(--g1)' : isToday ? 'var(--g2)' : 'var(--border)';
+    const baseBg  = isSelected ? 'rgba(61,214,140,0.07)' : isToday ? 'rgba(56,189,248,0.04)' : 'var(--bg2)';
+    const extra   = dayGrades.length > 2 ? dayGrades.length - 2 : 0;
+
+    const pills = dayGrades.slice(0, 2).map(g => {
+      const col = gradeColor(g.score);
+      const label = (g.subject_name || '') + (g.assignment_title ? ': ' + g.assignment_title : '');
+      return `<div style="display:flex;align-items:center;gap:3px;padding:1px 3px;border-radius:4px;background:${col}18;margin-bottom:2px;overflow:hidden;">
+        <div style="width:5px;height:5px;border-radius:50%;background:${col};flex-shrink:0;"></div>
+        <div style="font-size:9px;color:${col};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${pctToLetter(g.score)} ${label}</div>
+      </div>`;
+    }).join('');
+
+    const el = document.createElement('div');
+    el.className = 'cal-cell';
+    el.style.cssText = `background:${baseBg};border-color:${borderC};`;
+    el.innerHTML = `<div style="font-size:11px;font-weight:${isToday?700:500};color:${isToday?'var(--g2)':isSelected?'var(--g1)':'var(--text3)'};margin-bottom:3px;">${d}</div>${pills}${extra > 0 ? `<div style="font-size:9px;color:var(--text3);padding:0 2px;">+${extra}</div>` : ''}`;
+    el.onmouseover = () => { el.style.borderColor = 'var(--border-accent)'; };
+    el.onmouseout  = () => { el.style.borderColor = borderC; };
+    el.onclick = () => { calSelected = dateStr; renderCal(); showCalDetail(dateStr); };
+    grid.appendChild(el);
+  }
+
+  if (calSelected) showCalDetail(calSelected);
+}
+
+function showCalDetail(dateStr) {
+  const detail = document.getElementById('cal-detail');
+  const dayGrades = allGrades.filter(g => g.created_at && g.created_at.startsWith(dateStr));
+
+  if (!dayGrades.length) { detail.style.display = 'none'; return; }
+
+  const d = new Date(dateStr + 'T00:00:00');
+  document.getElementById('cal-detail-title').textContent = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+
+  document.getElementById('cal-detail-items').innerHTML = dayGrades.map(g => {
+    const col = gradeColor(g.score);
+    return `<div style="display:flex;align-items:center;gap:14px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;">
+      <div style="width:44px;height:44px;border-radius:var(--radius-sm);background:${col}22;border:1px solid ${col}44;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:${col};flex-shrink:0;">${pctToLetter(g.score)}</div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;">${g.assignment_title || 'Assignment'}</div>
+        <div style="font-size:11px;color:var(--text3);">${g.subject_name || ''}</div>
+      </div>
+      <div style="font-size:20px;font-weight:700;color:${col};">${Math.round(g.score)}%</div>
+    </div>`;
+  }).join('');
+
+  detail.style.display = 'block';
+}
+
+// ── GPA CALCULATOR ────────────────────────────────────────────
+
+let calcScores = [];
+
+function initCalc() {
+  if (calcScores.length === 0) calcAddScore();
+  calcUpdate();
+}
+
+function calcAddScore() {
+  calcScores.push(85);
+  renderCalcScores();
+  calcUpdate();
+}
+
+function renderCalcScores() {
+  const list = document.getElementById('calc-scores-list');
+  list.innerHTML = calcScores.map((score, i) => `
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 12px;display:flex;align-items:center;gap:10px;">
+        <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Score ${i+1}</span>
+        <input type="range" min="0" max="100" value="${score}" oninput="calcScores[${i}]=+this.value;document.getElementById('cv${i}').textContent=this.value+'%';calcUpdate()" style="flex:1;accent-color:var(--g1);">
+        <span id="cv${i}" style="font-size:13px;font-weight:600;color:${gradeColor(score)};min-width:38px;text-align:right;">${score}%</span>
+      </div>
+      <div class="icon-btn" onclick="calcScores.splice(${i},1);renderCalcScores();calcUpdate();" style="font-size:13px;color:var(--text3);">
+        <svg class="icon icon-14"><use href="#ic-x"/></svg>
+      </div>
+    </div>
+  `).join('');
+}
+
+function calcUpdate() {
+  const subj = document.getElementById('calc-subject')?.value || '__all__';
+  let current;
+  if (subj === '__all__') {
+    const avgs = Object.values(subjectAverages);
+    current = avgs.length ? Math.round(avgs.reduce((a,b)=>a+b,0)/avgs.length) : 0;
+  } else {
+    current = Math.round(subjectAverages[subj] ?? 0);
+  }
+
+  const gpa = pctToGpa(current);
+  document.getElementById('calc-current').textContent = current + '%  ' + pctToLetter(current);
+  document.getElementById('calc-current-gpa').textContent = 'GPA: ' + gpa.toFixed(1);
+
+  if (!calcScores.length) {
+    document.getElementById('calc-projected').textContent = current + '%  ' + pctToLetter(current);
+    document.getElementById('calc-projected-gpa').textContent = 'GPA: ' + gpa.toFixed(1);
+    return;
+  }
+
+  const existingWeight = 10;
+  const totalSum = current * existingWeight + calcScores.reduce((a,b)=>a+b,0);
+  const projected = Math.round(totalSum / (existingWeight + calcScores.length));
+  const projGpa = pctToGpa(projected);
+  const col = gradeColor(projected);
+
+  const projEl = document.getElementById('calc-projected');
+  projEl.textContent = projected + '%  ' + pctToLetter(projected);
+  projEl.style.cssText = `font-size:28px;font-weight:700;color:${col};`;
+
+  const diff = projected - current;
+  const diffStr = diff > 0 ? `↑ +${diff}%` : diff < 0 ? `↓ ${diff}%` : '→ no change';
+  document.getElementById('calc-projected-gpa').textContent = `GPA: ${projGpa.toFixed(1)}   ${diffStr}`;
+}
+
+// ── BOOT ──────────────────────────────────────────────────────
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  
+  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  
+  if (me.class_name) 
+
+  allGrades = await fetch('/api/grades').then(r => r.json()).catch(() => []);
+  buildSubjectTable(allGrades);
+}
+
+boot();
+
+
+</script>

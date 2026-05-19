@@ -1,0 +1,70 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-calendar"></use></svg>
+<span class="topbar-title">Weekly Schedule</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<div id="scheduleContent" style="color:var(--text3);font-size:13px;">Loading…</div>
+</div>
+
+<script>
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  
+
+  const schedule = await fetch('/api/teacher/schedule').then(r => r.json()).catch(() => []);
+
+  const todayIdx = new Date().getDay() - 1; // 0=Mon, 4=Fri; -1 or 5/6 = weekend
+  const totalPeriods = schedule.reduce((s, d) => s + d.periods.length, 0);
+
+  const el = document.getElementById('scheduleContent');
+
+  if (!totalPeriods) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;margin-top:60px;">No schedule periods found.<br><span style="font-size:12px;">Ask your admin to add schedule entries.</span></div>';
+    return;
+  }
+
+  el.innerHTML = `<div class="week-grid">` +
+    schedule.map(day => {
+      const isToday = day.day_index === todayIdx;
+      return `<div class="day-col${isToday ? ' today' : ''}">
+        <div class="day-header${isToday ? ' today-hdr' : ''}">${day.day}${isToday ? ' · Today' : ''}</div>
+        ${day.periods.length ? day.periods.map(p => `
+          <div class="period-card">
+            <div class="period-time">
+              <span class="period-num">${p.period}</span>${p.start} – ${p.end}
+            </div>
+            <div class="period-subject">${p.subject_name}</div>
+            <div class="period-class">${p.class_name}</div>
+          </div>`).join('') : '<div class="empty-day">Free day</div>'}
+      </div>`;
+    }).join('') + `</div>`;
+}
+
+boot();
+
+</script>

@@ -1,0 +1,660 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-tutor"></use></svg>
+<span class="topbar-title">AI Tutor</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="tutor-body">
+<!-- Session list -->
+<div class="sess-panel">
+<div class="sess-panel-head">
+<span class="sess-panel-label">Chats</span>
+<button class="new-chat-btn" onclick="newSession()">+ New</button>
+</div>
+<div class="sess-search">
+<svg class="sess-search-icon"><use href="#ic-search"></use></svg>
+<input class="sess-search-input" id="sessSearch" oninput="filterText=this.value;renderSessions()" placeholder="Search chats…" type="search"/>
+</div>
+<div class="sess-list" id="sessList">
+<div style="padding:20px 12px;text-align:center;color:var(--text3);font-size:12px;">Loading…</div>
+</div>
+</div>
+<!-- Chat area -->
+<div class="chat-panel" id="chatPanel">
+<div class="chat-welcome" id="chatWelcome">
+<div class="chat-welcome-icon">
+<svg class="icon" style="width:28px;height:28px;"><use href="#ic-tutor"></use></svg>
+</div>
+<div class="chat-welcome-title">AI Tutor</div>
+<div class="chat-welcome-sub">Ask me anything about your schoolwork. I can help explain concepts, solve problems, and review your work.</div>
+<button class="new-chat-btn" onclick="newSession()" style="margin-top:8px;padding:8px 20px;font-size:13px;">Start a new chat</button>
+<div class="nudge-label" id="nudgeLabel" style="display:none">Suggested for you</div>
+<div class="nudge-row" id="nudgeRow"></div>
+<div style="margin-top:24px;font-size:11px;color:var(--text3);text-align:center;max-width:300px;line-height:1.6;">
+          🔒 Your chats are private from other students. They are stored on your school's server and may be visible to school administrators.
+        </div>
+</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+let sessions = [];       // personal sessions
+let groups = [];         // user's groups with their AI session info
+let activeSessionId = null;
+let activeGroupId = null;  // non-null when viewing a group session
+let streaming = false;
+let myId = null;
+let myInitials = '?';
+let attachedFile = null;
+let filterText = '';
+let pinnedIds = new Set(JSON.parse(localStorage.getItem('armu_pinned') || '[]'));
+let groupPollTimer = null;
+let currentTier = 'standard';
+let modelNames = {standard: 'Standard', advanced: 'Advanced'};
+let cachedNudges = null;
+
+function renderContent(el, text) {
+  // Extract math blocks before markdown processing so delimiters aren't mangled
+  const blocks = [];
+  const ph = (display, src) => { blocks.push({display, src}); return `MKPH${blocks.length-1}MKPH`; };
+  let safe = text
+    .replace(/\$\$([\s\S]+?)\$\$/g,                       (_, m) => ph(true,  m))
+    .replace(/\\\[([\s\S]+?)\\\]/g,                        (_, m) => ph(true,  m))
+    .replace(/\\\(([\s\S]+?)\\\)/g,                        (_, m) => ph(false, m))
+    .replace(/(?<!\$)\$([^\$\n]{1,300}?)\$(?!\$)/g,       (_, m) => ph(false, m));
+
+  // Render markdown
+  let html = window.marked
+    ? marked.parse(safe, {gfm: true, breaks: false})
+    : safe.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+
+  // Re-inject math as KaTeX HTML
+  html = html.replace(/MKPH(\d+)MKPH/g, (_, i) => {
+    const {display, src} = blocks[+i];
+    if (!window.katex) return display ? `\\[${src}\\]` : `\\(${src}\\)`;
+    try { return katex.renderToString(src, {displayMode: display, throwOnError: false}); }
+    catch { return display ? `\\[${src}\\]` : `\\(${src}\\)`; }
+  });
+
+  el.innerHTML = html;
+  el.classList.add('md');
+}
+
+const TEXT_EXTS = new Set(['txt','md','py','js','ts','jsx','tsx','html','css','json','csv','xml','yaml','yml','c','cpp','h','java','rs','go','sh','toml','ini','sql']);
+const IMAGE_EXTS = new Set(['png','jpg','jpeg','webp','gif']);
+
+async function onFileSelected(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = '';
+
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  if (IMAGE_EXTS.has(ext)) {
+    // Read as base64, strip the data URI prefix
+    const dataUrl = await new Promise(res => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.readAsDataURL(file);
+    });
+    const b64 = dataUrl.split(',')[1];
+    attachedFile = {name: file.name, imageB64: b64};
+  } else if (TEXT_EXTS.has(ext)) {
+    let content = await file.text();
+    if (content.length > 40000) content = content.slice(0, 40000) + '\n\n[...truncated]';
+    attachedFile = {name: file.name, content};
+  } else if (ext === 'pdf' || ext === 'docx') {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch('/api/ai/extract', {method:'POST', body:fd})
+      .then(r => r.json()).catch(() => null);
+    if (!res || res.error) { alert(res?.error || 'Could not read file.'); return; }
+    let content = res.text;
+    if (content.length > 40000) content = content.slice(0, 40000) + '\n\n[...truncated]';
+    attachedFile = {name: file.name, content};
+  } else {
+    alert('Unsupported file type.');
+    return;
+  }
+
+  const chip = document.getElementById('fileChip');
+  if (chip) {
+    document.getElementById('fileChipName').textContent = file.name;
+    chip.style.display = 'flex';
+    // Show thumbnail for images
+    const thumb = document.getElementById('fileChipThumb');
+    if (thumb) {
+      if (attachedFile.imageB64) {
+        thumb.src = 'data:image/' + ext + ';base64,' + attachedFile.imageB64;
+        thumb.style.display = 'block';
+      } else {
+        thumb.style.display = 'none';
+      }
+    }
+  }
+}
+
+function clearFile() {
+  attachedFile = null;
+  const chip = document.getElementById('fileChip');
+  if (chip) chip.style.display = 'none';
+}
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:false});
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+
+function sessionTitle(s) {
+  return s.title || ('Chat ' + new Date(s.created_at).toLocaleDateString('en-US', {month:'short', day:'numeric'}));
+}
+
+function renderSessions() {
+  const el = document.getElementById('sessList');
+  const q = filterText.toLowerCase().trim();
+  const visible = sessions.filter(s => !q || sessionTitle(s).toLowerCase().includes(q));
+  const visibleGroups = groups.filter(g => !q || g.name.toLowerCase().includes(q));
+
+  if (!visible.length && !visibleGroups.length) {
+    el.innerHTML = `<div style="padding:20px 12px;text-align:center;color:var(--text3);font-size:12px;">${q ? 'No results.' : 'No chats yet.'}</div>`;
+    return;
+  }
+
+  const pinned   = visible.filter(s =>  pinnedIds.has(s.id));
+  const unpinned = visible.filter(s => !pinnedIds.has(s.id));
+
+  function personalItemHtml(s) {
+    const isPinned = pinnedIds.has(s.id);
+    const titleHtml = s._titling
+      ? `<div class="titling-dots"><span class="titling-dot"></span><span class="titling-dot"></span><span class="titling-dot"></span></div>`
+      : `<div class="sess-title">${sessionTitle(s)}</div>`;
+    return `<div class="sess-item${s.id === activeSessionId && !activeGroupId ? ' active' : ''}" onclick="openSession(${s.id}, null)">
+      <div class="sess-item-body">${titleHtml}<div class="sess-date">${fmtDate(s.created_at)}</div></div>
+      <button class="sess-pin${isPinned ? ' pinned' : ''}" onclick="togglePin(event,${s.id})" title="${isPinned ? 'Unpin' : 'Pin'} chat">
+        <svg class="icon" style="width:11px;height:11px;"><use href="#ic-pin"/></svg>
+      </button>
+      <button class="sess-delete" onclick="deleteSession(event,${s.id})" title="Delete chat">
+        <svg class="icon" style="width:12px;height:12px;"><use href="#ic-x"/></svg>
+      </button>
+    </div>`;
+  }
+
+  function groupItemHtml(g) {
+    const isActive = activeGroupId === g.id;
+    return `<div class="sess-item group-sess${isActive ? ' active' : ''}" onclick="openGroupSession(${g.id})">
+      <div class="sess-item-body">
+        <div class="sess-title">${g.name}</div>
+        <div class="sess-date">${g.member_count} members</div>
+      </div>
+      <span class="group-badge">Group</span>
+    </div>`;
+  }
+
+  let html = '';
+  if (pinned.length) {
+    html += '<div class="sess-group-label">Pinned</div>';
+    html += pinned.map(personalItemHtml).join('');
+  }
+  if (visibleGroups.length) {
+    html += '<div class="sess-group-label">Group Chats</div>';
+    html += visibleGroups.map(groupItemHtml).join('');
+  }
+  if (unpinned.length) {
+    if (pinned.length || visibleGroups.length) html += '<div class="sess-group-label">Chats</div>';
+    html += unpinned.map(personalItemHtml).join('');
+  }
+
+  el.innerHTML = html;
+}
+
+function togglePin(e, id) {
+  e.stopPropagation();
+  if (pinnedIds.has(id)) pinnedIds.delete(id);
+  else pinnedIds.add(id);
+  localStorage.setItem('armu_pinned', JSON.stringify([...pinnedIds]));
+  renderSessions();
+}
+
+async function deleteSession(e, id) {
+  e.stopPropagation();
+  if (!confirm('Delete this chat?')) return;
+  await fetch('/api/ai/sessions/' + id, {method: 'DELETE'}).catch(() => {});
+  sessions = sessions.filter(s => s.id !== id);
+  if (pinnedIds.has(id)) { pinnedIds.delete(id); localStorage.setItem('armu_pinned', JSON.stringify([...pinnedIds])); }
+  if (activeSessionId === id) {
+    activeSessionId = null;
+    activeGroupId = null;
+    stopGroupPoll();
+    document.getElementById('chatPanel').innerHTML = `
+      <div class="chat-welcome" id="chatWelcome">
+        <div class="chat-welcome-icon"><svg class="icon" style="width:28px;height:28px;"><use href="#ic-tutor"/></svg></div>
+        <div class="chat-welcome-title">AI Tutor</div>
+        <div class="chat-welcome-sub">Ask me anything about your schoolwork.</div>
+        <button class="new-chat-btn" style="margin-top:8px;padding:8px 20px;font-size:13px;" onclick="newSession()">Start a new chat</button>
+        <div class="nudge-label" id="nudgeLabel" style="display:none">Suggested for you</div>
+        <div class="nudge-row" id="nudgeRow"></div>
+      </div>`;
+    renderNudges();
+  }
+  renderSessions();
+}
+
+function updateModelSwitcher(tier, isGroup) {
+  const sw = document.getElementById('modelSwitcher');
+  if (!sw) return;
+  sw.style.display = isGroup ? 'none' : 'flex';
+  document.getElementById('modelBtnStandard')?.classList.toggle('active', tier === 'standard');
+  document.getElementById('modelBtnAdvanced')?.classList.toggle('active', tier === 'advanced');
+  if (modelNames.standard) document.getElementById('modelBtnStandard').textContent = modelNames.standard.split(':')[0];
+  if (modelNames.advanced) document.getElementById('modelBtnAdvanced').textContent = modelNames.advanced.split(':')[0];
+}
+
+async function switchModel(tier) {
+  if (!activeSessionId || activeGroupId) return;
+  currentTier = tier;
+  localStorage.setItem('armu_model_tier', tier);
+  updateModelSwitcher(tier, false);
+  await fetch('/api/ai/sessions/' + activeSessionId, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({model_tier: tier}),
+  }).catch(() => {});
+  const s = sessions.find(s => s.id === activeSessionId);
+  if (s) s.model_tier = tier;
+}
+
+function buildChatUI() {
+  const panel = document.getElementById('chatPanel');
+  panel.innerHTML = `
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-compose">
+      <div class="model-switcher" id="modelSwitcher">
+        <span class="model-switcher-label">Model:</span>
+        <button class="model-btn" id="modelBtnStandard" onclick="switchModel('standard')">Standard</button>
+        <button class="model-btn" id="modelBtnAdvanced" onclick="switchModel('advanced')">Advanced</button>
+      </div>
+      <div id="fileChip" style="display:none;" class="file-chip">
+        <img id="fileChipThumb" style="display:none;width:28px;height:28px;object-fit:cover;border-radius:4px;flex-shrink:0;">
+        <svg class="icon icon-14" style="flex-shrink:0;color:var(--g1);"><use href="#ic-paperclip"/></svg>
+        <span class="file-chip-name" id="fileChipName"></span>
+        <button class="file-chip-remove" onclick="clearFile()" title="Remove file">
+          <svg class="icon icon-14"><use href="#ic-x"/></svg>
+        </button>
+      </div>
+      <div class="compose-wrap">
+        <button class="compose-attach" onclick="document.getElementById('fileInput').click()" title="Attach file">
+          <svg class="icon icon-18"><use href="#ic-paperclip"/></svg>
+        </button>
+        <input type="file" id="fileInput" style="display:none"
+          accept=".txt,.md,.py,.js,.ts,.html,.css,.json,.csv,.xml,.yaml,.yml,.c,.cpp,.h,.java,.rs,.go,.sh,.pdf,.docx,.png,.jpg,.jpeg,.webp,.gif">
+        <textarea class="compose-textarea" id="composeTA" placeholder="Ask anything… or paste an image / file" rows="1"></textarea>
+        <button class="compose-send" id="composeSend" onclick="sendMessage()">
+          <svg class="icon icon-18"><use href="#ic-send"/></svg>
+        </button>
+      </div>
+    </div>`;
+
+  const ta = document.getElementById('composeTA');
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  });
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+  });
+  document.getElementById('fileInput').addEventListener('change', onFileSelected);
+  ta.addEventListener('paste', onPaste);
+}
+
+async function onPaste(e) {
+  const items = Array.from(e.clipboardData?.items || []);
+
+  // Look for a file item (image or other file)
+  const fileItem = items.find(i => i.kind === 'file');
+  if (!fileItem) return;  // plain text paste — let browser handle normally
+
+  const file = fileItem.getAsFile();
+  if (!file) return;
+
+  const mime = file.type;
+  const ext = mime.split('/')[1]?.split('+')[0] || '';  // e.g. "png", "jpeg", "pdf"
+  const name = file.name || ('pasted-image.' + ext);
+
+  if (IMAGE_EXTS.has(ext) || mime.startsWith('image/')) {
+    e.preventDefault();  // don't paste the binary as text
+    const dataUrl = await new Promise(res => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.readAsDataURL(file);
+    });
+    const b64 = dataUrl.split(',')[1];
+    attachedFile = {name, imageB64: b64};
+
+    const chip = document.getElementById('fileChip');
+    if (chip) {
+      document.getElementById('fileChipName').textContent = name;
+      chip.style.display = 'flex';
+      const thumb = document.getElementById('fileChipThumb');
+      if (thumb) { thumb.src = dataUrl; thumb.style.display = 'block'; }
+    }
+  } else if (TEXT_EXTS.has(ext)) {
+    e.preventDefault();
+    let content = await file.text();
+    if (content.length > 40000) content = content.slice(0, 40000) + '\n\n[...truncated]';
+    attachedFile = {name, content};
+    const chip = document.getElementById('fileChip');
+    if (chip) {
+      document.getElementById('fileChipName').textContent = name;
+      chip.style.display = 'flex';
+      const thumb = document.getElementById('fileChipThumb');
+      if (thumb) thumb.style.display = 'none';
+    }
+  }
+  // PDF/DOCX pasted as files: rare, skip for now — user can use the picker
+}
+
+function appendMsg(role, text, opts = {}) {
+  const msgs = document.getElementById('chatMsgs');
+  if (!msgs) return null;
+  const isUser = role === 'user';
+  const isMe = isUser && (!opts.senderId || opts.senderId === myId);
+  const initials = isUser
+    ? (opts.senderName || myInitials).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
+    : 'AI';
+  const div = document.createElement('div');
+  // Other group members' messages appear on the left like AI messages
+  const side = isMe ? 'user' : (isUser ? 'other' : 'ai');
+  div.className = `msg-row ${isMe ? 'user' : 'ai'}`;
+  div.innerHTML = `
+    <div class="msg-icon ${isMe ? 'user' : 'ai'}" style="${!isMe && isUser ? 'background:var(--bg4);color:var(--text2)' : ''}">${initials}</div>
+    <div class="msg-content">
+      ${opts.senderName && !isMe && isUser ? `<div class="msg-sender">${opts.senderName}</div>` : ''}
+      <div class="msg-text"></div>
+      <div class="msg-time">${fmtDate(new Date().toISOString())}</div>
+    </div>`;
+  const textEl = div.querySelector('.msg-text');
+  if (!isUser && text) renderContent(textEl, text);
+  else textEl.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return textEl;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('chatMsgs');
+  if (!msgs) return null;
+  const div = document.createElement('div');
+  div.className = 'msg-row ai';
+  div.id = 'typingRow';
+  div.innerHTML = `<div class="msg-icon ai">AI</div><div class="msg-content"><div class="msg-text" style="padding:11px 15px;"><div class="typing-dots"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div></div></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+function stopGroupPoll() {
+  if (groupPollTimer) { clearInterval(groupPollTimer); groupPollTimer = null; }
+}
+
+async function openSession(id, gid) {
+  stopGroupPoll();
+  activeSessionId = id;
+  activeGroupId = gid || null;
+  const s = sessions.find(s => s.id === id);
+  currentTier = s?.model_tier || localStorage.getItem('armu_model_tier') || 'standard';
+  renderSessions();
+  buildChatUI();
+  updateModelSwitcher(currentTier, !!gid);
+
+  const messages = await fetch('/api/ai/sessions/' + id + '/messages')
+    .then(r => r.json()).catch(() => []);
+
+  const msgs = document.getElementById('chatMsgs');
+  if (!msgs) return;
+  msgs.innerHTML = '';
+  for (const m of messages) {
+    appendMsg(m.role, m.content, {senderId: m.sender_id, senderName: m.sender_name});
+  }
+
+  if (activeGroupId) {
+    // Show group context bar
+    const g = groups.find(g => g.id === activeGroupId);
+    const bar = document.createElement('div');
+    bar.className = 'group-chat-bar';
+    bar.id = 'groupBar';
+    bar.innerHTML = `<svg class="icon icon-14"><use href="#ic-groups"/></svg><span>Group chat · <strong>${g ? g.name : ''}</strong> · ${g ? g.member_count : ''} members</span>`;
+    const chatPanel = document.getElementById('chatPanel');
+    const msgsEl = document.getElementById('chatMsgs');
+    chatPanel.insertBefore(bar, msgsEl);
+
+    // Poll for new messages from other members every 3 s
+    let lastCount = messages.length;
+    groupPollTimer = setInterval(async () => {
+      if (streaming) return;
+      const fresh = await fetch('/api/ai/sessions/' + activeSessionId + '/messages')
+        .then(r => r.json()).catch(() => null);
+      if (!fresh || fresh.length <= lastCount) return;
+      const newMsgs = fresh.slice(lastCount);
+      for (const m of newMsgs) {
+        appendMsg(m.role, m.content, {senderId: m.sender_id, senderName: m.sender_name});
+      }
+      lastCount = fresh.length;
+    }, 3000);
+  }
+}
+
+async function openGroupSession(groupId) {
+  stopGroupPoll();
+  const data = await fetch('/api/groups/' + groupId + '/ai/session')
+    .then(r => r.json()).catch(() => null);
+  if (!data || data.error) return;
+  await openSession(data.id, groupId);
+}
+
+async function newSession() {
+  stopGroupPoll();
+  const s = await fetch('/api/ai/sessions', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({model_tier: localStorage.getItem('armu_model_tier') || 'standard'}),
+  }).then(r => r.json()).catch(() => null);
+
+  if (!s || s.error) return;
+  sessions.unshift(s);
+  activeGroupId = null;
+  renderSessions();
+  await openSession(s.id, null);
+  document.getElementById('composeTA')?.focus();
+}
+
+async function sendMessage() {
+  if (streaming || !activeSessionId) return;
+  const ta = document.getElementById('composeTA');
+  const sendBtn = document.getElementById('composeSend');
+  const text = ta.value.trim();
+  if (!text && !attachedFile) return;
+
+  // Build the message sent to the AI
+  let fullMessage = text;
+  let displayText = text;
+  let imageB64 = null;
+  if (attachedFile) {
+    if (attachedFile.imageB64) {
+      imageB64 = attachedFile.imageB64;
+      displayText = (text ? text + '\n' : '') + `🖼 ${attachedFile.name}`;
+      fullMessage = text || 'What is in this image?';
+    } else {
+      fullMessage = `[Attached file: ${attachedFile.name}]\n\`\`\`\n${attachedFile.content}\n\`\`\`\n\n${text}`.trim();
+      displayText = (text ? text + '\n' : '') + `📎 ${attachedFile.name}`;
+    }
+    clearFile();
+  }
+
+  ta.value = '';
+  ta.style.height = 'auto';
+  sendBtn.disabled = true;
+  streaming = true;
+
+  appendMsg('user', displayText, {senderId: myId});
+  const typingRow = showTyping();
+
+  const resp = await fetch('/api/ai/sessions/' + activeSessionId + '/chat', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: fullMessage, ...(imageB64 ? {image: imageB64} : {})}),
+  }).catch(() => null);
+
+  if (typingRow) typingRow.remove();
+
+  if (!resp || !resp.ok) {
+    appendMsg('ai', 'Sorry, something went wrong. Please try again.');
+    streaming = false;
+    sendBtn.disabled = false;
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  const textEl = appendMsg('ai', '');
+  let full = '';
+
+  while (true) {
+    const {done, value} = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, {stream: true});
+    full += chunk;
+    textEl.textContent = full;
+    const msgs = document.getElementById('chatMsgs');
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  // Render markdown + math in the completed AI response
+  if (full) renderContent(textEl, full);
+
+  // If this was the first exchange in a personal session, show titling dots
+  const justSentFirst = !activeGroupId && (() => {
+    const s = sessions.find(s => s.id === activeSessionId);
+    return s && s.title === 'New Chat';
+  })();
+
+  if (justSentFirst) {
+    const s = sessions.find(s => s.id === activeSessionId);
+    if (s) { s._titling = true; renderSessions(); }
+    // Poll until the backend has saved the generated title
+    for (let i = 0; i < 20; i++) {
+      await new Promise(r => setTimeout(r, 1500));
+      const updated = await fetch('/api/ai/sessions/' + activeSessionId)
+        .then(r => r.json()).catch(() => null);
+      if (updated && updated.title && updated.title !== 'New Chat') {
+        const s = sessions.find(s => s.id === activeSessionId);
+        if (s) { s.title = updated.title; s._titling = false; renderSessions(); }
+        break;
+      }
+    }
+    // If still titling after timeout, clear the dots
+    const s2 = sessions.find(s => s.id === activeSessionId);
+    if (s2 && s2._titling) { s2._titling = false; renderSessions(); }
+  }
+
+  streaming = false;
+  sendBtn.disabled = false;
+  ta.focus();
+}
+
+// ── Proactive nudges ──────────────────────────────────────────────────────────
+async function loadNudges() {
+  const todayKey = new Date().toISOString().split('T')[0];
+  const stored = JSON.parse(localStorage.getItem('armu_nudges') || '{}');
+  if (stored.date === todayKey && Array.isArray(stored.nudges)) {
+    cachedNudges = stored.nudges;
+  } else {
+    try {
+      const data = await fetch('/api/ai/tutor-nudge').then(r => r.ok ? r.json() : null);
+      cachedNudges = data?.nudges || [];
+      localStorage.setItem('armu_nudges', JSON.stringify({date: todayKey, nudges: cachedNudges}));
+    } catch { cachedNudges = []; }
+  }
+  renderNudges();
+}
+
+function renderNudges() {
+  const row = document.getElementById('nudgeRow');
+  const label = document.getElementById('nudgeLabel');
+  if (!row || !cachedNudges?.length) return;
+  label.style.display = '';
+  row.innerHTML = cachedNudges.map((n, i) =>
+    `<button class="nudge-chip" onclick="startNudge(${i})">${n.label}</button>`
+  ).join('');
+}
+
+async function startNudge(index) {
+  const nudge = cachedNudges?.[index];
+  if (!nudge) return;
+  await newSession();
+  // Wait for the session to open and compose box to be ready, then send
+  await new Promise(r => setTimeout(r, 120));
+  const ta = document.getElementById('composeTA');
+  if (ta) {
+    ta.value = nudge.message;
+    ta.dispatchEvent(new Event('input'));
+  }
+  sendMessage();
+}
+
+async function boot() {
+  const [me, sessData, groupData, modelsData] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    fetch('/api/ai/sessions').then(r => r.json()).catch(() => []),
+    fetch('/api/groups').then(r => r.json()).catch(() => []),
+    fetch('/api/ai/models').then(r => r.json()).catch(() => null),
+  ]);
+  if (modelsData) modelNames = modelsData;
+
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  myId = me.id;
+  myInitials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  
+  
+  if (me.class_name) 
+
+  sessions = Array.isArray(sessData) ? sessData : [];
+  groups = Array.isArray(groupData) ? groupData : [];
+  renderSessions();
+
+  if (sessions.length) {
+    openSession(sessions[0].id, null);
+  } else {
+    // No sessions — show welcome with nudges
+    loadNudges();
+  }
+}
+
+boot();
+
+
+</script>

@@ -1,0 +1,215 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-dashboard"></use></svg>
+<span class="topbar-title">Teacher Overview</span>
+<div class="topbar-right">
+<button class="btn btn-primary btn-sm" onclick="openAnnounce()" title="Send class announcement">
+<svg class="icon icon-14"><use href="#ic-megaphone"></use></svg> Announce
+      </button>
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<div class="stat-grid" id="statGrid">
+<div class="stat-card"><div class="stat-label">Subjects</div><div class="stat-val" id="st-subjects">—</div></div>
+<div class="stat-card"><div class="stat-label">Classes</div><div class="stat-val" id="st-classes">—</div></div>
+<div class="stat-card"><div class="stat-label">Students</div><div class="stat-val" id="st-students">—</div></div>
+<div class="stat-card"><div class="stat-label">Assignments</div><div class="stat-val" id="st-assignments">—</div></div>
+<div class="stat-card"><div class="stat-label">Ungraded</div><div class="stat-val" id="st-ungraded" style="color:#fbbf24;">—</div><div class="stat-sub">awaiting grades</div></div>
+</div>
+<!-- AI Insights card -->
+<div class="ai-card">
+<div class="ai-card-header">
+<div style="display:flex;align-items:center;gap:8px;">
+<svg class="icon icon-14" style="color:var(--g1)"><use href="#ic-zap"></use></svg>
+<span class="ai-card-label">AI Class Insights</span>
+</div>
+<div style="display:flex;align-items:center;gap:8px;">
+<span class="ai-card-time" id="digestTime"></span>
+<button class="ai-card-refresh" id="digestRefreshBtn" onclick="loadDigest(true)" title="Refresh">
+<svg class="icon icon-14"><use href="#ic-refresh"></use></svg>
+</button>
+</div>
+</div>
+<div class="ai-card-body" id="digestBody">Loading insights…</div>
+</div>
+<!-- AI Action chips -->
+<div class="nudge-row" id="nudgeRow" style="display:none;"></div>
+<div class="section-title">My Subjects</div>
+<div class="subject-grid" id="subjectGrid">
+<div style="color:var(--text3);font-size:13px;">Loading…</div>
+</div>
+</div>
+
+<script>
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+async function loadDigest(force = false) {
+  const body = document.getElementById('digestBody');
+  const timeEl = document.getElementById('digestTime');
+  const btn = document.getElementById('digestRefreshBtn');
+
+  btn.disabled = true;
+  body.className = 'ai-card-body streaming';
+  body.textContent = '';
+
+  const url = '/api/ai/teacher-digest' + (force ? '?force=1' : '');
+  const res = await fetch(url).catch(() => null);
+  if (!res) { body.textContent = 'Could not load insights.'; body.className = 'ai-card-body'; btn.disabled = false; return; }
+
+  if (res.headers.get('content-type')?.includes('application/json')) {
+    const data = await res.json();
+    body.textContent = data.content || '';
+    if (data.generated_at) timeEl.textContent = new Date(data.generated_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    body.className = 'ai-card-body';
+    btn.disabled = false;
+    return;
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    text += decoder.decode(value, { stream: true });
+    body.textContent = text;
+  }
+  body.className = 'ai-card-body';
+  timeEl.textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  btn.disabled = false;
+}
+
+async function loadNudges() {
+  const CACHE_KEY = 'armu_teacher_nudges';
+  const CACHE_DATE_KEY = 'armu_teacher_nudges_date';
+  const today = new Date().toISOString().slice(0, 10);
+
+  let nudges = null;
+  if (localStorage.getItem(CACHE_DATE_KEY) === today) {
+    try { nudges = JSON.parse(localStorage.getItem(CACHE_KEY)); } catch {}
+  }
+
+  if (!nudges) {
+    const data = await fetch('/api/ai/teacher-nudge').then(r => r.json()).catch(() => null);
+    nudges = data?.nudges || [];
+    if (nudges.length) {
+      localStorage.setItem(CACHE_KEY, JSON.stringify(nudges));
+      localStorage.setItem(CACHE_DATE_KEY, today);
+    }
+  }
+
+  if (!nudges.length) return;
+  const row = document.getElementById('nudgeRow');
+  row.style.display = 'flex';
+  row.innerHTML = nudges.map(n =>
+    `<a class="nudge-chip" href="${n.href}">
+      <svg class="icon icon-14"><use href="#ic-zap"/></svg>${n.label}
+    </a>`
+  ).join('');
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+
+  
+  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  
+
+  const [overview, subjects] = await Promise.all([
+    fetch('/api/teacher/overview').then(r => r.json()).catch(() => ({})),
+    fetch('/api/teacher/subjects').then(r => r.json()).catch(() => []),
+  ]);
+
+  document.getElementById('st-subjects').textContent    = overview.subjects    ?? '—';
+  document.getElementById('st-classes').textContent     = overview.classes     ?? '—';
+  document.getElementById('st-students').textContent    = overview.students    ?? '—';
+  document.getElementById('st-assignments').textContent = overview.assignments ?? '—';
+  document.getElementById('st-ungraded').textContent    = overview.ungraded    ?? '—';
+
+  announceSubjects = subjects;
+
+  // AI features — fire and forget, don't block page load
+  loadDigest();
+  loadNudges();
+
+  const grid = document.getElementById('subjectGrid');
+  if (!subjects.length) {
+    grid.innerHTML = '<div style="color:var(--text3);font-size:13px;">No subjects assigned yet.</div>';
+    return;
+  }
+  grid.innerHTML = subjects.map(s => `
+    <a class="subject-card" href="/teacher/assignments?subject=${s.id}">
+      <div class="subject-name">${s.name}</div>
+      <div class="subject-class">${s.class_name}</div>
+      <div class="subject-meta">
+        <div class="subject-meta-item"><span>${s.student_count}</span> students</div>
+      </div>
+    </a>
+  `).join('');
+}
+
+boot();
+
+// ── Announce ──────────────────────────────────────────────────────────────────
+
+let announceSubjects = [];
+
+function openAnnounce() {
+  document.getElementById('announceModal').classList.add('open');
+  document.getElementById('announceTitle').value = '';
+  document.getElementById('announceBody').value  = '';
+  const sel = document.getElementById('announceSubject');
+  sel.innerHTML = announceSubjects.map(s => `<option value="${s.id}">${s.name} — ${s.class_name}</option>`).join('');
+}
+
+function closeAnnounce() {
+  document.getElementById('announceModal').classList.remove('open');
+}
+
+async function sendAnnouncement() {
+  const subjectId = +document.getElementById('announceSubject').value;
+  const title     = document.getElementById('announceTitle').value.trim();
+  const body      = document.getElementById('announceBody').value.trim();
+  if (!title) { alert('Title is required.'); return; }
+
+  const btn = document.getElementById('announceSendBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  const res = await fetch('/api/teacher/announce', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ subject_id: subjectId, title, body }),
+  });
+  btn.disabled = false;
+  btn.textContent = 'Send';
+
+  if (res.ok) {
+    const data = await res.json();
+    closeAnnounce();
+    alert(`Announcement sent to ${data.sent} student${data.sent !== 1 ? 's' : ''}.`);
+  } else {
+    const err = await res.json().catch(() => ({}));
+    alert(err.error || 'Failed to send announcement.');
+  }
+}
+
+</script>

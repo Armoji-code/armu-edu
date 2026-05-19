@@ -1,0 +1,246 @@
+<div class="topbar">
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-menu"/></svg>
+  <span class="topbar-title">Navigation Config</span>
+  <div class="topbar-right">
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+      <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+    </div>
+  </div>
+</div>
+
+<div class="content" style="max-width:800px">
+
+  <!-- Role tabs -->
+  <div class="tabs" style="margin-bottom:24px">
+    <button class="mode-btn active" id="tab-student"   onclick="navSwitchRole('student')">Student</button>
+    <button class="mode-btn"        id="tab-teacher"   onclick="navSwitchRole('teacher')">Teacher</button>
+    <button class="mode-btn"        id="tab-librarian" onclick="navSwitchRole('librarian')">Librarian</button>
+  </div>
+
+  <!-- Editor -->
+  <div id="navEditor">
+    <div style="color:var(--text3);font-size:13px">Loading…</div>
+  </div>
+
+  <!-- Save / reset bar -->
+  <div style="display:flex;gap:10px;margin-top:24px;align-items:center">
+    <button class="btn btn-primary" onclick="navSave()">Save changes</button>
+    <button class="btn btn-secondary" onclick="navReset()">Reset to defaults</button>
+    <span id="navSaveStatus" style="font-size:13px;color:var(--text3)"></span>
+  </div>
+
+  <!-- Add section / item modal -->
+  <div id="navAddModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center">
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px;width:360px;max-width:90vw">
+      <div style="font-size:15px;font-weight:600;margin-bottom:20px" id="navModalTitle">Add Item</div>
+
+      <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">Label</label>
+      <input id="navItemLabel" type="text" placeholder="e.g. Whiteboard" style="width:100%;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:13px;margin-bottom:14px">
+
+      <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">Path</label>
+      <input id="navItemPath" type="text" placeholder="e.g. /whiteboard" style="width:100%;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:13px;margin-bottom:14px">
+
+      <label style="font-size:12px;color:var(--text3);display:block;margin-bottom:4px">Icon</label>
+      <select id="navItemIcon" style="width:100%;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:13px;margin-bottom:20px">
+      </select>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-secondary" onclick="navModalClose()">Cancel</button>
+        <button class="btn btn-primary" onclick="navModalConfirm()">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+let currentRole  = 'student';
+let configs      = {};   // { student: [...sections], teacher: [...], librarian: [...] }
+let allIcons     = [];
+let addTarget    = null; // { sectionIdx, type: 'item'|'section' }
+
+async function boot() {
+  // Fetch all three role configs in parallel
+  const [s, t, l, icons] = await Promise.all([
+    fetch('/api/nav/config?role=student').then(r => r.json()).catch(() => []),
+    fetch('/api/nav/config?role=teacher').then(r => r.json()).catch(() => []),
+    fetch('/api/nav/config?role=librarian').then(r => r.json()).catch(() => []),
+    fetch('/api/nav/icons').then(r => r.json()).catch(() => []),
+  ]);
+  configs = { student: JSON.parse(JSON.stringify(s)), teacher: JSON.parse(JSON.stringify(t)), librarian: JSON.parse(JSON.stringify(l)) };
+  allIcons = icons;
+
+  // Populate icon select
+  const sel = document.getElementById('navItemIcon');
+  sel.innerHTML = icons.map(i => `<option value="${i}">${i}</option>`).join('');
+
+  renderEditor();
+}
+
+function navSwitchRole(role) {
+  currentRole = role;
+  document.querySelectorAll('.tabs .mode-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + role).classList.add('active');
+  renderEditor();
+}
+
+function renderEditor() {
+  const sections = configs[currentRole] || [];
+  const ed = document.getElementById('navEditor');
+
+  if (!sections.length) {
+    ed.innerHTML = `<div style="color:var(--text3);font-size:13px;padding:20px 0">No sections. <button class="btn btn-secondary btn-sm" onclick="navAddSection()">Add section</button></div>`;
+    return;
+  }
+
+  let html = '';
+  sections.forEach((sec, si) => {
+    html += `
+    <div class="nav-config-section" data-si="${si}" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <input class="nav-sec-label" value="${esc(sec.label)}" data-si="${si}"
+          style="flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text);font-size:13px;font-weight:600;font-family:inherit"
+          onchange="navUpdateSectionLabel(${si}, this.value)">
+        <button class="btn btn-secondary btn-sm" onclick="navMoveSection(${si},-1)" ${si===0?'disabled':''}>↑</button>
+        <button class="btn btn-secondary btn-sm" onclick="navMoveSection(${si},1)" ${si===sections.length-1?'disabled':''}>↓</button>
+        <button class="btn btn-danger btn-sm" onclick="navDeleteSection(${si})">Remove</button>
+      </div>
+      <div class="nav-config-items" data-si="${si}">`;
+    sec.items.forEach((item, ii) => {
+      html += `
+        <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <svg class="icon icon-14" style="color:var(--text3);flex-shrink:0"><use href="#${item.icon}"/></svg>
+          <span style="flex:1;font-size:13px">${esc(item.label)}</span>
+          <span style="font-size:11px;color:var(--text3);font-family:var(--font-mono,monospace)">${esc(item.path)}</span>
+          <button class="btn btn-secondary btn-sm" onclick="navMoveItem(${si},${ii},-1)" ${ii===0?'disabled':''}>↑</button>
+          <button class="btn btn-secondary btn-sm" onclick="navMoveItem(${si},${ii},1)" ${ii===sec.items.length-1?'disabled':''}>↓</button>
+          <button class="btn btn-danger btn-sm" onclick="navDeleteItem(${si},${ii})">✕</button>
+        </div>`;
+    });
+    html += `
+      </div>
+      <button class="btn btn-secondary btn-sm" style="margin-top:10px" onclick="navAddItem(${si})">+ Add item</button>
+    </div>`;
+  });
+
+  html += `<button class="btn btn-secondary" onclick="navAddSection()">+ Add section</button>`;
+  ed.innerHTML = html;
+}
+
+/* ── Mutations ─────────────────────────────────────── */
+function navUpdateSectionLabel(si, val) {
+  configs[currentRole][si].label = val;
+}
+function navMoveSection(si, dir) {
+  const arr = configs[currentRole];
+  const ni = si + dir;
+  if (ni < 0 || ni >= arr.length) return;
+  [arr[si], arr[ni]] = [arr[ni], arr[si]];
+  renderEditor();
+}
+function navDeleteSection(si) {
+  if (!confirm('Remove this section and all its items?')) return;
+  configs[currentRole].splice(si, 1);
+  renderEditor();
+}
+function navAddSection() {
+  configs[currentRole].push({ label: 'New Section', items: [] });
+  renderEditor();
+}
+function navMoveItem(si, ii, dir) {
+  const items = configs[currentRole][si].items;
+  const ni = ii + dir;
+  if (ni < 0 || ni >= items.length) return;
+  [items[ii], items[ni]] = [items[ni], items[ii]];
+  renderEditor();
+}
+function navDeleteItem(si, ii) {
+  configs[currentRole][si].items.splice(ii, 1);
+  renderEditor();
+}
+function navAddItem(si) {
+  addTarget = { sectionIdx: si };
+  document.getElementById('navModalTitle').textContent = 'Add Nav Item';
+  document.getElementById('navItemLabel').value = '';
+  document.getElementById('navItemPath').value = '';
+  document.getElementById('navItemIcon').value = allIcons[0] || '';
+  const modal = document.getElementById('navAddModal');
+  modal.style.display = 'flex';
+}
+function navModalClose() {
+  document.getElementById('navAddModal').style.display = 'none';
+  addTarget = null;
+}
+function navModalConfirm() {
+  const label = document.getElementById('navItemLabel').value.trim();
+  const path  = document.getElementById('navItemPath').value.trim();
+  const icon  = document.getElementById('navItemIcon').value;
+  if (!label || !path) { alert('Label and path are required.'); return; }
+  if (addTarget) {
+    configs[currentRole][addTarget.sectionIdx].items.push({ label, path, icon });
+    renderEditor();
+  }
+  navModalClose();
+}
+
+/* ── Save / Reset ──────────────────────────────────── */
+async function navSave() {
+  const status = document.getElementById('navSaveStatus');
+  status.textContent = 'Saving…';
+  try {
+    await fetch('/api/nav/config', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: currentRole, sections: configs[currentRole] }),
+    });
+    status.textContent = 'Saved ✓';
+    setTimeout(() => status.textContent = '', 2000);
+  } catch {
+    status.textContent = 'Failed to save';
+  }
+}
+
+async function navReset() {
+  if (!confirm(`Reset ${currentRole} nav to defaults? This cannot be undone.`)) return;
+  const status = document.getElementById('navSaveStatus');
+  status.textContent = 'Resetting…';
+  try {
+    const resp = await fetch('/api/nav/config/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: currentRole }),
+    });
+    const data = await resp.json();
+    configs[currentRole] = data.sections;
+    renderEditor();
+    status.textContent = 'Reset ✓';
+    setTimeout(() => status.textContent = '', 2000);
+  } catch {
+    status.textContent = 'Failed to reset';
+  }
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// Expose onclick handlers
+window.navSwitchRole   = navSwitchRole;
+window.navAddSection   = navAddSection;
+window.navAddItem      = navAddItem;
+window.navMoveSection  = navMoveSection;
+window.navDeleteSection= navDeleteSection;
+window.navMoveItem     = navMoveItem;
+window.navDeleteItem   = navDeleteItem;
+window.navModalClose   = navModalClose;
+window.navModalConfirm = navModalConfirm;
+window.navSave         = navSave;
+window.navReset        = navReset;
+window.navUpdateSectionLabel = navUpdateSectionLabel;
+
+boot();
+</script>

@@ -1,0 +1,172 @@
+
+<div class="topbar">
+<div class="topbar-title">Homework</div>
+<div class="topbar-right">
+<div class="icon-btn" onclick="toggleTheme()" title="Toggle theme"><svg class="icon icon-18"><use href="#ic-moon" id="themeIcon"></use></svg></div>
+<div class="icon-btn" title="Notifications"><svg class="icon icon-18"><use href="#ic-bell"></use></svg></div>
+</div>
+</div>
+<div class="content">
+<!-- AI RECOMMENDATION -->
+<div style="background:linear-gradient(135deg,rgba(61,214,140,0.08),rgba(56,189,248,0.08));border:1px solid var(--border-accent);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;display:flex;gap:14px;align-items:flex-start;">
+<div style="flex-shrink:0;color:var(--g1)"><svg class="icon icon-20"><use href="#ic-tutor"></use></svg></div>
+<div>
+<div style="font-size:11px;font-weight:600;color:var(--g1);letter-spacing:0.5px;margin-bottom:5px">AI RECOMMENDATION</div>
+<div id="aiRec" style="font-size:13px;color:var(--text);line-height:1.5">Analysing your assignments…</div>
+</div>
+</div>
+<!-- HEADER + FILTERS -->
+<div class="section-header" style="margin-bottom:14px">
+<div>
+<div class="section-title">All Homework</div>
+<div id="countLabel" style="font-size:12px;color:var(--text3);margin-top:2px"></div>
+</div>
+<div style="display:flex;gap:8px">
+<button class="mode-btn active" id="f-all" onclick="setFilter('all')">All</button>
+<button class="mode-btn" id="f-incomplete" onclick="setFilter('incomplete')">Incomplete</button>
+<button class="mode-btn" id="f-done" onclick="setFilter('done')">Done</button>
+</div>
+</div>
+<div class="assignment-list" id="hwList">
+<div class="empty">Loading…</div>
+</div>
+</div>
+
+<script>
+
+
+let allHw = [];
+let filter = 'all';
+// Track checked state client-side (persisted to localStorage)
+let checkedIds = new Set(JSON.parse(localStorage.getItem('hw_checked') || '[]'));
+
+async function boot() {
+  const me = await api('/api/auth/me');
+  if (!me) { window.location.href = '/login'; return; }
+  setUser(me);
+  const saved = localStorage.getItem('theme');
+  if (saved) setTheme(saved);
+
+  const hw = await api('/api/homework');
+  if (hw) {
+    allHw = hw;
+    render();
+    renderAiRec();
+    const pending = hw.filter(a => !isDone(a)).length;
+    const badge = document.getElementById('hwBadge');
+    if (pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+  } else {
+    document.getElementById('hwList').innerHTML = '<div class="empty">No homework found.</div>';
+    document.getElementById('aiRec').textContent = 'No assignments to analyse.';
+  }
+}
+
+function isDone(a) {
+  return a.completed || checkedIds.has(a.id);
+}
+
+function setFilter(f) {
+  filter = f;
+  ['all','incomplete','done'].forEach(x =>
+    document.getElementById('f-' + x).classList.toggle('active', x === f)
+  );
+  render();
+}
+
+function render() {
+  let items = allHw;
+  if (filter === 'incomplete') items = items.filter(a => !isDone(a));
+  if (filter === 'done')       items = items.filter(a => isDone(a));
+
+  const label = document.getElementById('countLabel');
+  label.textContent = `${items.length} assignment${items.length !== 1 ? 's' : ''}`;
+
+  if (!items.length) {
+    document.getElementById('hwList').innerHTML =
+      `<div class="empty">${filter === 'done' ? 'Nothing completed yet.' : 'All caught up!'}</div>`;
+    return;
+  }
+
+  document.getElementById('hwList').innerHTML = items.map(a => {
+    const done = isDone(a);
+    const days = daysUntil(a.due_date);
+    const priority = done ? 'priority-low' : days <= 1 ? 'priority-high' : days <= 3 ? 'priority-med' : 'priority-low';
+    const dueClass = done ? '' : days <= 1 ? 'due-urgent' : days <= 3 ? 'due-soon' : '';
+    const dueText  = done ? 'Done ✓' : relDue(a.due_date);
+    const dateStr  = new Date(a.due_date).toLocaleDateString('en-US', { month:'2-digit', day:'2-digit', year:'numeric' });
+
+    return `<div class="assignment-item${done ? ' done-item' : ''}" id="item-${a.id}">
+      <div class="assignment-check${done ? ' done' : ''}" onclick="toggleDone(${a.id}, event)"></div>
+      <div class="assignment-info">
+        <div class="assignment-subject">${esc(a.subject_name || '')}</div>
+        <div class="assignment-title" title="${esc(a.title)}">${esc(a.title)}</div>
+        ${a.description ? `<div class="assignment-desc">${esc(a.description)}</div>` : ''}
+      </div>
+      <div class="priority-dot ${priority}"></div>
+      <div class="due-date ${dueClass}" title="${dateStr}">${dueText}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderAiRec() {
+  const pending = allHw.filter(a => !isDone(a));
+  if (!pending.length) {
+    document.getElementById('aiRec').textContent = 'You\'re all caught up! No pending assignments.';
+    return;
+  }
+  pending.sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+  const first = pending[0];
+  const second = pending[1];
+  let text = `<strong>Start with ${esc(first.subject_name || 'your first assignment')}: ${esc(first.title)}</strong> — due ${relDue(first.due_date)}.`;
+  if (second) text += ` Then move on to ${esc(second.subject_name || '')}: ${esc(second.title)} (${relDue(second.due_date)}).`;
+  if (pending.length > 2) text += ` ${pending.length - 2} more assignment${pending.length > 3 ? 's' : ''} after that.`;
+  document.getElementById('aiRec').innerHTML = text;
+}
+
+function toggleDone(id, e) {
+  e.stopPropagation();
+  if (checkedIds.has(id)) checkedIds.delete(id);
+  else checkedIds.add(id);
+  localStorage.setItem('hw_checked', JSON.stringify([...checkedIds]));
+  render();
+  renderAiRec();
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function daysUntil(iso) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const d = new Date(iso); d.setHours(0,0,0,0);
+  return Math.round((d - now) / 86400000);
+}
+function relDue(iso) {
+  const d = daysUntil(iso);
+  if (d < 0)  return 'Overdue';
+  if (d === 0) return 'Today';
+  if (d === 1) return 'Tomorrow';
+  return `In ${d}d.`;
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function setUser(u) {
+  const initials = u.name.split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
+  
+  
+  
+}
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.getElementById('themeIcon').setAttribute('href', t === 'dark' ? '#ic-moon' : '#ic-sun');
+  localStorage.setItem('theme', t);
+}
+function toggleTheme() { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); }
+async function api(url) {
+  try {
+    const r = await fetch(url, { credentials:'include' });
+    if (r.status === 401) return null;
+    return r.ok ? r.json() : null;
+  } catch { return null; }
+}
+
+boot();
+
+
+</script>

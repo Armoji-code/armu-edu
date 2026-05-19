@@ -1,0 +1,199 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-activities"></use></svg>
+<span class="topbar-title">Activities</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<div class="tab-bar">
+<button class="tab-btn active" onclick="switchTab('afterschool',this)">After School</button>
+<button class="tab-btn" onclick="switchTab('service',this)">Community Service</button>
+</div>
+<!-- After School -->
+<div class="tab-panel active" id="tab-afterschool">
+<div class="activities-grid" id="activities-grid">
+<div class="empty-msg">Loading activities…</div>
+</div>
+</div>
+<!-- Community Service -->
+<div class="tab-panel" id="tab-service">
+<div class="cs-progress-card">
+<div class="cs-progress-top">
+<span class="cs-progress-title">Graduation Requirement</span>
+<span><span class="cs-hours-big" id="cs-hours-num">0</span><span class="cs-hours-goal"> / 40 hrs</span></span>
+</div>
+<div class="prog-bar-wrap">
+<div class="prog-bar-fill" id="cs-bar" style="width:0%"></div>
+</div>
+<div class="cs-prog-meta" id="cs-meta">Loading…</div>
+</div>
+<div class="cs-stats-row">
+<div class="cs-stat"><div class="cs-stat-value" id="cs-total">–</div><div class="cs-stat-label">Total Hours</div></div>
+<div class="cs-stat"><div class="cs-stat-value" id="cs-orgs">–</div><div class="cs-stat-label">Organizations</div></div>
+<div class="cs-stat"><div class="cs-stat-value" id="cs-month">–</div><div class="cs-stat-label">This Month</div></div>
+</div>
+<div class="cs-log-wrap">
+<div class="cs-log-head">Service Log</div>
+<div class="cs-log-header-row">
+<div class="cs-log-th">Date</div>
+<div class="cs-log-th">Organization</div>
+<div class="cs-log-th">Description</div>
+<div class="cs-log-th">Hours</div>
+</div>
+<div id="cs-log-body">
+<div class="empty-msg">Loading…</div>
+</div>
+</div>
+</div>
+</div><!-- .content -->
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+const TYPE_ICON = {
+  club: `<svg class="icon icon-18"><use href="#ic-groups"/></svg>`,
+  sport: `<svg class="icon icon-18"><use href="#ic-leaderboard"/></svg>`,
+  team: `<svg class="icon icon-18"><use href="#ic-conduct"/></svg>`,
+  other: `<svg class="icon icon-18"><use href="#ic-activities"/></svg>`,
+};
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+}
+
+function fmtDateFull(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+}
+
+async function loadActivities() {
+  const grid = document.getElementById('activities-grid');
+  try {
+    const res = await fetch('/api/activities', {credentials:'include'});
+    if (res.status === 401) { location.href = '/login'; return; }
+    const data = await res.json();
+
+    if (!data.length) {
+      grid.innerHTML = '<div class="empty-msg">You\'re not enrolled in any activities yet.</div>';
+      return;
+    }
+
+    grid.innerHTML = data.map(act => {
+      const icon = TYPE_ICON[act.type] || TYPE_ICON.other;
+      const desc = act.description
+        ? `<div class="act-desc">${esc(act.description)}</div>` : '';
+      const events = (act.upcoming_events || []).length
+        ? act.upcoming_events.map(ev => `
+            <div class="act-event-row">
+              <span class="act-event-date">${fmtDate(ev.date)}</span>
+              <span class="act-event-title">${esc(ev.title)}</span>
+            </div>`).join('')
+        : '<div class="act-no-events">No upcoming events</div>';
+
+      return `<div class="activity-card">
+        <div class="act-header">
+          <div class="act-icon-wrap">${icon}</div>
+          <div>
+            <div class="act-name">${esc(act.name)}</div>
+            <span class="act-type-badge">${esc(act.type)}</span>
+          </div>
+        </div>
+        ${desc}
+        <div>
+          <div class="act-events-label">Upcoming Events</div>
+          ${events}
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = '<div class="empty-msg">Failed to load activities.</div>';
+  }
+}
+
+async function loadService() {
+  try {
+    const res = await fetch('/api/community-service', {credentials:'include'});
+    if (res.status === 401) { location.href = '/login'; return; }
+    const d = await res.json();
+
+    const pct = Math.min(100, Math.round((d.total_hours / d.goal_hours) * 100));
+    const remaining = Math.max(0, d.goal_hours - d.total_hours);
+
+    document.getElementById('cs-hours-num').textContent = d.total_hours;
+    document.getElementById('cs-bar').style.width = pct + '%';
+    document.getElementById('cs-meta').textContent = pct >= 100
+      ? 'Goal reached! Graduation requirement complete.'
+      : `${remaining} hours remaining`;
+
+    document.getElementById('cs-total').textContent = d.total_hours;
+    document.getElementById('cs-orgs').textContent = d.organizations;
+    document.getElementById('cs-month').textContent = d.this_month_hours;
+
+    const body = document.getElementById('cs-log-body');
+    if (!d.entries.length) {
+      body.innerHTML = '<div class="empty-msg">No service hours logged yet.</div>';
+      return;
+    }
+    body.innerHTML = d.entries.map(e => `
+      <div class="cs-log-row">
+        <div style="color:var(--text2)">${fmtDateFull(e.date)}</div>
+        <div style="font-weight:500">${esc(e.organization)}</div>
+        <div style="color:var(--text2)">${esc(e.description || '—')}</div>
+        <div><span class="cs-hours-pill">${e.hours}h</span></div>
+      </div>`).join('');
+  } catch(err) {
+    document.getElementById('cs-log-body').innerHTML =
+      '<div class="empty-msg">Failed to load service log.</div>';
+  }
+}
+
+async function boot() {
+  const [me] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    loadActivities(),
+    loadService(),
+  ]);
+
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  
+  
+  if (me.class_name) 
+}
+
+boot();
+
+
+</script>

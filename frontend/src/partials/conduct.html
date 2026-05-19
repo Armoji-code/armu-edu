@@ -1,0 +1,203 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-conduct"></use></svg>
+<span class="topbar-title">Conduct</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<!-- Score banner -->
+<div style="background:linear-gradient(135deg,rgba(61,214,140,0.08),rgba(56,189,248,0.08));border:1px solid var(--border-accent);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+<div style="text-align:center;flex-shrink:0;">
+<div id="banner-total" style="font-size:42px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;">—</div>
+<div style="font-size:11px;color:var(--text3);margin-top:4px;">Total Points</div>
+</div>
+<div style="width:1px;height:50px;background:var(--border);flex-shrink:0;"></div>
+<div style="flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;min-width:200px;">
+<div style="text-align:center;">
+<div id="banner-pos" style="font-size:20px;font-weight:700;color:var(--g1);">—</div>
+<div style="font-size:11px;color:var(--text3);">Positive</div>
+</div>
+<div style="text-align:center;">
+<div id="banner-neg" style="font-size:20px;font-weight:700;color:#f87171;">—</div>
+<div style="font-size:11px;color:var(--text3);">Negative</div>
+</div>
+<div style="text-align:center;">
+<div id="banner-exc" style="font-size:20px;font-weight:700;color:var(--text2);">—</div>
+<div style="font-size:11px;color:var(--text3);">Excused</div>
+</div>
+</div>
+<div id="banner-rank-wrap" style="display:none;width:1px;height:50px;background:var(--border);flex-shrink:0;"></div>
+<div id="banner-rank" style="display:none;text-align:center;flex-shrink:0;">
+<div id="banner-rank-num" style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;">—</div>
+<div style="font-size:11px;color:var(--text3);">Conduct rank</div>
+</div>
+</div>
+<!-- Legend -->
+<div class="section-header" style="margin-bottom:14px;">
+<div class="section-title">Points by Subject</div>
+<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);"><span style="width:8px;height:8px;border-radius:50%;background:var(--g1);display:inline-block;"></span>+3 Excellent</span>
+<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);"><span style="width:8px;height:8px;border-radius:50%;background:var(--g2);display:inline-block;"></span>+1 Good</span>
+<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);"><span style="width:8px;height:8px;border-radius:50%;background:#f87171;display:inline-block;"></span>-1 Issue</span>
+<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3);"><span style="width:8px;height:8px;border-radius:50%;background:var(--text3);display:inline-block;"></span>0 Excused</span>
+</div>
+</div>
+<!-- Subject table -->
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:28px;">
+<div style="overflow-x:auto;">
+<div style="min-width:520px;">
+<div style="display:grid;grid-template-columns:1fr 90px 90px 90px 90px 90px;padding:10px 16px;background:var(--bg3);border-bottom:1px solid var(--border);">
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;">Subject</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Particip.</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Behaviour</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Assignments</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Absences</div>
+<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;text-align:center;">Total</div>
+</div>
+<div id="conduct-table-body"></div>
+<div id="conduct-table-footer" style="display:none;grid-template-columns:1fr 90px 90px 90px 90px 90px;min-width:520px;padding:12px 16px;border-top:2px solid var(--border);background:var(--bg3);">
+<div style="font-size:13px;font-weight:700;color:var(--text);">Overall Total</div>
+<div id="foot-participation" style="text-align:center;font-size:13px;font-weight:700;"></div>
+<div id="foot-behaviour" style="text-align:center;font-size:13px;font-weight:700;"></div>
+<div id="foot-assignments" style="text-align:center;font-size:13px;font-weight:700;"></div>
+<div id="foot-absences" style="text-align:center;font-size:13px;font-weight:700;"></div>
+<div id="foot-total" style="text-align:center;font-size:15px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Recent events -->
+<div class="section-header" style="margin-bottom:14px;">
+<div class="section-title">Recent Events</div>
+</div>
+<div id="conduct-log"></div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+function ptColor(n) {
+  if (n > 0) return '#3dd68c';
+  if (n < 0) return '#f87171';
+  return 'var(--text3)';
+}
+function ptLabel(n) {
+  if (n > 0) return '+' + n;
+  return '' + n;
+}
+
+function render(data) {
+  const total = data.total_points;
+  const pos   = data.positive;
+  const neg   = data.negative;
+  const exc   = data.excused;
+
+  document.getElementById('banner-total').textContent = ptLabel(total);
+  document.getElementById('banner-total').style.cssText = total >= 0
+    ? 'font-size:42px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;'
+    : 'font-size:42px;font-weight:700;color:#f87171;line-height:1;';
+  document.getElementById('banner-pos').textContent = pos > 0 ? '+' + pos : '0';
+  document.getElementById('banner-neg').textContent = neg < 0 ? neg : '0';
+  document.getElementById('banner-exc').textContent = exc;
+
+  if (data.class_rank != null) {
+    document.getElementById('banner-rank-wrap').style.display = '';
+    document.getElementById('banner-rank').style.display = '';
+    document.getElementById('banner-rank-num').textContent = '#' + data.class_rank + ' in class';
+  }
+
+  // Subject table
+  const cats = ['participation','behaviour','assignments','absences'];
+  const rows = data.subject_rows || [];
+
+  if (!rows.length) {
+    document.getElementById('conduct-table-body').innerHTML =
+      '<div style="padding:32px;text-align:center;color:var(--text3);">No conduct records yet.</div>';
+  } else {
+    const catTotals = {participation:0, behaviour:0, assignments:0, absences:0};
+    document.getElementById('conduct-table-body').innerHTML = rows.map(r => {
+      const rowTotal = cats.reduce((s, c) => s + (r[c] || 0), 0);
+      cats.forEach(c => { catTotals[c] += r[c] || 0; });
+      return `<div style="display:grid;grid-template-columns:1fr 90px 90px 90px 90px 90px;min-width:520px;padding:12px 16px;border-bottom:1px solid var(--border);transition:background var(--transition);" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+        <div style="font-size:13px;font-weight:500;color:var(--text);">${r.subject}</div>
+        ${cats.map(c => `<div style="text-align:center;font-size:13px;font-weight:600;color:${ptColor(r[c]||0)};">${ptLabel(r[c]||0)}</div>`).join('')}
+        <div style="text-align:center;font-size:14px;font-weight:700;color:${ptColor(rowTotal)};">${ptLabel(rowTotal)}</div>
+      </div>`;
+    }).join('');
+
+    const footer = document.getElementById('conduct-table-footer');
+    footer.style.display = 'grid';
+    cats.forEach(c => {
+      document.getElementById('foot-' + c).textContent = ptLabel(catTotals[c]);
+      document.getElementById('foot-' + c).style.color = ptColor(catTotals[c]);
+    });
+    document.getElementById('foot-total').textContent = ptLabel(total);
+  }
+
+  // Events log
+  const events = data.events || [];
+  if (!events.length) {
+    document.getElementById('conduct-log').innerHTML =
+      '<div style="padding:32px;text-align:center;color:var(--text3);">No conduct events yet.</div>';
+    return;
+  }
+
+  document.getElementById('conduct-log').innerHTML = events.map(e => {
+    const pts = e.points;
+    const isPos = pts > 0, isNeg = pts < 0;
+    const col    = isPos ? '#3dd68c' : isNeg ? '#f87171' : 'var(--text3)';
+    const bgCol  = isPos ? 'rgba(61,214,140,0.08)' : isNeg ? 'rgba(248,113,113,0.08)' : 'rgba(148,163,184,0.08)';
+    const border = isPos ? 'rgba(61,214,140,0.2)'  : isNeg ? 'rgba(248,113,113,0.2)'  : 'rgba(148,163,184,0.15)';
+    const icon   = isPos ? '#ic-check' : isNeg ? '#ic-x' : '#ic-conduct';
+    const date   = e.date ? new Date(e.date).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '';
+    return `<div style="display:flex;align-items:flex-start;gap:14px;padding:12px 14px;background:${bgCol};border:1px solid ${border};border-radius:var(--radius-sm);margin-bottom:8px;">
+      <div style="width:36px;height:36px;border-radius:var(--radius-sm);background:${bgCol};border:1px solid ${border};display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${col};">
+        <svg class="icon icon-18"><use href="${icon}"/></svg>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:2px;">${e.reason || e.category || '—'}</div>
+        <div style="font-size:11px;color:var(--text3);">${e.subject_name || ''} · ${e.category || ''} · ${date}</div>
+      </div>
+      <div style="font-size:16px;font-weight:700;color:${col};flex-shrink:0;">${ptLabel(pts)}</div>
+    </div>`;
+  }).join('');
+}
+
+async function boot() {
+  const [me, conduct] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    fetch('/api/conduct').then(r => r.json()).catch(() => null),
+  ]);
+
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  
+  
+  if (me.class_name) 
+
+  if (conduct) render(conduct);
+}
+
+boot();
+
+
+</script>

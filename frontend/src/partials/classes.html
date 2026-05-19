@@ -1,0 +1,171 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-groups"></use></svg>
+<span class="topbar-title">Classes</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="split">
+<div class="panel-left">
+<div class="panel-header">My Classes</div>
+<div class="class-list" id="classList">
+<div style="padding:20px;color:var(--text3);font-size:13px;">Loading…</div>
+</div>
+</div>
+<div class="panel-right" id="panelRight">
+<div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select a class to view students</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+let classes = [];
+let activeClassId = null;
+
+function scoreColor(avg) {
+  if (avg === null) return 'var(--text3)';
+  if (avg >= 70) return '#3dd68c';
+  if (avg >= 50) return '#fbbf24';
+  return '#f87171';
+}
+
+function selectClass(cls) {
+  activeClassId = cls.id;
+  document.querySelectorAll('.class-item').forEach(el => {
+    el.classList.toggle('active', +el.dataset.id === cls.id);
+  });
+  loadStudents(cls);
+}
+
+async function loadStudents(cls) {
+  const panel = document.getElementById('panelRight');
+  panel.innerHTML = '<div style="color:var(--text3);font-size:13px;">Loading…</div>';
+
+  const data = await fetch(`/api/teacher/classes/${cls.id}/students`).then(r => r.json()).catch(() => null);
+  if (!data) { panel.innerHTML = '<div style="color:#f87171;font-size:13px;">Failed to load students.</div>'; return; }
+
+  const subjectList = cls.subjects.map(s => `<span style="font-size:11px;color:var(--text3);background:var(--bg3);padding:2px 8px;border-radius:100px;margin-right:4px;">${s.name}</span>`).join('');
+
+  panel.innerHTML = `
+    <div style="animation:slideIn 0.2s ease;">
+      <div style="margin-bottom:18px;">
+        <div style="font-size:17px;font-weight:600;margin-bottom:4px;">${cls.name} — Year ${cls.year ?? ''}</div>
+        <div style="margin-bottom:8px;color:var(--text3);font-size:12px;">${data.students.length} students · Subjects: ${subjectList}</div>
+      </div>
+      <div class="student-table">
+        <div class="student-row header">
+          <div>Student</div>
+          <div style="text-align:center;">Avg Score</div>
+          <div style="text-align:center;">Grades</div>
+          <div style="text-align:right;">Actions</div>
+        </div>
+        ${data.students.length ? data.students.map(s => {
+          const col = scoreColor(s.grade_avg);
+          const avgStr = s.grade_avg !== null ? s.grade_avg.toFixed(1) : '—';
+          return `<div class="student-row">
+            <div>
+              <div style="font-size:13px;font-weight:500;">${s.name}</div>
+              <div style="font-size:11px;color:var(--text3);">${s.email || ''}</div>
+            </div>
+            <div style="text-align:center;">
+              <span class="score-chip" style="background:${col}18;color:${col};">${avgStr}</span>
+            </div>
+            <div style="text-align:center;font-size:13px;color:var(--text3);">${s.grade_count}</div>
+            <div style="text-align:right;">
+              ${cls.subjects.map(sub =>
+                `<button class="conduct-btn" onclick="openConduct(${s.id},'${s.name.replace(/'/g,"\\'")}',${sub.id})" style="margin-left:4px;">+ Conduct · ${sub.name}</button>`
+              ).join('')}
+            </div>
+          </div>`;
+        }).join('') : '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">No students in this class</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function openConduct(studentId, studentName, subjectId) {
+  document.getElementById('conductStudentId').value = studentId;
+  document.getElementById('conductSubjectId').value  = subjectId;
+  document.getElementById('conductStudentName').textContent = studentName;
+  document.getElementById('conductPoints').value = '-1';
+  document.getElementById('conductReason').value = '';
+  document.getElementById('conductModal').classList.add('open');
+}
+
+function closeConduct() {
+  document.getElementById('conductModal').classList.remove('open');
+}
+
+async function submitConduct() {
+  const payload = {
+    student_id: +document.getElementById('conductStudentId').value,
+    subject_id: +document.getElementById('conductSubjectId').value,
+    points:     +document.getElementById('conductPoints').value,
+    category:    document.getElementById('conductCategory').value,
+    reason:      document.getElementById('conductReason').value,
+  };
+  const res = await fetch('/api/teacher/conduct', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) {
+    closeConduct();
+  } else {
+    alert('Failed to log conduct event.');
+  }
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  
+
+  classes = await fetch('/api/teacher/classes').then(r => r.json()).catch(() => []);
+
+  const list = document.getElementById('classList');
+  if (!classes.length) {
+    list.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;">No classes assigned.</div>';
+    return;
+  }
+
+  list.innerHTML = classes.map(c => `
+    <div class="class-item" data-id="${c.id}" onclick="selectClass(${JSON.stringify(JSON.stringify(c)).slice(1,-1)})">
+      <div class="class-item-name">${c.name}</div>
+      <div class="class-item-meta">${c.students} students · ${c.subjects.length} subject${c.subjects.length !== 1 ? 's' : ''}</div>
+    </div>
+  `).join('');
+
+  // Store classes on items for easy retrieval
+  classes.forEach((c, i) => {
+    list.querySelectorAll('.class-item')[i].onclick = () => selectClass(c);
+  });
+
+  selectClass(classes[0]);
+}
+
+boot();
+
+
+</script>

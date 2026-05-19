@@ -1,0 +1,458 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-settings"></use></svg>
+<span class="topbar-title">Settings</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"></use></svg></div>
+</div>
+</div>
+<div class="content" id="mainContent">
+<div style="padding:48px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+const TABS = [
+  { key: 'calendar',    label: 'Calendar',    desc: 'Class schedule & events' },
+  { key: 'homework',    label: 'Homework',    desc: 'Assignment tracking' },
+  { key: 'tests',       label: 'Tests',       desc: 'Upcoming tests' },
+  { key: 'schedule',    label: 'Schedule',    desc: 'Daily timetable' },
+  { key: 'activities',  label: 'Activities',  desc: 'Extracurriculars' },
+  { key: 'grades',      label: 'Grades',      desc: 'Grade history' },
+  { key: 'conduct',     label: 'Conduct',     desc: 'Behaviour log' },
+  { key: 'leaderboard', label: 'Leaderboard', desc: 'Student ranking' },
+  { key: 'tutor',       label: 'AI Tutor',    desc: 'Chat with AI' },
+  { key: 'whiteboard',  label: 'Whiteboard',  desc: 'Collaborative drawing' },
+  { key: 'library',     label: 'Library',     desc: 'Learning resources' },
+  { key: 'groups',      label: 'Groups',      desc: 'Study groups' },
+  { key: 'meeting',    label: 'Meeting',     desc: 'Video calls' },
+  { key: 'messages',    label: 'Messages',    desc: 'Peer messaging' },
+];
+
+const FEATURES = [
+  { key: 'ai_enabled',                 label: 'AI Features',         desc: 'Master switch for all AI' },
+  { key: 'tutor_enabled',              label: 'AI Tutor',            desc: 'Per-student chat tutor' },
+  { key: 'digest_enabled',             label: 'Teacher Digest',      desc: 'Daily AI briefing for teachers' },
+  { key: 'nudges_enabled',             label: 'Teacher Nudges',      desc: 'Action chips on teacher dashboard' },
+  { key: 'deadline_reminders_enabled', label: 'Deadline Reminders',  desc: 'Scheduled push notifications' },
+  { key: 'weekly_digest_enabled',      label: 'Weekly Student Report', desc: 'Weekly email/notification summary' },
+];
+
+const MODEL_PH = {
+  ollama:    { tutor: 'e.g. gemma3:12b', tracker: 'e.g. llama3.2:3b', advanced: 'e.g. gemma3:12b' },
+  openai:    { tutor: 'e.g. gpt-4o-mini', tracker: 'e.g. gpt-4o-mini', advanced: 'e.g. gpt-4o' },
+  anthropic: { tutor: 'e.g. claude-haiku-4-5-20251001', tracker: 'e.g. claude-haiku-4-5-20251001', advanced: 'e.g. claude-sonnet-4-6' },
+};
+
+let settings = null;
+
+function toggle(key) {
+  settings[key] = !settings[key];
+  renderToggleCard(key);
+  renderFeatCard(key);
+}
+
+function toggleTab(key) {
+  const hidden = settings.hidden_tabs || [];
+  const idx = hidden.indexOf(key);
+  if (idx === -1) hidden.push(key); else hidden.splice(idx, 1);
+  settings.hidden_tabs = hidden;
+  renderTabCard(key);
+}
+
+function renderTabCard(key) {
+  const el = document.querySelector(`.tab-card[data-key="${key}"]`);
+  if (!el) return;
+  const enabled = !(settings.hidden_tabs || []).includes(key);
+  el.classList.toggle('enabled', enabled);
+  const inp = el.querySelector('input');
+  if (inp) inp.checked = enabled;
+  updateThumb(el.querySelector('.toggle-thumb'), inp);
+}
+
+function renderFeatCard(key) {
+  const el = document.querySelector(`.feat-card[data-key="${key}"]`);
+  if (!el) return;
+  const enabled = !!settings[key];
+  el.classList.toggle('enabled', enabled);
+  const inp = el.querySelector('input');
+  if (inp) inp.checked = enabled;
+  updateThumb(el.querySelector('.toggle-thumb'), inp);
+}
+
+function updateThumb(thumb, inp) {
+  if (!thumb || !inp) return;
+  thumb.style.transform = inp.checked ? 'translateX(16px)' : '';
+}
+
+function renderAll(s) {
+  settings = s;
+  const c = document.getElementById('mainContent');
+  c.innerHTML = `
+    <!-- School Name -->
+    <div class="section" id="section-school">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15))">
+          <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-school"/></svg>
+        </div>
+        <div><div class="section-title">School</div><div class="section-desc">Basic school information</div></div>
+      </div>
+      <div class="field-row">
+        <div class="field-label">School Name</div>
+        <input class="field-input" id="schoolName" type="text" value="${escAttr(s.school_name || '')}" placeholder="Your school name">
+      </div>
+    </div>
+
+    <!-- Page Visibility -->
+    <div class="section" id="section-tabs">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(110,231,183,0.15))">
+          <svg class="icon icon-18" style="color:var(--g2)"><use href="#ic-eye"/></svg>
+        </div>
+        <div><div class="section-title">Page Visibility</div><div class="section-desc">Hide nav tabs school-wide — students on hidden pages are redirected to Dashboard</div></div>
+      </div>
+      <div class="tab-grid" id="tabGrid"></div>
+    </div>
+
+    <!-- AI Features (toggles) -->
+    <div class="section" id="section-ai">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(61,214,140,0.15))">
+          <svg class="icon icon-18" style="color:#a855f7"><use href="#ic-cpu"/></svg>
+        </div>
+        <div><div class="section-title">AI Features</div><div class="section-desc">Enable or disable individual AI features school-wide</div></div>
+      </div>
+      <div class="feat-grid" id="featGrid"></div>
+    </div>
+
+    <!-- AI Configuration -->
+    <div class="section" id="section-ai-config">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(168,85,247,0.15))">
+          <svg class="icon icon-18" style="color:var(--g2)"><use href="#ic-cpu"/></svg>
+        </div>
+        <div><div class="section-title">AI Configuration</div><div class="section-desc">Choose provider, set API keys, models, and generation parameters</div></div>
+      </div>
+
+      <!-- Provider -->
+      <div class="sub-label">Provider</div>
+      <div class="provider-pills">
+        <button class="provider-pill${s.ai_provider==='ollama'?' active':''}" onclick="setProvider('ollama')">🖥 Ollama (Local)</button>
+        <button class="provider-pill${s.ai_provider==='openai'?' active':''}" onclick="setProvider('openai')">✦ OpenAI / Compatible</button>
+        <button class="provider-pill${s.ai_provider==='anthropic'?' active':''}" onclick="setProvider('anthropic')">◆ Anthropic</button>
+      </div>
+
+      <!-- Ollama config -->
+      <div id="cfg-ollama" style="display:${s.ai_provider!=='openai'&&s.ai_provider!=='anthropic'?'block':'none'}">
+        <div class="field-row">
+          <div class="field-label">Ollama Server URL</div>
+          <input class="field-input" id="ollama_base_url" type="text" value="${escAttr(s.ollama_base_url||'http://localhost:11434')}" placeholder="http://localhost:11434">
+        </div>
+        <div class="sub-label">Install Model</div>
+        <div class="pull-row">
+          <input class="pull-input" id="pullModelInput" type="text" placeholder="e.g. llama3.2:3b, gemma3:12b">
+          <button class="pull-btn" id="pullBtn" onclick="pullModel()">Install</button>
+        </div>
+        <div class="pull-status" id="pullStatus"></div>
+      </div>
+
+      <!-- OpenAI config -->
+      <div id="cfg-openai" style="display:${s.ai_provider==='openai'?'block':'none'}">
+        <div class="privacy-warn">⚠ Student chat messages will be sent to OpenAI's servers to generate responses. Review OpenAI's <a href="https://openai.com/enterprise-privacy" target="_blank" style="color:inherit">data privacy policy</a> before enabling this in a school environment.</div>
+        <div class="field-row">
+          <div class="field-label">API Key</div>
+          <input class="field-input" id="ai_api_key_openai" type="password" placeholder="${s.ai_api_key_set?'Key saved — enter new to replace':'sk-...'}">
+        </div>
+        <div class="field-row">
+          <div class="field-label">Base URL <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional — for OpenAI-compatible APIs)</span></div>
+          <input class="field-input" id="ai_api_base_url" type="text" value="${escAttr(s.ai_api_base_url||'')}" placeholder="https://api.openai.com/v1">
+        </div>
+      </div>
+
+      <!-- Anthropic config -->
+      <div id="cfg-anthropic" style="display:${s.ai_provider==='anthropic'?'block':'none'}">
+        <div class="privacy-warn">⚠ Student chat messages will be sent to Anthropic's servers to generate responses. Review Anthropic's <a href="https://www.anthropic.com/privacy" target="_blank" style="color:inherit">data privacy policy</a> before enabling this in a school environment.</div>
+        <div class="field-row">
+          <div class="field-label">API Key</div>
+          <input class="field-input" id="ai_api_key_anthropic" type="password" placeholder="${s.ai_api_key_set?'Key saved — enter new to replace':'sk-ant-...'}">
+        </div>
+      </div>
+
+      <!-- Models -->
+      <div class="sub-label">Models</div>
+      <div class="ai-params-grid">
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Tutor Model</div>
+          <input class="field-input" id="tutor_model" type="text" value="${escAttr(s.tutor_model||'')}" placeholder="${(MODEL_PH[s.ai_provider]||MODEL_PH.ollama).tutor}">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Advanced Model</div>
+          <input class="field-input" id="advanced_model" type="text" value="${escAttr(s.advanced_model||'')}" placeholder="${(MODEL_PH[s.ai_provider]||MODEL_PH.ollama).advanced}">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Tracker Model <span style="font-weight:400;text-transform:none;letter-spacing:0">(digests, nudges)</span></div>
+          <input class="field-input" id="tracker_model" type="text" value="${escAttr(s.tracker_model||'')}" placeholder="${(MODEL_PH[s.ai_provider]||MODEL_PH.ollama).tracker}">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Max Tokens</div>
+          <input class="field-input" id="max_tokens" type="number" min="64" max="32768" value="${s.max_tokens||2048}">
+        </div>
+      </div>
+
+      <!-- Generation params -->
+      <div class="sub-label">Generation Parameters</div>
+      <div class="ai-params-grid">
+        <div>
+          <div class="field-label" style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Tutor Temperature</div>
+          <div class="slider-row">
+            <input type="range" id="tutor_temperature" min="0" max="2" step="0.05" value="${s.tutor_temperature??0.7}"
+              oninput="document.getElementById('tutor_temp_val').textContent=parseFloat(this.value).toFixed(2)">
+            <span class="slider-val" id="tutor_temp_val">${(s.tutor_temperature??0.7).toFixed(2)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3)">0 = deterministic · 1 = creative · 2 = wild</div>
+        </div>
+        <div>
+          <div class="field-label" style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Tracker Temperature</div>
+          <div class="slider-row">
+            <input type="range" id="tracker_temperature" min="0" max="2" step="0.05" value="${s.tracker_temperature??0.3}"
+              oninput="document.getElementById('tracker_temp_val').textContent=parseFloat(this.value).toFixed(2)">
+            <span class="slider-val" id="tracker_temp_val">${(s.tracker_temperature??0.3).toFixed(2)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3)">Lower = more consistent structured output</div>
+        </div>
+        <div>
+          <div class="field-label" style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Top-P (Tutor)</div>
+          <div class="slider-row">
+            <input type="range" id="tutor_top_p" min="0" max="1" step="0.05" value="${s.tutor_top_p??1.0}"
+              oninput="document.getElementById('top_p_val').textContent=parseFloat(this.value).toFixed(2)">
+            <span class="slider-val" id="top_p_val">${(s.tutor_top_p??1.0).toFixed(2)}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3)">Nucleus sampling — 1.0 = off</div>
+        </div>
+      </div>
+
+      <!-- System Prompt -->
+      <div class="sub-label" style="margin-top:24px;">Tutor System Prompt</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Leave blank to use the built-in Socratic method prompt.</div>
+      <textarea class="prompt-area" id="tutor_system_prompt" placeholder="Custom system prompt… (leave blank for default)">${escAttr(s.tutor_system_prompt||'')}</textarea>
+      <button class="prompt-reset" onclick="document.getElementById('tutor_system_prompt').value=''">↺ Reset to default</button>
+    </div>
+
+    <!-- TURN Server -->
+    <div class="section" id="section-turn">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15))">
+          <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-meeting"/></svg>
+        </div>
+        <div><div class="section-title">Video Call (TURN Server)</div><div class="section-desc">Optional — needed for calls through strict NAT / home routers. Leave blank for STUN-only (works on most school networks).</div></div>
+      </div>
+      <div class="ai-params-grid">
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">TURN URL</div>
+          <input class="field-input" id="turn_url" type="text" value="${escAttr(s.turn_url||'')}" placeholder="turn:your-server.example.com:3478">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Username</div>
+          <input class="field-input" id="turn_username" type="text" value="${escAttr(s.turn_username||'')}" placeholder="turnuser">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Credential</div>
+          <input class="field-input" id="turn_credential" type="password" placeholder="${s.turn_credential_set?'Saved — enter new to replace':'turnpassword'}">
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin-top:10px;">Install <code style="font-family:monospace;background:var(--bg3);padding:1px 5px;border-radius:4px">coturn</code> on your server for self-hosted TURN. See the README for a minimal config.</div>
+    </div>
+
+    <!-- Save bar -->
+    <div class="save-bar">
+      <button class="btn btn-primary" id="saveBtn" onclick="save()">
+        <svg class="icon icon-14"><use href="#ic-save"/></svg> Save Changes
+      </button>
+      <span class="save-msg" id="saveMsg">Saved!</span>
+    </div>
+  `;
+
+  // Tab cards
+  const tg = document.getElementById('tabGrid');
+  TABS.forEach(t => {
+    const enabled = !(s.hidden_tabs || []).includes(t.key);
+    const div = document.createElement('div');
+    div.className = 'tab-card' + (enabled ? ' enabled' : '');
+    div.dataset.key = t.key;
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <span class="tab-card-name">${t.label}</span>
+        <label class="toggle">
+          <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggleTab('${t.key}')">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="tab-card-desc">${t.desc}</div>`;
+    tg.appendChild(div);
+  });
+
+  // Feature cards
+  const fg = document.getElementById('featGrid');
+  FEATURES.forEach(f => {
+    const enabled = !!s[f.key];
+    const div = document.createElement('div');
+    div.className = 'feat-card' + (enabled ? ' enabled' : '');
+    div.dataset.key = f.key;
+    div.innerHTML = `
+      <div class="feat-info">
+        <div class="feat-name">${f.label}</div>
+        <div class="feat-desc">${f.desc}</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" ${enabled ? 'checked' : ''} onchange="toggle('${f.key}')">
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>`;
+    fg.appendChild(div);
+  });
+
+  // Scroll to hash
+  const hash = location.hash.slice(1);
+  if (hash === 'tabs') document.getElementById('section-tabs')?.scrollIntoView({ behavior: 'smooth' });
+  else if (hash === 'ai') document.getElementById('section-ai')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function escAttr(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+}
+
+function setProvider(p) {
+  settings.ai_provider = p;
+  document.querySelectorAll('.provider-pill').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.provider-pill[onclick="setProvider('${p}')"]`)?.classList.add('active');
+  document.getElementById('cfg-ollama').style.display    = p === 'ollama'    ? 'block' : 'none';
+  document.getElementById('cfg-openai').style.display    = p === 'openai'    ? 'block' : 'none';
+  document.getElementById('cfg-anthropic').style.display = p === 'anthropic' ? 'block' : 'none';
+  const ph = MODEL_PH[p] || MODEL_PH.ollama;
+  document.getElementById('tutor_model').placeholder    = ph.tutor;
+  document.getElementById('advanced_model').placeholder = ph.advanced;
+  document.getElementById('tracker_model').placeholder  = ph.tracker;
+}
+
+async function pullModel() {
+  const input  = document.getElementById('pullModelInput');
+  const model  = input.value.trim();
+  if (!model) return;
+  const btn    = document.getElementById('pullBtn');
+  const status = document.getElementById('pullStatus');
+  btn.disabled = true;
+  status.textContent = 'Starting…';
+  try {
+    const resp = await fetch('/api/admin/ai/pull', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model }),
+    });
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    outer: while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        try {
+          const d = JSON.parse(line.slice(6));
+          if (d.error)           { status.textContent = 'Error: ' + d.error; break outer; }
+          if (d.status === 'done') { status.textContent = '✓ ' + model + ' installed'; break outer; }
+          const pct = d.total ? Math.round((d.completed || 0) / d.total * 100) : null;
+          status.textContent = d.status + (pct !== null ? ' ' + pct + '%' : '');
+        } catch {}
+      }
+    }
+  } catch (e) {
+    status.textContent = 'Error: ' + e.message;
+  }
+  btn.disabled = false;
+}
+
+async function save() {
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true;
+  const provider = settings.ai_provider || 'ollama';
+  const apiKey = provider === 'openai'
+    ? (document.getElementById('ai_api_key_openai')?.value.trim() || '')
+    : (document.getElementById('ai_api_key_anthropic')?.value.trim() || '');
+  const payload = {
+    school_name:                 document.getElementById('schoolName').value.trim(),
+    hidden_tabs:                 settings.hidden_tabs || [],
+    ai_enabled:                  settings.ai_enabled,
+    tutor_enabled:               settings.tutor_enabled,
+    digest_enabled:              settings.digest_enabled,
+    nudges_enabled:              settings.nudges_enabled,
+    deadline_reminders_enabled:  settings.deadline_reminders_enabled,
+    weekly_digest_enabled:       settings.weekly_digest_enabled,
+    ai_provider:                 provider,
+    ollama_base_url:             document.getElementById('ollama_base_url')?.value.trim() || '',
+    ai_api_base_url:             document.getElementById('ai_api_base_url')?.value.trim() || '',
+    tutor_model:                 document.getElementById('tutor_model').value.trim(),
+    advanced_model:              document.getElementById('advanced_model').value.trim(),
+    tracker_model:               document.getElementById('tracker_model').value.trim(),
+    tutor_temperature:           parseFloat(document.getElementById('tutor_temperature').value),
+    tracker_temperature:         parseFloat(document.getElementById('tracker_temperature').value),
+    tutor_top_p:                 parseFloat(document.getElementById('tutor_top_p').value),
+    max_tokens:                  parseInt(document.getElementById('max_tokens').value, 10),
+    tutor_system_prompt:         document.getElementById('tutor_system_prompt').value,
+    turn_url:                    document.getElementById('turn_url')?.value.trim() || '',
+    turn_username:               document.getElementById('turn_username')?.value.trim() || '',
+  };
+  if (apiKey) payload.ai_api_key = apiKey;
+  const turnCred = document.getElementById('turn_credential')?.value.trim() || '';
+  if (turnCred) payload.turn_credential = turnCred;
+  const ok = await fetch('/api/admin/settings', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  }).then(r => r.ok).catch(() => false);
+  btn.disabled = false;
+  if (ok) {
+    // Clear sessionStorage tab cache so notif.js picks up new visibility
+    sessionStorage.removeItem('armu_hidden_tabs');
+    sessionStorage.removeItem('armu_hidden_tabs_date');
+    const msg = document.getElementById('saveMsg');
+    msg.classList.add('visible');
+    setTimeout(() => msg.classList.remove('visible'), 2500);
+  } else {
+    alert('Save failed. Please try again.');
+  }
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  
+
+  const s = await fetch('/api/admin/settings').then(r => r.json()).catch(() => null);
+  if (!s) {
+    document.getElementById('mainContent').innerHTML = '<div style="padding:48px;text-align:center;color:var(--text3);">Failed to load settings.</div>';
+    return;
+  }
+  renderAll(s);
+}
+boot();
+
+
+</script>

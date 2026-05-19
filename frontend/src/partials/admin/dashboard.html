@@ -1,0 +1,91 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-dashboard"></use></svg>
+<span class="topbar-title">Admin Overview</span>
+<div id="schoolNameTopbar" style="font-size:13px;color:var(--text3);margin-left:8px;"></div>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"></use></svg></div>
+</div>
+</div>
+<div class="content">
+<div class="stat-grid">
+<div class="stat-card"><div class="stat-label">Total Users</div><div class="stat-val" id="st-users">—</div></div>
+<div class="stat-card"><div class="stat-label">Classes</div><div class="stat-val" id="st-classes">—</div></div>
+<div class="stat-card"><div class="stat-label">Subjects</div><div class="stat-val" id="st-subjects">—</div></div>
+<div class="stat-card"><div class="stat-label">Assignments</div><div class="stat-val" id="st-assignments">—</div></div>
+<div class="stat-card"><div class="stat-label">Grades Given</div><div class="stat-val" id="st-grades">—</div></div>
+</div>
+<div style="font-size:15px;font-weight:600;margin-bottom:14px;">Quick Actions</div>
+<div class="quick-grid">
+<a class="quick-card" href="/admin/users">
+<div class="quick-icon"><svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-users"></use></svg></div>
+<div class="quick-title">Manage Users</div>
+<div class="quick-desc">Add, edit, or remove student and teacher accounts</div>
+</a>
+<a class="quick-card" href="/admin/school">
+<div class="quick-icon"><svg class="icon icon-20" style="color:var(--g2)"><use href="#ic-school"></use></svg></div>
+<div class="quick-title">Classes &amp; Subjects</div>
+<div class="quick-desc">Create classes and assign teachers to subjects</div>
+</a>
+<a class="quick-card" href="/admin/settings#tabs">
+<div class="quick-icon"><svg class="icon icon-20" style="color:var(--g3)"><use href="#ic-zap"></use></svg></div>
+<div class="quick-title">Page Visibility</div>
+<div class="quick-desc">Show or hide nav tabs for all students</div>
+</a>
+<a class="quick-card" href="/admin/settings#ai">
+<div class="quick-icon"><svg class="icon icon-20" style="color:#a855f7"><use href="#ic-settings"></use></svg></div>
+<div class="quick-title">AI Config</div>
+<div class="quick-desc">Toggle AI features and configure Ollama models</div>
+</a>
+</div>
+<div style="font-size:15px;font-weight:600;margin-bottom:14px;">Users by Role</div>
+<div class="role-table" id="roleTable">
+<div style="padding:24px;color:var(--text3);font-size:13px;">Loading…</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  
+
+  const ov = await fetch('/api/admin/overview').then(r => r.json()).catch(() => ({}));
+  document.getElementById('schoolNameTopbar').textContent = ov.school_name || '';
+  document.getElementById('st-users').textContent       = ov.total_users  ?? '—';
+  document.getElementById('st-classes').textContent     = ov.classes      ?? '—';
+  document.getElementById('st-subjects').textContent    = ov.subjects     ?? '—';
+  document.getElementById('st-assignments').textContent = ov.assignments  ?? '—';
+  document.getElementById('st-grades').textContent      = ov.grades_given ?? '—';
+
+  const roles = ov.users || {};
+  const order = ['student','teacher','admin','librarian','parent'];
+  const rows = order.filter(r => roles[r]).map(r =>
+    `<div class="role-row">
+      <span class="role-badge role-${r}">${r}</span>
+      <span style="font-size:20px;font-weight:700;color:var(--text);">${roles[r]}</span>
+    </div>`
+  );
+  document.getElementById('roleTable').innerHTML = rows.length
+    ? rows.join('')
+    : '<div style="padding:24px;color:var(--text3);font-size:13px;">No users found.</div>';
+}
+boot();
+
+
+</script>

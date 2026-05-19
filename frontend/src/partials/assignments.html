@@ -1,0 +1,322 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-homework"></use></svg>
+<span class="topbar-title">Assignments</span>
+<div class="topbar-right">
+<button class="btn btn-primary btn-sm" onclick="openCreate()">
+<svg class="icon icon-14"><use href="#ic-plus"></use></svg> New Assignment
+      </button>
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="split">
+<!-- Left: assignment list -->
+<div class="panel-left">
+<div class="panel-header">
+<div class="panel-header-title">All Assignments</div>
+<select id="filterSubject" onchange="renderList()" style="font-size:12px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:4px 8px;border-radius:var(--radius-sm);outline:none;font-family:'DM Sans',sans-serif;">
+<option value="">All subjects</option>
+</select>
+</div>
+<div class="assignment-list" id="assignmentList">
+<div style="padding:20px;color:var(--text3);font-size:13px;">Loading…</div>
+</div>
+</div>
+<!-- Right: grade sheet / detail -->
+<div class="panel-right" id="panelRight">
+<div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select an assignment to view or enter grades</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+let assignments = [];
+let subjects    = [];
+let activeAsnId = null;
+
+function typeBadge(type) {
+  return `<span class="type-badge type-${type}">${type}</span>`;
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+}
+
+function renderList() {
+  const filter = document.getElementById('filterSubject').value;
+  const list = document.getElementById('assignmentList');
+  let items = assignments;
+  if (filter) items = items.filter(a => String(a.subject_id) === filter);
+
+  if (!items.length) {
+    list.innerHTML = '<div style="padding:20px;color:var(--text3);font-size:13px;">No assignments yet.</div>';
+    return;
+  }
+
+  list.innerHTML = items.map(a => {
+    const pct  = a.total ? Math.round(a.graded / a.total * 100) : 0;
+    const isActive = a.id === activeAsnId;
+    return `<div class="asn-item${isActive ? ' active' : ''}" data-id="${a.id}" onclick="selectAsn(${a.id})">
+      <div class="asn-title">${a.title}</div>
+      <div class="asn-meta" style="margin-bottom:6px;">
+        ${typeBadge(a.type)}
+        <span>${a.subject_name} · ${a.class_name}</span>
+        <span style="margin-left:auto;">Due ${fmtDate(a.due_date)}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="progress-bar" style="flex:1;"><div class="progress-fill" style="width:${pct}%;"></div></div>
+        <span style="font-size:11px;color:var(--text3);white-space:nowrap;">${a.graded}/${a.total}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function selectAsn(id) {
+  activeAsnId = id;
+  renderList();
+  loadGrades(id);
+}
+
+async function loadGrades(id) {
+  const panel = document.getElementById('panelRight');
+  panel.innerHTML = '<div style="color:var(--text3);font-size:13px;">Loading…</div>';
+
+  const a = assignments.find(x => x.id === id);
+  const data = await fetch(`/api/teacher/assignments/${id}/grades`).then(r => r.json()).catch(() => null);
+  if (!data) { panel.innerHTML = '<div style="color:#f87171;font-size:13px;">Failed to load grades.</div>'; return; }
+
+  const gradedCount = data.students.filter(s => s.score !== null).length;
+  const totalCount  = data.students.length;
+  const pct = totalCount ? Math.round(gradedCount / totalCount * 100) : 0;
+
+  panel.innerHTML = `
+    <div style="animation:slideIn 0.2s ease;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:17px;font-weight:600;margin-bottom:4px;">${data.assignment.title}</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);">
+            ${typeBadge(data.assignment.type)}
+            <span>Max: ${data.assignment.max} pts</span>
+            ${a ? `<span>· Due ${fmtDate(a.due_date)}</span>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <a class="btn btn-sm" href="/api/teacher/assignments/${id}/grades/export" download title="Export grades as CSV">⬇ CSV</a>
+          <button class="btn btn-sm" onclick="openEdit(${id})"><svg class="icon icon-14"><use href="#ic-edit"/></svg> Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteAsn(${id})"><svg class="icon icon-14"><use href="#ic-trash"/></svg> Delete</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div class="progress-bar" style="flex:1;height:6px;">
+          <div class="progress-fill" style="width:${pct}%;"></div>
+        </div>
+        <span style="font-size:12px;color:var(--text3);white-space:nowrap;">${gradedCount} of ${totalCount} graded</span>
+      </div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+        <div class="grade-row header">
+          <div>Student</div>
+          <div style="text-align:center;">Score (0–100)</div>
+        </div>
+        ${data.students.map(s => {
+          const scoreVal = s.score !== null ? s.score : '';
+          const col = s.score !== null ? (s.score >= 70 ? '#3dd68c' : s.score >= 50 ? '#fbbf24' : '#f87171') : 'var(--text3)';
+          return `<div class="grade-row">
+            <div>
+              <div style="font-size:13px;font-weight:500;">${s.name}</div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:8px;">
+              <input
+                class="score-input"
+                id="score-${s.id}"
+                type="number"
+                min="0" max="100" step="1"
+                value="${scoreVal}"
+                placeholder="—"
+                style="color:${s.score !== null ? col : 'var(--text2)'}"
+                onchange="saveGrade(${id}, ${s.id}, this)"
+                onkeydown="if(event.key==='Enter')this.blur()"
+              >
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:10px;">Changes save automatically on blur or Enter.</div>
+    </div>
+  `;
+}
+
+async function saveGrade(asnId, studentId, input) {
+  const val = input.value.trim();
+  if (val === '') return;
+  const score = parseFloat(val);
+  if (isNaN(score) || score < 0 || score > 100) {
+    input.style.borderColor = '#f87171';
+    return;
+  }
+  input.style.borderColor = 'var(--border)';
+
+  const res = await fetch('/api/teacher/grades', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ assignment_id: asnId, student_id: studentId, score }),
+  });
+  if (res.ok) {
+    input.classList.add('saved');
+    const col = score >= 70 ? '#3dd68c' : score >= 50 ? '#fbbf24' : '#f87171';
+    input.style.color = col;
+    setTimeout(() => { input.classList.remove('saved'); input.style.borderColor = ''; }, 1200);
+    // update graded count in list
+    const a = assignments.find(x => x.id === asnId);
+    if (a) {
+      const graded = await fetch(`/api/teacher/assignments/${asnId}/grades`).then(r => r.json()).catch(() => null);
+      if (graded) a.graded = graded.students.filter(s => s.score !== null).length;
+      renderList();
+    }
+  } else {
+    input.style.borderColor = '#f87171';
+  }
+}
+
+// ── Create / Edit ─────────────────────────────────────────────
+
+function openCreate() {
+  document.getElementById('asnModalTitle').textContent = 'New Assignment';
+  document.getElementById('asnSubmitBtn').textContent  = 'Create';
+  document.getElementById('asnId').value    = '';
+  document.getElementById('asnTitle').value = '';
+  document.getElementById('asnDesc').value  = '';
+  document.getElementById('asnType').value  = 'homework';
+  // Default due date: tomorrow at noon
+  const tom = new Date(); tom.setDate(tom.getDate()+1); tom.setHours(12,0,0,0);
+  document.getElementById('asnDue').value = tom.toISOString().slice(0,16);
+  document.getElementById('asnModal').classList.add('open');
+}
+
+function openEdit(id) {
+  const a = assignments.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('asnModalTitle').textContent = 'Edit Assignment';
+  document.getElementById('asnSubmitBtn').textContent  = 'Save';
+  document.getElementById('asnId').value      = a.id;
+  document.getElementById('asnTitle').value   = a.title;
+  document.getElementById('asnDesc').value    = a.description || '';
+  document.getElementById('asnType').value    = a.type;
+  document.getElementById('asnSubject').value = a.subject_id;
+  document.getElementById('asnDue').value     = new Date(a.due_date).toISOString().slice(0,16);
+  document.getElementById('asnModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('asnModal').classList.remove('open');
+}
+
+async function submitAssignment() {
+  const id      = document.getElementById('asnId').value;
+  const payload = {
+    subject_id:  +document.getElementById('asnSubject').value,
+    title:       document.getElementById('asnTitle').value.trim(),
+    description: document.getElementById('asnDesc').value.trim(),
+    type:        document.getElementById('asnType').value,
+    due_date:    new Date(document.getElementById('asnDue').value).toISOString(),
+  };
+
+  if (!payload.title) { alert('Title is required.'); return; }
+
+  let res;
+  if (id) {
+    res = await fetch(`/api/teacher/assignments/${id}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+  } else {
+    res = await fetch('/api/teacher/assignments', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+  }
+
+  if (res.ok) {
+    closeModal();
+    await reloadAssignments();
+    if (id) selectAsn(+id);
+  } else {
+    const err = await res.json().catch(() => ({}));
+    alert(err.error || 'Failed to save assignment.');
+  }
+}
+
+async function deleteAsn(id) {
+  if (!confirm('Delete this assignment and all its grades?')) return;
+  const res = await fetch(`/api/teacher/assignments/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    activeAsnId = null;
+    document.getElementById('panelRight').innerHTML = '<div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select an assignment to view or enter grades</div>';
+    await reloadAssignments();
+  }
+}
+
+async function reloadAssignments() {
+  assignments = await fetch('/api/teacher/assignments').then(r => r.json()).catch(() => []);
+  renderList();
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  
+
+  [assignments, subjects] = await Promise.all([
+    fetch('/api/teacher/assignments').then(r => r.json()).catch(() => []),
+    fetch('/api/teacher/subjects').then(r => r.json()).catch(() => []),
+  ]);
+
+  // Populate subject filter + modal select
+  const filterEl  = document.getElementById('filterSubject');
+  const subjectEl = document.getElementById('asnSubject');
+  subjects.forEach(s => {
+    filterEl.add(new Option(`${s.name} (${s.class_name})`, s.id));
+    subjectEl.add(new Option(`${s.name} — ${s.class_name}`, s.id));
+  });
+
+  // Pre-select from URL ?subject=X
+  const sp = new URLSearchParams(location.search);
+  if (sp.has('subject')) filterEl.value = sp.get('subject');
+
+  renderList();
+
+  // Auto-open first ungraded assignment
+  const ungraded = assignments.find(a => a.graded < a.total);
+  if (ungraded) selectAsn(ungraded.id);
+}
+
+boot();
+
+
+</script>

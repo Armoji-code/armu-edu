@@ -1,0 +1,175 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-school"></use></svg>
+<span class="topbar-title">Classes &amp; Subjects</span>
+<div class="topbar-right">
+<button onclick="openAddClass()" style="padding:7px 14px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--g1),var(--g2));color:#000;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;">
+<svg class="icon icon-14"><use href="#ic-plus"></use></svg> Add Class
+      </button>
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"></use></svg></div>
+</div>
+</div>
+<div class="split">
+<div class="panel-left">
+<div class="panel-header"><div class="panel-header-title">Classes</div></div>
+<div class="class-list" id="classList">
+<div style="padding:16px;color:var(--text3);font-size:13px;">Loading…</div>
+</div>
+</div>
+<div class="panel-right" id="panelRight">
+<div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select a class to manage it</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t==='dark'?'#ic-sun':'#ic-moon');
+})();
+function toggleTheme(){
+  const next = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('theme',next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href',next==='dark'?'#ic-sun':'#ic-moon');
+}
+
+let classes  = [];
+let teachers = [];
+let activeClassId = null;
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function selectClass(c) {
+  activeClassId = c.id;
+  document.querySelectorAll('.class-item').forEach(el =>
+    el.classList.toggle('active', +el.dataset.id === c.id));
+  renderDetail(c);
+}
+
+function renderDetail(c) {
+  const panel = document.getElementById('panelRight');
+  panel.style.animation = 'slideIn 0.2s ease';
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <div style="font-size:17px;font-weight:600;">${c.name}</div>
+        <div style="font-size:12px;color:var(--text3);">Year ${c.grade_year} · ${c.student_count} student${c.student_count!==1?'s':''}</div>
+      </div>
+      <button onclick="deleteClass(${c.id},'${c.name.replace(/'/g,"\\'")}');"
+        style="padding:6px 14px;border-radius:var(--radius-sm);border:1px solid rgba(248,113,113,0.3);background:rgba(248,113,113,0.08);color:#f87171;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;">
+        Delete Class
+      </button>
+    </div>
+
+    <div class="section-title">Subjects</div>
+    <div class="item-list">
+      ${c.subjects.length ? c.subjects.map(s => `
+        <div class="item-row">
+          <div>
+            <div class="item-name">${s.name}</div>
+            <div class="item-sub">${s.teacher_name}</div>
+          </div>
+          <div class="del-btn" onclick="deleteSubject(${s.id},'${s.name.replace(/'/g,"\\'")}')">
+            <svg class="icon icon-14"><use href="#ic-trash"/></svg>
+          </div>
+        </div>`).join('') : '<div style="padding:16px;color:var(--text3);font-size:13px;">No subjects yet.</div>'}
+    </div>
+    <button class="add-btn" onclick="openAddSubject(${c.id})">+ Add Subject</button>
+  `;
+}
+
+function openAddClass() {
+  document.getElementById('cName').value = '';
+  document.getElementById('cYear').value = '';
+  document.getElementById('classModal').classList.add('open');
+}
+
+async function submitClass() {
+  const name = document.getElementById('cName').value.trim();
+  const year = document.getElementById('cYear').value;
+  if (!name) { alert('Class name required.'); return; }
+  const res = await fetch('/api/admin/classes', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({name, grade_year: +year || 0}),
+  });
+  if (res.ok) { closeModal('classModal'); await reload(); }
+  else { const e = await res.json().catch(()=>{}); alert(e?.error || 'Error creating class.'); }
+}
+
+async function deleteClass(id, name) {
+  if (!confirm(`Delete class "${name}" and all its subjects?`)) return;
+  await fetch(`/api/admin/classes/${id}`, {method:'DELETE'});
+  activeClassId = null;
+  document.getElementById('panelRight').innerHTML =
+    '<div style="color:var(--text3);font-size:13px;margin-top:60px;text-align:center;">Select a class to manage it</div>';
+  await reload();
+}
+
+function openAddSubject(classId) {
+  document.getElementById('sClassId').value = classId;
+  document.getElementById('sName').value = '';
+  const sel = document.getElementById('sTeacher');
+  sel.innerHTML = teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+  document.getElementById('subjectModal').classList.add('open');
+}
+
+async function submitSubject() {
+  const payload = {
+    name:       document.getElementById('sName').value.trim(),
+    class_id:   +document.getElementById('sClassId').value,
+    teacher_id: +document.getElementById('sTeacher').value,
+  };
+  if (!payload.name) { alert('Subject name required.'); return; }
+  const res = await fetch('/api/admin/subjects', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload),
+  });
+  if (res.ok) { closeModal('subjectModal'); await reload(); }
+  else { const e = await res.json().catch(()=>{}); alert(e?.error || 'Error adding subject.'); }
+}
+
+async function deleteSubject(id, name) {
+  if (!confirm(`Remove subject "${name}"?`)) return;
+  await fetch(`/api/admin/subjects/${id}`, {method:'DELETE'});
+  await reload();
+}
+
+async function reload() {
+  classes = await fetch('/api/admin/classes').then(r => r.json()).catch(() => []);
+  const list = document.getElementById('classList');
+  if (!classes.length) {
+    list.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;">No classes yet.</div>';
+    return;
+  }
+  list.innerHTML = classes.map(c => `
+    <div class="class-item${c.id===activeClassId?' active':''}" data-id="${c.id}">
+      <div class="class-item-name">${c.name}</div>
+      <div class="class-item-meta">Year ${c.grade_year} · ${c.student_count} students · ${c.subjects.length} subjects</div>
+    </div>`).join('');
+  list.querySelectorAll('.class-item').forEach((el, i) =>
+    el.addEventListener('click', () => selectClass(classes[i])));
+
+  if (activeClassId) {
+    const active = classes.find(c => c.id === activeClassId);
+    if (active) renderDetail(active);
+  }
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  
+
+  const users = await fetch('/api/admin/users').then(r => r.json()).catch(() => []);
+  teachers = users.filter(u => u.role === 'teacher');
+
+  await reload();
+}
+boot();
+
+
+</script>

@@ -1,0 +1,160 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-leaderboard"></use></svg>
+<span class="topbar-title">Leaderboard 🔥</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<!-- Header -->
+<div class="section-header" style="margin-bottom:6px;">
+<div class="section-title" id="lb-subtitle">Class — Current Semester</div>
+</div>
+<div style="height:2px;background:var(--gradient);border-radius:2px;margin-bottom:20px;"></div>
+<!-- Tab bar -->
+<div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid var(--border);padding-bottom:12px;flex-wrap:wrap;">
+<button class="mode-btn active" id="tab-btn-streaks" onclick="switchTab('streaks')"><svg class="icon icon-14"><use href="#ic-streak"></use></svg> Streaks</button>
+<button class="mode-btn" id="tab-btn-ontime" onclick="switchTab('ontime')"><svg class="icon icon-14"><use href="#ic-check"></use></svg> On-time</button>
+<button class="mode-btn" id="tab-btn-helpful" onclick="switchTab('helpful')"><svg class="icon icon-14"><use href="#ic-messages"></use></svg> Helpful</button>
+<button class="mode-btn" id="tab-btn-conduct" onclick="switchTab('conduct')"><svg class="icon icon-14"><use href="#ic-conduct"></use></svg> Conduct</button>
+</div>
+<!-- Podium (top 3) -->
+<div class="podium" id="lb-podium"></div>
+<!-- Full ranked list -->
+<div id="lb-list"></div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+const TAB_ICON  = { streaks:'#ic-streak', ontime:'#ic-check', helpful:'#ic-messages', conduct:'#ic-conduct' };
+const TAB_LABEL = { streaks:'grades submitted', ontime:'avg score', helpful:'messages sent', conduct:'conduct pts' };
+const RANK_CLASS  = ['gold','silver','bronze'];
+const MEDAL       = ['🥇','🥈','🥉'];
+const PODIUM_BG   = [
+  ['rgba(251,191,36,0.08)','rgba(251,191,36,0.35)'],
+  ['rgba(148,163,184,0.07)','rgba(148,163,184,0.3)'],
+  ['rgba(180,83,9,0.08)','rgba(180,83,9,0.3)'],
+];
+
+// Avatar gradient palette — cycles for each student by index
+const AVATAR_GRADIENTS = [
+  'var(--gradient)',
+  'linear-gradient(135deg,#8b5cf6,#7c3aed)',
+  'linear-gradient(135deg,#ec4899,#db2777)',
+  'linear-gradient(135deg,#fb923c,#f59e0b)',
+  'linear-gradient(135deg,#34d399,#0ea5e9)',
+  'linear-gradient(135deg,#64748b,#475569)',
+];
+
+let lbData = { streaks:[], ontime:[], helpful:[], conduct:[] };
+let currentTab = 'streaks';
+
+function avatarGrad(id) {
+  return AVATAR_GRADIENTS[id % AVATAR_GRADIENTS.length];
+}
+
+function scoreStr(e) {
+  return `${e.prefix || ''}${Math.abs(e.score)}${e.suffix || ''}`;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  ['streaks','ontime','helpful','conduct'].forEach(t =>
+    document.getElementById('tab-btn-' + t).classList.toggle('active', t === tab)
+  );
+  renderTab();
+}
+
+function renderTab() {
+  const data   = lbData[currentTab] || [];
+  const icon   = TAB_ICON[currentTab];
+  const sublbl = TAB_LABEL[currentTab];
+
+  if (!data.length) {
+    document.getElementById('lb-podium').innerHTML = '';
+    document.getElementById('lb-list').innerHTML =
+      `<div style="text-align:center;padding:48px;color:var(--text3);font-size:14px;">No classmates yet — add more students to your class to see the leaderboard.</div>`;
+    return;
+  }
+
+  // Podium
+  const podiumEl = document.getElementById('lb-podium');
+  podiumEl.style.display = data.length >= 3 ? 'grid' : 'none';
+  if (data.length >= 3) {
+    podiumEl.innerHTML = data.slice(0,3).map((e, i) => `
+      <div class="podium-card ${['first','second','third'][i]}"
+        style="background:${PODIUM_BG[i][0]};border-color:${PODIUM_BG[i][1]};">
+        <div class="podium-medal">${MEDAL[i]}</div>
+        <div class="podium-avatar" style="background:${avatarGrad(e.id)};">${e.initials}</div>
+        <div class="podium-name">${e.name}</div>
+        <div class="podium-score">${scoreStr(e)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${sublbl}</div>
+      </div>`).join('');
+  }
+
+  // Full ranked list
+  document.getElementById('lb-list').innerHTML = data.map((e, i) => {
+    const neg = !!e.negative;
+    return `<div class="lb-item${e.me ? ' me' : ''}">
+      <div class="rank ${RANK_CLASS[i] || ''}">${i + 1}</div>
+      <div class="avatar" style="background:${avatarGrad(e.id)};font-size:12px;">${e.initials}</div>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:500;color:var(--text);">
+          ${e.name}${e.me ? ' <span style="font-size:11px;color:var(--g2);">← You</span>' : ''}
+        </div>
+      </div>
+      <div class="lb-score${neg ? ' negative' : ''}">
+        <svg class="icon icon-14"><use href="${icon}"/></svg>
+        <span>${scoreStr(e)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function boot() {
+  const [me, lb] = await Promise.all([
+    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
+    fetch('/api/leaderboard').then(r => r.json()).catch(() => null),
+  ]);
+
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  
+  
+
+  const classInfo = me.class_name
+    ? me.class_name + (me.school_name ? ' · ' + me.school_name : '')
+    : '';
+  if (classInfo) {
+    
+    document.getElementById('lb-subtitle').textContent =
+      classInfo + ' · ' + new Date().toLocaleDateString('en-US', {month:'long', year:'numeric'});
+  }
+
+  if (lb) lbData = lb;
+  renderTab();
+}
+
+boot();
+
+
+</script>

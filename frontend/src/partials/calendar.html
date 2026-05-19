@@ -1,0 +1,454 @@
+
+<div class="topbar">
+<div class="topbar-title">Calendar</div>
+<div class="topbar-right">
+<div class="icon-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle theme"><svg class="icon icon-18"><use href="#ic-moon" id="themeIcon"></use></svg></div>
+<div class="icon-btn" title="Notifications"><svg class="icon icon-18"><use href="#ic-bell"></use></svg></div>
+</div>
+</div>
+<div class="content">
+<!-- SEARCH + CHIPS + ADD -->
+<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;">
+<div class="search-wrap">
+<svg class="icon icon-14"><use href="#ic-search"></use></svg>
+<input class="search-input" id="searchInput" oninput="render()" placeholder="Search events…"/>
+</div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;flex:2;min-width:300px;">
+<div class="cal-chip active" data-type="homework" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-book"></use></svg> Homework</div>
+<div class="cal-chip active" data-type="test" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-pencil"></use></svg> Tests</div>
+<div class="cal-chip active" data-type="grade" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-grades"></use></svg> Grades</div>
+<div class="cal-chip active" data-type="activity" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-activities"></use></svg> Activities</div>
+<div class="cal-chip active" data-type="service" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-heart"></use></svg> Service</div>
+<div class="cal-chip active" data-type="personal" onclick="toggleChip(this)"><svg class="icon icon-14"><use href="#ic-user"></use></svg> Personal</div>
+<div class="cal-chip active" data-type="group" onclick="toggleChip(this)"><svg class="icon icon-14"><use href="#ic-groups"></use></svg> Group</div>
+<div class="cal-chip active" data-type="school_vac" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-school"></use></svg> School Break</div>
+<div class="cal-chip active" data-type="missed" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-medical"></use></svg> Missed Day</div>
+<div class="cal-chip active" data-type="family_vac" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-plane"></use></svg> Family Vacation</div>
+</div>
+<button class="btn-add-event" onclick="openModal()"><svg class="icon icon-14"><use href="#ic-plus"></use></svg> Add Event</button>
+</div>
+<!-- LEGEND -->
+<div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
+<div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Key:</div>
+<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.35);"></div>School Break</div>
+<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.35);"></div>Missed Day</div>
+<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.35);"></div>Family Vacation</div>
+</div>
+<!-- NAV + VIEW TOGGLE -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+<div style="display:flex;align-items:center;gap:10px;">
+<div class="icon-btn" onclick="navMonth(-1)" style="font-size:18px;font-weight:300">‹</div>
+<div id="monthLabel" style="font-size:16px;font-weight:600;min-width:140px;text-align:center"></div>
+<div class="icon-btn" onclick="navMonth(1)" style="font-size:18px;font-weight:300">›</div>
+<button class="mode-btn" onclick="goToday()" style="padding:5px 12px">Today</button>
+</div>
+<div style="display:flex;gap:4px;">
+<button class="mode-btn active" id="view-month" onclick="setView('month')">Month</button>
+<button class="mode-btn" id="view-week" onclick="setView('week')">Week</button>
+<button class="mode-btn" id="view-list" onclick="setView('list')">List</button>
+</div>
+</div>
+<!-- CALENDAR CONTAINER -->
+<div id="calContainer"></div>
+<!-- DETAIL PANEL -->
+<div class="detail-panel" id="detailPanel" style="display:none">
+<div class="detail-label" id="detailTitle"></div>
+<div id="detailItems"></div>
+</div>
+</div>
+
+<script>
+
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const DAY_NAMES_LONG = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+let year = new Date().getFullYear();
+let month = new Date().getMonth();
+let view = 'month';
+let selected = null;
+let activeFilters = new Set(['homework','test','grade','activity','service','personal','group','school_vac','missed','family_vac']);
+
+// API data
+let hwEvents = [], testEvents = [], gradeEvents = [], activityEvents = [], serviceEvents = [];
+let userAddedEvents = [];
+
+// Vacation/absence ranges (will come from admin API later; hardcoded for now)
+const vacationRanges = [];
+
+// Event type config
+const TYPE_COLOR = {
+  homework:'#38bdf8', test:'#f87171', grade:'#3dd68c',
+  activity:'#a78bfa', service:'#34d399',
+  personal:'#8892b0', group:'#38bdf8',
+  school_vac:'#38bdf8', missed:'#f87171', family_vac:'#a78bfa',
+};
+const TYPE_LABEL = {
+  homework:'Homework', test:'Test', grade:'Grade',
+  activity:'Activity', service:'Service',
+  personal:'Personal', group:'Group',
+  school_vac:'School Break', missed:'Missed Day', family_vac:'Family Vacation',
+};
+const TYPE_ICON = {
+  homework:'ic-book', test:'ic-pencil', grade:'ic-grades',
+  activity:'ic-activities', service:'ic-heart',
+  personal:'ic-user', group:'ic-groups',
+  school_vac:'ic-school', missed:'ic-medical', family_vac:'ic-plane',
+};
+const VAC_BG = {
+  school_vac:'rgba(56,189,248,0.07)',
+  missed:'rgba(248,113,113,0.07)',
+  family_vac:'rgba(167,139,250,0.08)',
+};
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function boot() {
+  const me = await api('/api/auth/me');
+  if (!me) { window.location.href = '/login'; return; }
+  setUser(me);
+
+  const saved = localStorage.getItem('theme');
+  if (saved) setTheme(saved);
+
+  const [hw, tests] = await Promise.all([api('/api/homework'), api('/api/tests')]);
+
+  if (hw) hwEvents = hw.map(a => ({
+    date: isoDate(a.due_date), type: 'homework',
+    label: `${a.subject_name || ''}: ${a.title}`,
+    subject: a.subject_name, color: TYPE_COLOR.homework,
+  }));
+
+  if (tests) testEvents = tests.map(t => ({
+    date: isoDate(t.due_date), type: 'test',
+    label: `${t.subject_name || ''}: ${t.title}`,
+    subject: t.subject_name, color: TYPE_COLOR.test,
+  }));
+
+  render();
+}
+
+// ── Data ──────────────────────────────────────────────────────────────────────
+function expandVacations() {
+  const out = [];
+  vacationRanges.forEach(r => {
+    const start = new Date(r.start + 'T00:00:00');
+    const end   = new Date(r.end   + 'T00:00:00');
+    const cur   = new Date(start);
+    while (cur <= end) {
+      const dow = cur.getDay();
+      const isWeekday = dow >= 1 && dow <= 5;
+      const isFirst = cur.getTime() === start.getTime();
+      const isLast  = cur.getTime() === end.getTime();
+      if (isWeekday || isFirst || isLast) {
+        out.push({ date: fmtDate(cur), type: r.type, label: r.label,
+          subject: r.type === 'school_vac' ? 'School' : r.type === 'missed' ? 'Absence' : 'Family',
+          color: TYPE_COLOR[r.type], isRange: true, rangeStart: r.start, rangeEnd: r.end });
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
+  });
+  return out;
+}
+
+function allEvents() {
+  return [...hwEvents, ...testEvents, ...gradeEvents, ...activityEvents,
+          ...serviceEvents, ...expandVacations(), ...userAddedEvents];
+}
+
+function filteredEvents() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  return allEvents().filter(e =>
+    activeFilters.has(e.type) &&
+    (q === '' || e.label.toLowerCase().includes(q) || (e.subject || '').toLowerCase().includes(q))
+  );
+}
+
+function byDay(events) {
+  const map = {};
+  events.forEach(e => { if (!map[e.date]) map[e.date] = []; map[e.date].push(e); });
+  return map;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  document.getElementById('monthLabel').textContent = MONTHS[month] + ' ' + year;
+  if (view === 'month') renderMonth();
+  else if (view === 'week') renderWeek();
+  else renderList();
+}
+
+function renderMonth() {
+  const events = filteredEvents();
+  const evMap = byDay(events);
+  const today = new Date();
+
+  const firstDow = new Date(year, month, 1).getDay();
+  const startOffset = firstDow === 0 ? 6 : firstDow - 1;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;">`;
+  DAYS.forEach(d => html += `<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px;">${d}</div>`);
+  html += `</div><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;">`;
+
+  for (let i = 0; i < startOffset; i++) html += `<div style="min-height:70px;"></div>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = dayKey(year, month, d);
+    const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === d;
+    const isSel   = selected === key;
+    const dayEvs  = evMap[key] || [];
+    const vacEv   = dayEvs.find(e => e.isRange);
+    const vacTint = vacEv ? (VAC_BG[vacEv.type] || '') : '';
+    const baseBg  = isSel ? 'rgba(61,214,140,0.07)' : isToday ? 'rgba(56,189,248,0.04)' : vacTint || 'var(--bg2)';
+    const borderC = isSel ? 'var(--g1)' : isToday ? 'var(--g2)' : vacEv ? vacEv.color + '55' : 'var(--border)';
+    const extra   = dayEvs.length > 2 ? dayEvs.length - 2 : 0;
+
+    html += `<div class="cal-cell" onclick="selectDay('${key}')"
+      style="background:${baseBg};border-color:${borderC};"
+      onmouseover="this.style.borderColor='var(--border-accent)'"
+      onmouseout="this.style.borderColor='${borderC}'">
+      <div style="font-size:11px;font-weight:${isToday ? 700 : 500};color:${isToday ? 'var(--g2)' : isSel ? 'var(--g1)' : 'var(--text3)'};margin-bottom:3px;">${d}</div>
+      ${dayEvs.slice(0, 2).map(e => eventPill(e, true)).join('')}
+      ${extra > 0 ? `<div style="font-size:9px;color:var(--text3);padding:0 2px;">+${extra}</div>` : ''}
+    </div>`;
+  }
+  html += `</div>`;
+  document.getElementById('calContainer').innerHTML = html;
+  if (selected) showDetail(selected);
+}
+
+function renderWeek() {
+  const events = filteredEvents();
+  const evMap  = byDay(events);
+  const today  = new Date();
+  const ref    = selected ? new Date(selected + 'T00:00:00') : new Date(year, month, 1);
+  const dow    = ref.getDay();
+  const monday = new Date(ref); monday.setDate(ref.getDate() - (dow === 0 ? 6 : dow - 1));
+
+  let html = `<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;">`;
+  for (let i = 0; i < 7; i++) {
+    const d   = new Date(monday); d.setDate(monday.getDate() + i);
+    const key = fmtDate(d);
+    const isToday = d.toDateString() === today.toDateString();
+    const isSel   = selected === key;
+    const dayEvs  = evMap[key] || [];
+    html += `<div class="cal-cell" onclick="selectDay('${key}')"
+      style="min-height:80px;background:var(--bg2);border-color:${isSel ? 'var(--g1)' : isToday ? 'var(--g2)' : 'var(--border)'};"
+      onmouseover="this.style.borderColor='var(--border-accent)'"
+      onmouseout="this.style.borderColor='${isSel ? 'var(--g1)' : isToday ? 'var(--g2)' : 'var(--border)'}'">
+      <div style="font-size:11px;font-weight:600;color:${isToday ? 'var(--g2)' : isSel ? 'var(--g1)' : 'var(--text3)'};margin-bottom:6px;">${DAYS[(i + 0) % 7]} ${d.getDate()}</div>
+      ${dayEvs.map(e => eventPill(e)).join('')}
+    </div>`;
+  }
+  html += `</div>`;
+  document.getElementById('calContainer').innerHTML = html;
+  if (selected) showDetail(selected);
+}
+
+function renderList() {
+  document.getElementById('detailPanel').style.display = 'none';
+  const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const events = filteredEvents()
+    .filter(e => e.date.startsWith(monthStr))
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (!events.length) {
+    document.getElementById('calContainer').innerHTML = `<div style="text-align:center;padding:40px;color:var(--text3);">No events this month.</div>`;
+    return;
+  }
+
+  const grouped = byDay(events);
+  let html = '';
+  Object.entries(grouped).sort().forEach(([date, evs]) => {
+    const d = new Date(date + 'T00:00:00');
+    const isToday = d.toDateString() === new Date().toDateString();
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:600;color:${isToday ? 'var(--g1)' : 'var(--text3)'};text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;">
+        ${DAY_NAMES_LONG[d.getDay()]}, ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}${isToday ? ' · Today' : ''}
+      </div>`;
+    evs.forEach(ev => {
+      html += `<div style="display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;transition:border-color var(--transition);"
+        onmouseover="this.style.borderColor='${ev.color}55'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="width:8px;height:8px;border-radius:50%;background:${ev.color};flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:500;color:var(--text);">${esc(ev.label)}</div>
+          ${ev.subject ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${esc(ev.subject)}</div>` : ''}
+          ${ev.desc ? `<div style="font-size:11px;color:var(--text2);margin-top:2px;">${esc(ev.desc)}</div>` : ''}
+        </div>
+        <div style="font-size:10px;padding:3px 8px;border-radius:20px;background:${ev.color}18;color:${ev.color};font-weight:600;white-space:nowrap;">${TYPE_LABEL[ev.type] || ev.type}</div>
+        ${ev.userAdded ? `<div onclick="deleteEvent('${ev.id}')" style="cursor:pointer;color:var(--text3);"><svg class="icon icon-14"><use href="#ic-x"/></svg></div>` : ''}
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  document.getElementById('calContainer').innerHTML = html;
+}
+
+// ── Day detail ────────────────────────────────────────────────────────────────
+function selectDay(key) {
+  selected = selected === key ? null : key;
+  render();
+  if (selected) showDetail(selected);
+}
+
+function showDetail(date) {
+  const evs = filteredEvents().filter(e => e.date === date);
+  const panel = document.getElementById('detailPanel');
+  if (!evs.length) { panel.style.display = 'none'; return; }
+
+  const d = new Date(date + 'T00:00:00');
+  document.getElementById('detailTitle').textContent =
+    d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' }).toUpperCase();
+
+  document.getElementById('detailItems').innerHTML = evs.map(ev => `
+    <div class="detail-item">
+      <div class="detail-icon"><svg class="icon icon-16"><use href="#${TYPE_ICON[ev.type] || 'ic-calendar'}"/></svg></div>
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px;">${esc(ev.label)}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          ${ev.subject ? `<span style="font-size:11px;color:var(--text3);">${esc(ev.subject)}</span>` : ''}
+          <span style="font-size:10px;padding:2px 8px;border-radius:20px;background:${ev.color}18;color:${ev.color};font-weight:600;">${TYPE_LABEL[ev.type] || ev.type}</span>
+        </div>
+        ${ev.desc ? `<div style="font-size:12px;color:var(--text2);margin-top:4px;">${esc(ev.desc)}</div>` : ''}
+      </div>
+      ${ev.userAdded ? `<div onclick="deleteEvent('${ev.id}')" style="cursor:pointer;color:var(--text3);"><svg class="icon icon-14"><use href="#ic-x"/></svg></div>` : ''}
+    </div>`).join('');
+
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ── Event pill (compact label inside cell) ─────────────────────────────────────
+function eventPill(ev, compact = false) {
+  const maxLen = compact ? 14 : 22;
+  const label  = ev.label.length > maxLen ? ev.label.slice(0, maxLen) + '…' : ev.label;
+  return `<div style="display:flex;align-items:center;gap:3px;padding:${compact ? '1px 3px' : '2px 5px'};border-radius:4px;background:${ev.color}18;margin-bottom:2px;overflow:hidden;cursor:pointer;" onclick="event.stopPropagation();selectDay('${ev.date}')">
+    <div style="width:5px;height:5px;border-radius:50%;background:${ev.color};flex-shrink:0;"></div>
+    <div style="font-size:9px;color:${ev.color};font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(label)}</div>
+  </div>`;
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function navMonth(dir) {
+  month += dir;
+  if (month < 0)  { month = 11; year--; }
+  if (month > 11) { month = 0;  year++; }
+  selected = null;
+  render();
+}
+
+function goToday() {
+  const now = new Date();
+  year = now.getFullYear(); month = now.getMonth();
+  selected = null;
+  render();
+}
+
+function setView(v) {
+  view = v;
+  ['month','week','list'].forEach(n =>
+    document.getElementById('view-' + n).classList.toggle('active', n === v)
+  );
+  selected = null;
+  render();
+}
+
+// ── Chips ─────────────────────────────────────────────────────────────────────
+function toggleChip(el) {
+  const t = el.dataset.type;
+  el.classList.toggle('active');
+  if (activeFilters.has(t)) activeFilters.delete(t);
+  else activeFilters.add(t);
+  render();
+}
+
+// ── Add event modal ───────────────────────────────────────────────────────────
+function openModal() {
+  const today = fmtDate(new Date());
+  document.getElementById('evDate').value  = today;
+  document.getElementById('evTitle').value = '';
+  document.getElementById('evDesc').value  = '';
+  document.getElementById('evType').value  = 'personal';
+  document.getElementById('evGroupRow').style.display = 'none';
+  document.getElementById('evTitle').style.borderColor = '';
+  document.getElementById('modal').style.display = 'block';
+  document.getElementById('modalOverlay').style.display = 'block';
+  setTimeout(() => document.getElementById('evTitle').focus(), 50);
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  document.getElementById('modalOverlay').style.display = 'none';
+}
+
+function saveEvent() {
+  const title = document.getElementById('evTitle').value.trim();
+  const date  = document.getElementById('evDate').value;
+  const type  = document.getElementById('evType').value;
+  const desc  = document.getElementById('evDesc').value.trim();
+
+  if (!title || !date) {
+    document.getElementById('evTitle').style.borderColor = '#f87171';
+    return;
+  }
+
+  userAddedEvents.push({
+    id: 'ue-' + Date.now(), date, type,
+    label: title, subject: type === 'personal' ? 'Personal' : 'Group',
+    desc, color: TYPE_COLOR[type] || '#8892b0', userAdded: true,
+  });
+
+  closeModal();
+  render();
+}
+
+function deleteEvent(id) {
+  userAddedEvents = userAddedEvents.filter(e => e.id !== id);
+  render();
+}
+
+// ── Theme ─────────────────────────────────────────────────────────────────────
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  document.getElementById('themeIcon').setAttribute('href', t === 'dark' ? '#ic-moon' : '#ic-sun');
+  localStorage.setItem('theme', t);
+}
+function toggleTheme() { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); }
+
+// ── User ──────────────────────────────────────────────────────────────────────
+function setUser(u) {
+  const initials = u.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
+  
+  
+  
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+async function api(url) {
+  try {
+    const r = await fetch(url, { credentials:'include' });
+    if (r.status === 401) return null;
+    return r.ok ? r.json() : null;
+  } catch { return null; }
+}
+
+function dayKey(y, m, d) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function fmtDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function isoDate(iso) { return iso.split('T')[0]; }
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+boot();
+
+
+</script>

@@ -1,0 +1,496 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-whiteboard"></use></svg>
+<span class="topbar-title">Whiteboard</span>
+<div class="room-picker">
+<button class="room-btn active" id="rb-personal" onclick="switchRoomMode('personal')">My Board</button>
+<button class="room-btn" id="rb-group" onclick="switchRoomMode('group')">Group</button>
+</div>
+<div class="room-code-bar" id="room-code-bar" style="display:none">
+<span style="color:var(--text3)">Room:</span>
+<span class="room-code-val" id="room-code-val">—</span>
+<button class="wb-action-btn" onclick="copyRoomLink()" style="padding:3px 10px;font-size:11px;box-shadow:none;">
+<svg class="icon icon-14"><use href="#ic-copy"></use></svg> Copy link
+      </button>
+<button class="wb-action-btn" onclick="newGroupRoom()" style="padding:3px 10px;font-size:11px;box-shadow:none;">
+<svg class="icon icon-14"><use href="#ic-plus"></use></svg> New room
+      </button>
+</div>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="wb-area">
+<canvas id="wb"></canvas>
+<!-- Left toolbar -->
+<div class="wb-toolbar">
+<button class="wb-tool active" id="tool-pen" onclick="setTool('pen')" title="Pen (P)"> <svg class="icon icon-18"><use href="#ic-pen"></use></svg></button>
+<button class="wb-tool" id="tool-eraser" onclick="setTool('eraser')" title="Eraser (E)"> <svg class="icon icon-18"><use href="#ic-eraser"></use></svg></button>
+<div class="wb-sep"></div>
+<button class="wb-tool" id="tool-line" onclick="setTool('line')" title="Line (L)"> <svg class="icon icon-18"><use href="#ic-line"></use></svg></button>
+<button class="wb-tool" id="tool-rect" onclick="setTool('rect')" title="Rectangle (R)"><svg class="icon icon-18"><use href="#ic-rect"></use></svg></button>
+<button class="wb-tool" id="tool-circle" onclick="setTool('circle')" title="Circle (C)"> <svg class="icon icon-18"><use href="#ic-circle"></use></svg></button>
+<div class="wb-sep"></div>
+<button class="wb-tool" id="tool-text" onclick="setTool('text')" title="Text (T)"> <svg class="icon icon-18"><use href="#ic-text"></use></svg></button>
+<div class="wb-sep"></div>
+<button class="wb-tool" id="tool-undo" onclick="undoStroke()" title="Undo (Ctrl+Z)"><svg class="icon icon-18"><use href="#ic-undo"></use></svg></button>
+</div>
+<input id="wb-text-input" placeholder="Type…" type="text"/>
+<!-- Bottom options bar -->
+<div class="wb-options">
+<div id="color-swatches" style="display:flex;gap:5px;align-items:center;"></div>
+<button class="color-more-btn" onclick="toggleColorPopup(event)" title="More colors">+</button>
+<div class="color-popup" id="color-popup"></div>
+<div class="opts-sep"></div>
+<button class="width-btn active" id="w1" onclick="setWidth(2,'w1')">S</button>
+<button class="width-btn" id="w2" onclick="setWidth(4,'w2')">M</button>
+<button class="width-btn" id="w3" onclick="setWidth(8,'w3')">L</button>
+<button class="width-btn" id="w4" onclick="setWidth(16,'w4')">XL</button>
+</div>
+<!-- Top-right action buttons -->
+<div class="wb-actions">
+<div class="online-indicator">
+<div class="online-dot"></div>
+<span id="online-count">1 online</span>
+</div>
+<button class="wb-action-btn" onclick="exportPNG()">
+<svg class="icon icon-14"><use href="#ic-download"></use></svg> Export
+      </button>
+<button class="wb-action-btn danger" onclick="clearBoard()">
+<svg class="icon icon-14"><use href="#ic-trash"></use></svg> Clear
+      </button>
+</div>
+</div><!-- .wb-area -->
+
+<script>
+
+
+/* ── Theme ── */
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t==='dark'?'#ic-sun':'#ic-moon');
+})();
+function toggleTheme(){
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme')==='dark'?'light':'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next==='dark'?'#ic-sun':'#ic-moon');
+  renderAll();
+}
+
+/* ── Inline colour palette (no OS dialog) ── */
+const MAIN_PALETTE = ['#3dd68c','#38bdf8','#f87171','#fbbf24','#a78bfa','#f472b6','#f0f0f0','#111111'];
+const EXT_PALETTE  = [
+  '#3dd68c','#38bdf8','#6ee7b7','#f87171','#fbbf24','#a78bfa','#f472b6','#fb923c','#34d399',
+  '#1d4ed8','#0891b2','#15803d','#b91c1c','#92400e','#7c3aed','#be185d','#b45309','#0f766e',
+  '#ffffff','#e5e7eb','#9ca3af','#6b7280','#4b5563','#374151','#1f2937','#111111','#000000',
+];
+function buildPalette(){
+  const wrap = document.getElementById('color-swatches');
+  wrap.innerHTML = '';
+  MAIN_PALETTE.forEach((c,i) => {
+    const el = document.createElement('div');
+    el.className = 'color-swatch'+(i===0?' active':'');
+    el.style.background = c;
+    el.title = c;
+    el.onclick = () => setColor(c, el);
+    wrap.appendChild(el);
+  });
+  const popup = document.getElementById('color-popup');
+  popup.innerHTML = '';
+  EXT_PALETTE.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'color-swatch';
+    el.style.background = c;
+    el.title = c;
+    el.onclick = () => { setColor(c, null); closeColorPopup(); };
+    popup.appendChild(el);
+  });
+}
+function toggleColorPopup(e){
+  e.stopPropagation();
+  document.getElementById('color-popup').classList.toggle('open');
+}
+function closeColorPopup(){
+  document.getElementById('color-popup').classList.remove('open');
+}
+document.addEventListener('click', closeColorPopup);
+
+/* ── Canvas ── */
+const canvas = document.getElementById('wb');
+const ctx    = canvas.getContext('2d');
+let cssW = 1, cssH = 1, dpr = 1;
+
+let strokes       = [];
+let currentStroke = null;
+let drawing       = false;
+let activeTool    = 'pen';
+let activeColor   = '#3dd68c';
+let activeWidth   = 2;
+let myUserId      = localStorage.getItem('wb_uid') || null;
+let roomMode      = 'personal';
+let groupCode     = '';
+// Always start on personal. Only join a group if the hash looks like a shared invite
+// (i.e., it's alphanumeric and was set by someone else, not lingering from last session).
+// We track whether THIS session set the hash via localStorage.
+const _hash      = window.location.hash.slice(1);
+const _ownHash   = localStorage.getItem('wb_own_hash');
+const _isInvite  = _hash && _hash !== _ownHash;   // hash we didn't generate ourselves
+let room = (_isInvite) ? 'group_' + _hash : (myUserId ? 'personal_' + myUserId : 'personal_anon');
+
+function setColor(c, el){
+  activeColor = c;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  if(el) el.classList.add('active');
+}
+function setWidth(w, btnId){
+  activeWidth = w;
+  document.querySelectorAll('.width-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(btnId).classList.add('active');
+}
+function setTool(t){
+  activeTool = t;
+  document.querySelectorAll('.wb-tool').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tool-'+t);
+  if(btn) btn.classList.add('active');
+  const cursors = {pen:'crosshair',eraser:'cell',line:'crosshair',rect:'crosshair',circle:'crosshair',text:'text'};
+  canvas.style.cursor = cursors[t] || 'crosshair';
+}
+
+/* ── Resize: setTransform(dpr) so all drawing is in CSS pixels ── */
+function resize(){
+  const rect = canvas.getBoundingClientRect();
+  if(!rect.width || !rect.height){ requestAnimationFrame(resize); return; }
+  dpr   = window.devicePixelRatio || 1;
+  cssW  = rect.width;
+  cssH  = rect.height;
+  canvas.width  = Math.round(cssW * dpr);
+  canvas.height = Math.round(cssH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);  // all drawing coords now in CSS pixels
+  renderAll();
+}
+window.addEventListener('resize', resize);
+
+/* ── Draw — coords are 0-1 fractions; multiply by cssW/cssH (CSS pixels) ── */
+function drawStroke(s){
+  if(!s) return;
+  const W = cssW;   // CSS pixels — ctx.setTransform handles the DPR scaling
+  const H = cssH;
+  ctx.save();
+  ctx.lineCap   = 'round';
+  ctx.lineJoin  = 'round';
+  ctx.lineWidth = s.width;  // CSS pixels
+
+  if(s.tool === 'eraser'){
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.strokeStyle = 'rgba(0,0,0,1)';
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = s.color;
+  }
+
+  if(s.tool === 'pen' || s.tool === 'eraser'){
+    const pts = s.points;
+    if(!pts || !pts.length){ ctx.restore(); return; }
+    if(pts.length === 1){
+      ctx.beginPath();
+      ctx.arc(pts[0].x*W, pts[0].y*H, s.width/2, 0, Math.PI*2);
+      ctx.fillStyle = s.tool==='eraser' ? 'rgba(0,0,0,1)' : s.color;
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x*W, pts[0].y*H);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x*W, pts[i].y*H);
+      ctx.stroke();
+    }
+  } else if(s.tool === 'line'){
+    ctx.beginPath();
+    ctx.moveTo(s.x1*W, s.y1*H);
+    ctx.lineTo(s.x2*W, s.y2*H);
+    ctx.stroke();
+  } else if(s.tool === 'rect'){
+    ctx.strokeRect(s.x1*W, s.y1*H, (s.x2-s.x1)*W, (s.y2-s.y1)*H);
+  } else if(s.tool === 'circle'){
+    const rx = Math.abs((s.x2-s.x1)*W/2);
+    const ry = Math.abs((s.y2-s.y1)*H/2);
+    ctx.beginPath();
+    ctx.ellipse((s.x1+s.x2)/2*W, (s.y1+s.y2)/2*H, Math.max(rx,1), Math.max(ry,1), 0, 0, Math.PI*2);
+    ctx.stroke();
+  } else if(s.tool === 'text'){
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.font = `${s.fontSize}px 'DM Sans', sans-serif`;  // CSS px, transform handles dpr
+    ctx.fillStyle = s.color;
+    ctx.fillText(s.text, s.x*W, s.y*H);
+  }
+  ctx.restore();
+}
+
+function renderAll(){
+  ctx.clearRect(0, 0, cssW, cssH);  // CSS pixels (transform is active)
+  for(const s of strokes) drawStroke(s);
+  if(currentStroke) drawStroke(currentStroke);
+}
+
+/* ── Input ── */
+function getPos(e){
+  const rect = canvas.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
+  return {
+    x: (src.clientX - rect.left) / rect.width,
+    y: (src.clientY - rect.top)  / rect.height,
+  };
+}
+
+function startDraw(e){
+  if(activeTool === 'text'){ startText(e); return; }
+  drawing = true;
+  const pos = getPos(e);
+  if(activeTool==='pen'||activeTool==='eraser'){
+    currentStroke = {tool:activeTool, color:activeColor, width:activeWidth, points:[pos]};
+  } else {
+    currentStroke = {tool:activeTool, color:activeColor, width:activeWidth, x1:pos.x, y1:pos.y, x2:pos.x, y2:pos.y};
+  }
+}
+function continueDraw(e){
+  if(!drawing||!currentStroke) return;
+  const pos = getPos(e);
+  if(activeTool==='pen'||activeTool==='eraser'){
+    currentStroke.points.push(pos);
+  } else {
+    currentStroke.x2 = pos.x;
+    currentStroke.y2 = pos.y;
+  }
+  renderAll();
+}
+function endDraw(){
+  if(!drawing||!currentStroke) return;
+  drawing = false;
+  strokes.push(currentStroke);
+  socket.emit('wb_stroke', {room, stroke:currentStroke});
+  currentStroke = null;
+  renderAll();
+}
+
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', continueDraw);
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('mouseleave', endDraw);
+canvas.addEventListener('touchstart', e=>{e.preventDefault();startDraw(e);},{passive:false});
+canvas.addEventListener('touchmove',  e=>{e.preventDefault();continueDraw(e);},{passive:false});
+canvas.addEventListener('touchend',   e=>{e.preventDefault();endDraw();},{passive:false});
+
+/* ── Text tool ── */
+const textInput = document.getElementById('wb-text-input');
+let textPos = null;
+
+function startText(e){
+  e.preventDefault();   // stop canvas stealing focus back
+  commitText();
+  const rect = canvas.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
+  const cx = src.clientX - rect.left;
+  const cy = src.clientY - rect.top;
+  textPos = {x: cx / rect.width, y: cy / rect.height};
+  const fontSize = activeWidth * 6 + 10;
+  textInput.style.left     = cx + 'px';
+  textInput.style.top      = (cy - fontSize - 8) + 'px';
+  textInput.style.fontSize = fontSize + 'px';
+  textInput.style.color    = activeColor;
+  textInput.style.display  = 'block';
+  textInput.value = '';
+  setTimeout(() => textInput.focus(), 0);  // defer so mousedown fully finishes first
+}
+
+function commitText(){
+  const val = textInput.value.trim();
+  if(val && textPos){
+    const fontSize = activeWidth * 6 + 10;
+    const s = {tool:'text', color:activeColor, fontSize, text:val, x:textPos.x, y:textPos.y};
+    strokes.push(s);
+    socket.emit('wb_stroke', {room, stroke:s});
+    renderAll();
+  }
+  textInput.style.display = 'none';
+  textInput.value = '';
+  textPos = null;
+}
+
+textInput.addEventListener('keydown', e=>{
+  if(e.key==='Enter'){ e.preventDefault(); commitText(); }
+  if(e.key==='Escape'){ textInput.style.display='none'; textInput.value=''; textPos=null; }
+});
+textInput.addEventListener('blur', ()=>{ setTimeout(commitText, 100); });
+
+/* ── Undo ── */
+function undoStroke(){
+  if(!strokes.length) return;
+  strokes.pop();
+  renderAll();
+}
+
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey||e.metaKey) && e.key==='z'){ e.preventDefault(); undoStroke(); return; }
+  if(e.target.tagName==='INPUT') return;
+  const map = {p:'pen',e:'eraser',l:'line',r:'rect',c:'circle',t:'text'};
+  if(map[e.key]) setTool(map[e.key]);
+});
+
+/* ── Fix 2: Clear also resets currentStroke ── */
+function clearBoard(){
+  const label = roomMode==='personal' ? 'your personal board' : 'this group board for everyone';
+  if(!confirm('Clear '+label+'?')) return;
+  strokes = [];
+  currentStroke = null;
+  drawing = false;
+  renderAll();
+  socket.emit('wb_clear', {room});
+}
+
+/* ── Export ── */
+function exportPNG(){
+  const dpr  = window.devicePixelRatio || 1;
+  const tmp  = document.createElement('canvas');
+  tmp.width  = canvas.width;
+  tmp.height = canvas.height;
+  const tctx = tmp.getContext('2d');
+  tctx.scale(dpr, dpr);
+  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+  tctx.fillStyle = isDark ? '#1e1e1e' : '#f8f9fc';
+  tctx.fillRect(0, 0, cssW, cssH);
+  tctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, cssW, cssH);
+  const a    = document.createElement('a');
+  a.download = 'whiteboard.png';
+  a.href     = tmp.toDataURL('image/png');
+  a.click();
+}
+
+/* ── Room management ── */
+function genCode(){
+  return Math.random().toString(36).slice(2,8).toUpperCase();
+}
+
+function switchRoomMode(mode){
+  roomMode = mode;
+  document.getElementById('rb-personal').classList.toggle('active', mode==='personal');
+  document.getElementById('rb-group').classList.toggle('active', mode==='group');
+  document.getElementById('room-code-bar').style.display = mode==='group' ? 'flex' : 'none';
+
+  if(mode === 'personal'){
+    joinRoom('personal_' + myUserId);
+  } else {
+    // Use URL hash if present, else generate a new code
+    const hash = window.location.hash.slice(1);
+    groupCode = hash || genCode();
+    joinRoom('group_' + groupCode);
+  }
+}
+
+function newGroupRoom(){
+  groupCode = genCode();
+  joinRoom('group_' + groupCode);
+}
+
+function joinRoom(newRoom){
+  room = newRoom;
+  if(roomMode === 'group'){
+    groupCode = room.replace('group_','');
+    document.getElementById('room-code-val').textContent = groupCode;
+    history.replaceState(history.state, '', location.pathname + '#' + groupCode);
+    localStorage.setItem('wb_own_hash', groupCode);  // mark as ours so reload stays on personal
+  } else {
+    history.replaceState(history.state, '', location.pathname);  // clear hash when going personal
+    localStorage.removeItem('wb_own_hash');
+  }
+  strokes = [];
+  currentStroke = null;
+  drawing = false;
+  renderAll();
+  socket.emit('wb_join', {room});
+}
+
+function copyRoomLink(){
+  const url = window.location.origin + window.location.pathname + '#' + groupCode;
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn = event.target.closest('button');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✓ Copied!';
+    btn.style.color = 'var(--g1)';
+    setTimeout(()=>{ btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+  });
+}
+
+/* ── Socket.IO ── */
+const socket = io({transports:['websocket','polling']});
+
+socket.on('connect', ()=>{ socket.emit('wb_join', {room}); });
+
+socket.on('wb_sync', data=>{
+  strokes = data.strokes || [];
+  renderAll();
+});
+socket.on('wb_stroke', data=>{
+  strokes.push(data.stroke);
+  renderAll();
+});
+/* Fix 2 (server side): also reset currentStroke on clear */
+socket.on('wb_cleared', ()=>{
+  strokes = [];
+  currentStroke = null;
+  drawing = false;
+  renderAll();
+});
+
+/* ── Boot ── */
+async function boot(){
+  buildPalette();
+
+  const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+  if(!me||me.error){ location.href='/login'; return; }
+
+  myUserId = me.id;
+  localStorage.setItem('wb_uid', myUserId);
+  // If the cached uid was wrong (first visit), switch to correct personal room now
+  if(roomMode === 'personal' && room !== 'personal_' + myUserId){
+    room = 'personal_' + myUserId;
+    socket.emit('wb_join', {room});
+  }
+  
+  
+  if(me.class_name) 
+
+  // Reflect group mode in UI only if this was a genuine shared invite link
+  if(_isInvite){
+    groupCode = _hash;
+    roomMode  = 'group';
+    document.getElementById('rb-personal').classList.remove('active');
+    document.getElementById('rb-group').classList.add('active');
+    document.getElementById('room-code-bar').style.display = 'flex';
+    document.getElementById('room-code-val').textContent = groupCode;
+  }
+}
+
+resize();  // set cssW/cssH immediately — before any mouse event can fire
+boot();
+
+window.switchRoomMode  = switchRoomMode;
+window.newGroupRoom    = newGroupRoom;
+window.copyRoomLink    = copyRoomLink;
+window.setTool         = setTool;
+window.setWidth        = setWidth;
+window.toggleTheme     = toggleTheme;
+window.toggleColorPopup= toggleColorPopup;
+window.clearBoard      = clearBoard;
+window.exportPNG       = exportPNG;
+window.undoStroke      = undoStroke;
+
+window.__cleanup = function() {
+  if (socket) { socket.disconnect(); }
+};
+
+
+</script>

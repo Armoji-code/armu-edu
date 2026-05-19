@@ -1,0 +1,205 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-schedule"></use></svg>
+<span class="topbar-title">Schedule</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<!-- Day progress bar -->
+<div style="margin-bottom:20px;">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+<div id="sched-today-label" style="font-size:13px;font-weight:600;color:var(--text);">Loading…</div>
+<div id="sched-time-label" style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;">--:--</div>
+</div>
+<div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;">
+<div id="sched-progress-bar" style="height:100%;width:0%;background:var(--gradient);border-radius:3px;transition:width 1s linear;"></div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:4px;">
+<div style="font-size:10px;color:var(--text3);">8:00</div>
+<div id="sched-progress-pct" style="font-size:10px;color:var(--text3);">0% through school day</div>
+<div style="font-size:10px;color:var(--text3);">15:30</div>
+</div>
+</div>
+<!-- Schedule grid -->
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
+<div style="overflow-x:auto;">
+<div style="min-width:560px;">
+<div id="sched-header" style="display:grid;grid-template-columns:80px repeat(5,1fr);background:var(--bg3);border-bottom:1px solid var(--border);"></div>
+<div id="sched-body"></div>
+</div>
+</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+}
+
+const SCHED_PERIODS = [
+  { num:1,       label:'P1',    time:'8:00 – 8:50',   start:'8:00',  end:'8:50'  },
+  { num:2,       label:'P2',    time:'8:55 – 9:45',   start:'8:55',  end:'9:45'  },
+  { num:3,       label:'P3',    time:'9:50 – 10:40',  start:'9:50',  end:'10:40' },
+  { num:'lunch', label:'🍽',   time:'10:40 – 11:10', start:'10:40', end:'11:10' },
+  { num:4,       label:'P4',    time:'11:10 – 12:00', start:'11:10', end:'12:00' },
+  { num:5,       label:'P5',    time:'12:05 – 12:55', start:'12:05', end:'12:55' },
+  { num:6,       label:'P6',    time:'13:00 – 13:50', start:'13:00', end:'13:50' },
+  { num:7,       label:'P7',    time:'13:55 – 14:45', start:'13:55', end:'14:45' },
+  { num:8,       label:'P8',    time:'14:50 – 15:30', start:'14:50', end:'15:30' },
+];
+
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+
+const SUBJECT_COLORS = [
+  '#3dd68c','#38bdf8','#a78bfa','#fbbf24','#f87171','#fb923c','#34d399','#e879f9','#60a5fa','#4ade80'
+];
+
+function timeToMins(t) {
+  const parts = t.split(':').map(Number);
+  return parts[0] * 60 + parts[1];
+}
+
+let schedTimer = null;
+
+function renderSchedule(apiData) {
+  const now = new Date();
+  const todayIndex = now.getDay() - 1; // 0=Mon…4=Fri, -1=Sun, 5=Sat
+  const isWeekday = todayIndex >= 0 && todayIndex <= 4;
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+
+  // Build lookup: schedMap[dayIndex][periodNum] = { subject_name, ... }
+  const schedMap = {};
+  (apiData || []).forEach(p => {
+    if (!schedMap[p.day_of_week]) schedMap[p.day_of_week] = {};
+    schedMap[p.day_of_week][p.period_number] = p;
+  });
+
+  // Assign consistent colors to subject names
+  const colorMap = {};
+  let colorIdx = 0;
+  (apiData || []).forEach(p => {
+    if (p.subject_name && !colorMap[p.subject_name]) {
+      colorMap[p.subject_name] = SUBJECT_COLORS[colorIdx++ % SUBJECT_COLORS.length];
+    }
+  });
+
+  // Header
+  const header = document.getElementById('sched-header');
+  header.innerHTML = `<div style="padding:12px 10px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;border-right:1px solid var(--border);">Period</div>`;
+  DAYS.forEach((day, i) => {
+    const isToday = i === todayIndex;
+    header.innerHTML += `<div class="sched-day-header${isToday ? ' today' : ''}">${day}${isToday ? ' 📍' : ''}</div>`;
+  });
+
+  // Body
+  const body = document.getElementById('sched-body');
+  body.innerHTML = '';
+
+  SCHED_PERIODS.forEach(period => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:80px repeat(5,1fr);';
+
+    const pStart = timeToMins(period.start);
+    const pEnd   = timeToMins(period.end);
+    const isCurPeriod = isWeekday && nowMins >= pStart && nowMins < pEnd;
+
+    // Time cell
+    const tc = document.createElement('div');
+    tc.className = 'sched-time-col';
+    tc.innerHTML = period.num === 'lunch'
+      ? `<div class="sched-period-num">${period.label}</div><div class="sched-period-time">${period.time}</div>`
+      : `<div class="sched-period-num">${period.label}</div><div class="sched-period-time">${period.time}</div>`;
+    if (isCurPeriod) {
+      tc.style.background = 'linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.08))';
+      tc.querySelector('.sched-period-num').style.color = 'var(--g1)';
+    }
+    row.appendChild(tc);
+
+    DAYS.forEach((_, di) => {
+      const cell = document.createElement('div');
+      const isToday = di === todayIndex;
+      const isCur   = isToday && isCurPeriod;
+      cell.className = `sched-cell${isToday ? ' today-col' : ''}${isCur ? ' current-period' : ''}`;
+
+      if (period.num === 'lunch') {
+        cell.style.cssText = `display:flex;align-items:center;padding:10px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);${isToday ? 'background:rgba(61,214,140,0.04);' : 'background:var(--bg3);'}`;
+        cell.innerHTML = `<div style="font-size:11px;color:var(--text3);">${isToday ? '🍽 Lunch Break' : 'Lunch'}</div>`;
+        row.appendChild(cell);
+        return;
+      }
+
+      const info = schedMap[di]?.[period.num];
+      if (info && info.subject_name) {
+        const col = colorMap[info.subject_name] || 'var(--g1)';
+        cell.innerHTML = `
+          <div class="sched-subject"><span class="sched-subject-dot" style="background:${col}"></span>${info.subject_name}</div>
+          ${isCur ? `<div style="font-size:9px;font-weight:700;margin-top:3px;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">● NOW</div>` : ''}
+        `;
+      } else {
+        cell.innerHTML = `<div style="font-size:11px;color:var(--text3);">—</div>`;
+      }
+      row.appendChild(cell);
+    });
+
+    body.appendChild(row);
+  });
+
+  // Progress bar labels
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const monNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const dl = document.getElementById('sched-today-label');
+  const tl = document.getElementById('sched-time-label');
+  if (dl) dl.textContent = `${dayNames[now.getDay()]}, ${monNames[now.getMonth()]} ${now.getDate()}`;
+  if (tl) tl.textContent = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const schoolStart = 480, schoolEnd = 930; // 8:00–15:30
+  const bar = document.getElementById('sched-progress-bar');
+  const pctLabel = document.getElementById('sched-progress-pct');
+  if (!bar || !pctLabel) return;
+  if (!isWeekday) { bar.style.width = '0%'; pctLabel.textContent = 'No school today'; return; }
+  if (nowMins < schoolStart) { bar.style.width = '0%'; pctLabel.textContent = "School hasn't started yet"; return; }
+  if (nowMins >= schoolEnd)  { bar.style.width = '100%'; pctLabel.textContent = 'School day complete ✓'; return; }
+  const pct = Math.round(((nowMins - schoolStart) / (schoolEnd - schoolStart)) * 100);
+  bar.style.width = pct + '%';
+  pctLabel.textContent = `${pct}% through school day`;
+}
+
+async function boot() {
+  // Auth check
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  if (!me || me.error) { location.href = '/login'; return; }
+
+  
+  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  
+  if (me.class_name) 
+
+  const apiData = await fetch('/api/schedule').then(r => r.json()).catch(() => []);
+
+  renderSchedule(apiData);
+
+  if (schedTimer) clearInterval(schedTimer);
+  schedTimer = setInterval(() => renderSchedule(apiData), 30000);
+}
+
+boot();
+
+
+</script>

@@ -1,0 +1,387 @@
+
+<div class="topbar">
+<div class="topbar-title">Dashboard</div>
+<div class="topbar-right">
+<div class="streak-badge">
+<span style="color:var(--g1)"><svg class="icon icon-18"><use href="#ic-streak"></use></svg></span>
+<span class="streak-num" id="streakNum">0</span>
+<span style="color:var(--text2);font-size:12px">day streak</span>
+</div>
+<div class="icon-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle theme"><svg class="icon icon-18"><use href="#ic-moon" id="themeIcon"></use></svg></div>
+<div class="icon-btn" title="Notifications"><svg class="icon icon-18"><use href="#ic-bell"></use></svg></div>
+</div>
+</div>
+<div class="content">
+<!-- AI DAILY DIGEST CARD -->
+<div class="ai-card" id="aiCard">
+<div class="ai-card-header">
+<svg class="icon icon-14" style="color:var(--g1)"><use href="#ic-tutor"></use></svg>
+<span class="ai-card-label">AI Study Advisor</span>
+<span class="ai-card-time" id="aiCardTime"></span>
+<button class="ai-card-refresh" id="aiCardRefresh" onclick="loadDigest(true)" title="Regenerate">
+<svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" style="width:13px;height:13px" viewbox="0 0 24 24"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+</button>
+</div>
+<div class="ai-card-body" id="aiCardBody">Loading your personalised study plan…</div>
+</div>
+<!-- STAT CARDS -->
+<div class="grid-4">
+<div class="card"><div class="card-title">Due Today</div><div class="stat-val" id="statToday">—</div><div class="stat-label">assignments</div></div>
+<div class="card"><div class="card-title">This Week</div><div class="stat-val" id="statWeek">—</div><div class="stat-label">total due</div></div>
+<div class="card"><div class="card-title">Streak</div><div class="stat-val" id="statStreak">—</div><div class="stat-label">days in a row ⚡</div></div>
+<div class="card"><div class="card-title">GPA</div><div class="stat-val" id="statGpa">—</div><div class="stat-label">this semester</div></div>
+</div>
+<!-- TABS -->
+<div class="tabs">
+<button class="mode-btn active" id="tab-overview" onclick="switchTab('overview')"><svg class="icon icon-14"><use href="#ic-homework"></use></svg> Overview</button>
+<button class="mode-btn" id="tab-calendar" onclick="switchTab('calendar')"><svg class="icon icon-14"><use href="#ic-calendar"></use></svg> Calendar</button>
+</div>
+<!-- OVERVIEW -->
+<div id="pane-overview">
+<div class="grid-2">
+<div>
+<div class="section-header">
+<div class="section-title">Priority Assignments</div>
+<a class="section-link" href="/homework">All →</a>
+</div>
+<div class="assignment-list" id="hwList"><div class="empty">Loading…</div></div>
+</div>
+<div>
+<div class="section-header">
+<div class="section-title">Upcoming Tests</div>
+<a class="section-link" href="/tests">All →</a>
+</div>
+<div id="testList"><div class="empty">Loading…</div></div>
+</div>
+</div>
+</div>
+<!-- CALENDAR TAB -->
+<div id="pane-calendar" style="display:none">
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+<div style="display:flex;gap:6px">
+<button class="mode-btn active" id="cf-all" onclick="setCalFilter('all',this)">All</button>
+<button class="mode-btn" id="cf-hw" onclick="setCalFilter('homework',this)">Homework</button>
+<button class="mode-btn" id="cf-test" onclick="setCalFilter('tests',this)">Tests</button>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<div class="icon-btn" onclick="calNav(-1)" style="font-size:18px;font-weight:300">‹</div>
+<div id="calMonthLabel" style="font-size:14px;font-weight:600;min-width:90px;text-align:center"></div>
+<div class="icon-btn" onclick="calNav(1)" style="font-size:18px;font-weight:300">›</div>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px">Mon</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px">Tue</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px">Wed</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px">Thu</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px">Fri</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px">Sat</div>
+<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text3);padding:4px">Sun</div>
+</div>
+<div id="calGrid" style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:3px;margin-bottom:16px"></div>
+<div class="cal-detail" id="calDetail" style="display:none">
+<div class="cal-detail-title" id="calDetailTitle"></div>
+<div id="calDetailItems"></div>
+</div>
+</div>
+</div>
+
+<script>
+
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  let hwData = [], testData = [];
+  let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+  let calFilter = 'all';
+
+  // ── Boot ────────────────────────────────────────────────────────────────────
+  async function boot() {
+    // Check auth
+    const me = await api('/api/auth/me');
+    if (!me) { window.location.href = '/login'; return; }
+    setUser(me);
+
+    // Restore theme
+    const saved = localStorage.getItem('theme');
+    if (saved) setTheme(saved);
+
+    // Load all data in parallel
+    const [dash, hw, tests] = await Promise.all([
+      api('/api/dashboard'),
+      api('/api/homework'),
+      api('/api/tests'),
+    ]);
+
+    if (dash) renderStats(dash);
+    if (hw)   { hwData = hw; renderHw(hw); updateHwBadge(hw); }
+    if (tests) { testData = tests; renderTests(tests); }
+    renderCalendar();
+    loadDigest(false);
+  }
+
+  async function api(url) {
+    try {
+      const r = await fetch(url, { credentials: 'include' });
+      if (r.status === 401) return null;
+      return r.ok ? r.json() : null;
+    } catch { return null; }
+  }
+
+  // ── User ────────────────────────────────────────────────────────────────────
+  function setUser(user) {
+    const initials = user.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
+    
+    
+    
+  }
+
+  // ── Stats ───────────────────────────────────────────────────────────────────
+  function renderStats(dash) {
+    document.getElementById('statToday').textContent = dash.due_today?.length ?? 0;
+    document.getElementById('statWeek').textContent  = (dash.due_today?.length ?? 0) + (dash.due_this_week?.length ?? 0);
+    document.getElementById('statGpa').textContent   = dash.gpa ?? '—';
+    document.getElementById('statStreak').textContent = 0; // streak calc TBD
+    document.getElementById('streakNum').textContent  = 0;
+  }
+
+  // ── AI Daily Digest ──────────────────────────────────────────────────────────
+  async function loadDigest(force) {
+    const body = document.getElementById('aiCardBody');
+    const timeEl = document.getElementById('aiCardTime');
+    const refreshBtn = document.getElementById('aiCardRefresh');
+    if (!body) return;
+
+    refreshBtn.disabled = true;
+    body.textContent = force ? 'Regenerating…' : 'Loading your personalised study plan…';
+    body.classList.add('streaming');
+
+    const url = '/api/ai/daily-digest' + (force ? '?force=1' : '');
+    try {
+      const resp = await fetch(url, { credentials: 'include' });
+      if (!resp.ok) { body.textContent = 'Could not load study plan.'; body.classList.remove('streaming'); return; }
+
+      const ct = resp.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
+        // Cached — display instantly
+        const data = await resp.json();
+        body.textContent = data.content;
+        if (data.generated_at) {
+          const d = new Date(data.generated_at);
+          timeEl.textContent = 'Today · ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+        }
+      } else {
+        // Streaming — show text as it arrives
+        body.textContent = '';
+        timeEl.textContent = '';
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          body.textContent += decoder.decode(value, { stream: true });
+        }
+        timeEl.textContent = 'Just now';
+      }
+    } catch (e) {
+      body.textContent = 'Could not load study plan.';
+    }
+    body.classList.remove('streaming');
+    refreshBtn.disabled = false;
+  }
+
+  // ── Homework list ────────────────────────────────────────────────────────────
+  function renderHw(hw) {
+    const el = document.getElementById('hwList');
+    const pending = hw.filter(a => !a.completed).slice(0, 5);
+    if (pending.length === 0) { el.innerHTML = '<div class="empty">No pending assignments.</div>'; return; }
+
+    el.innerHTML = pending.map(a => {
+      const days = daysUntil(a.due_date);
+      const priority = days <= 1 ? 'priority-high' : days <= 3 ? 'priority-med' : 'priority-low';
+      const dueClass = days <= 2 ? 'due-urgent' : '';
+      return `
+        <div class="assignment-item">
+          <div class="assignment-check" onclick="this.classList.toggle('done')"></div>
+          <div class="assignment-info">
+            <div class="assignment-subject">${esc(a.subject_name || '')}</div>
+            <div class="assignment-title">${esc(a.title)}</div>
+          </div>
+          <div class="priority-dot ${priority}"></div>
+          <div class="due-date ${dueClass}">${relDue(a.due_date)}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function updateHwBadge(hw) {
+    const pending = hw.filter(a => !a.completed).length;
+    const badge = document.getElementById('hw-badge');
+    if (pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+  }
+
+  // ── Tests list ───────────────────────────────────────────────────────────────
+  const testIcons = { default: '📝', math: '📐', chemistry: '⚗️', physics: '⚡', history: '📖', english: '📚', biology: '🔬' };
+
+  function renderTests(tests) {
+    const el = document.getElementById('testList');
+    const upcoming = tests.slice(0, 4);
+    if (upcoming.length === 0) { el.innerHTML = '<div class="empty">No upcoming tests.</div>'; return; }
+
+    el.innerHTML = upcoming.map(t => {
+      const days = daysUntil(t.due_date);
+      const soonClass = days <= 3 ? 'soon' : '';
+      const name = (t.subject_name || '').toLowerCase();
+      const icon = Object.entries(testIcons).find(([k]) => name.includes(k))?.[1] ?? testIcons.default;
+      return `
+        <div class="test-item">
+          <div class="test-icon">${icon}</div>
+          <div>
+            <div class="assignment-subject">${esc(t.subject_name || '')}</div>
+            <div class="assignment-title">${esc(t.title)}</div>
+          </div>
+          <div class="test-days ${soonClass}">${relDue(t.due_date)}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Calendar ─────────────────────────────────────────────────────────────────
+  const CAL_COLOR = { homework: '#38bdf8', test: '#f87171' };
+
+  function renderCalendar() {
+    const label = new Date(calYear, calMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    document.getElementById('calMonthLabel').textContent = label;
+
+    const grid = document.getElementById('calGrid');
+    const today = new Date();
+    const firstDay = new Date(calYear, calMonth, 1);
+    let startDow = firstDay.getDay();
+    startDow = startDow === 0 ? 6 : startDow - 1;
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+    const allItems = getFilteredItems();
+    const itemsByDay = {};
+    allItems.forEach(item => {
+      const d = new Date(item.due_date);
+      if (d.getFullYear() === calYear && d.getMonth() === calMonth) {
+        const day = d.getDate();
+        if (!itemsByDay[day]) itemsByDay[day] = [];
+        itemsByDay[day].push(item);
+      }
+    });
+
+    let html = '';
+    for (let i = 0; i < startDow; i++) html += `<div style="min-height:70px;"></div>`;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const isToday = d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear();
+      const items = itemsByDay[d] || [];
+      const extra = items.length > 2 ? items.length - 2 : 0;
+      const borderC = isToday ? 'var(--g2)' : 'var(--border)';
+      const baseBg  = isToday ? 'rgba(56,189,248,0.04)' : 'var(--bg2)';
+      const pills = items.slice(0,2).map(it => {
+        const col = CAL_COLOR[it.type] || '#888';
+        const label = esc((it.subject_name ? it.subject_name + ': ' : '') + it.title);
+        return `<div style="display:flex;align-items:center;gap:3px;padding:1px 3px;border-radius:4px;background:${col}18;margin-bottom:2px;overflow:hidden;">
+          <div style="width:5px;height:5px;border-radius:50%;background:${col};flex-shrink:0;"></div>
+          <div style="font-size:9px;color:${col};font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${label}</div>
+        </div>`;
+      }).join('');
+      html += `<div class="cal-cell" onclick="calDayClick(${d})"
+        style="background:${baseBg};border-color:${borderC};"
+        onmouseover="this.style.borderColor='var(--border-accent)'"
+        onmouseout="this.style.borderColor='${borderC}'">
+        <div style="font-size:11px;font-weight:${isToday ? 700 : 500};color:${isToday ? 'var(--g2)' : 'var(--text3)'};margin-bottom:3px;">${d}</div>
+        ${pills}
+        ${extra > 0 ? `<div style="font-size:9px;color:var(--text3);padding:0 2px;">+${extra}</div>` : ''}
+      </div>`;
+    }
+
+    const total = startDow + daysInMonth;
+    const remainder = total % 7 === 0 ? 0 : 7 - (total % 7);
+    for (let d = 1; d <= remainder; d++) html += `<div style="min-height:70px;"></div>`;
+
+    grid.innerHTML = html;
+    document.getElementById('calDetail').style.display = 'none';
+  }
+
+  function calDayClick(day) {
+    const items = getFilteredItems().filter(it => {
+      const d = new Date(it.due_date);
+      return d.getFullYear() === calYear && d.getMonth() === calMonth && d.getDate() === day;
+    });
+    const detail = document.getElementById('calDetail');
+    if (items.length === 0) { detail.style.display = 'none'; return; }
+    const date = new Date(calYear, calMonth, day).toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+    document.getElementById('calDetailTitle').textContent = date;
+    document.getElementById('calDetailItems').innerHTML = items.map(it => {
+      const col = CAL_COLOR[it.type] || '#888';
+      return `<div class="cal-event">
+        <div style="width:8px;height:8px;border-radius:50%;background:${col};flex-shrink:0;"></div>
+        <span style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:600;width:60px;">${esc(it.type)}</span>
+        <span>${esc(it.subject_name || '')} — ${esc(it.title)}</span>
+      </div>`;
+    }).join('');
+    detail.style.display = 'block';
+  }
+
+  function getFilteredItems() {
+    if (calFilter === 'homework') return hwData;
+    if (calFilter === 'tests') return testData;
+    return [...hwData, ...testData];
+  }
+
+  function setCalFilter(f, btn) {
+    calFilter = f;
+    document.querySelectorAll('#pane-calendar .mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCalendar();
+  }
+
+  function calNav(dir) {
+    calMonth += dir;
+    if (calMonth > 11) { calMonth = 0; calYear++; }
+    if (calMonth < 0) { calMonth = 11; calYear--; }
+    renderCalendar();
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    document.getElementById('pane-overview').style.display = tab === 'overview' ? '' : 'none';
+    document.getElementById('pane-calendar').style.display = tab === 'calendar' ? '' : 'none';
+    document.getElementById('tab-overview').classList.toggle('active', tab === 'overview');
+    document.getElementById('tab-calendar').classList.toggle('active', tab === 'calendar');
+    if (tab === 'calendar') renderCalendar();
+  }
+
+  // ── Theme ────────────────────────────────────────────────────────────────────
+  function setTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    document.getElementById('themeIcon').setAttribute('href', theme === 'dark' ? '#ic-moon' : '#ic-sun');
+    localStorage.setItem('theme', theme);
+  }
+  function toggleTheme() {
+    setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function daysUntil(iso) {
+    const now = new Date(); now.setHours(0,0,0,0);
+    const d = new Date(iso); d.setHours(0,0,0,0);
+    return Math.round((d - now) / 86400000);
+  }
+
+  function relDue(iso) {
+    const d = daysUntil(iso);
+    if (d < 0)  return 'Overdue';
+    if (d === 0) return 'Today';
+    if (d === 1) return 'Tomorrow';
+    return `In ${d}d.`;
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  boot();
+
+
+</script>

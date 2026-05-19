@@ -1,0 +1,398 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-activity"></use></svg>
+<span class="topbar-title">Server Performance</span>
+<div class="topbar-right">
+<div class="icon-btn" id="refreshBtn" onclick="refresh()" title="Refresh now">
+<svg class="icon icon-18"><use href="#ic-refresh"></use></svg>
+</div>
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"></use></svg></div>
+</div>
+</div>
+<div class="content">
+<div class="refresh-row">
+<div class="pulse"></div>
+<span id="refreshLabel">Auto-refreshes every second</span>
+</div>
+<!-- History graph -->
+<div class="history-card">
+<div class="history-header">
+<span class="history-title">Last 60 seconds</span>
+<div class="history-legend">
+<div class="legend-item"><div class="legend-dot" style="background:#3dd68c"></div>CPU</div>
+<div class="legend-item"><div class="legend-dot" style="background:#38bdf8"></div>RAM</div>
+<div class="legend-item"><div class="legend-dot" style="background:#a855f7"></div>Disk</div>
+</div>
+</div>
+<canvas height="140" id="histCanvas"></canvas>
+</div>
+<!-- Metrics cards -->
+<div class="metrics-grid">
+<!-- CPU -->
+<div class="metric-card" id="card-cpu">
+<div class="metric-header">
+<div class="metric-icon" style="background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15))">
+<svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-cpu"></use></svg>
+</div>
+<div>
+<div class="metric-title">CPU</div>
+<div class="metric-sub" id="cpu-sub">Loading…</div>
+</div>
+</div>
+<div class="gauge-wrap">
+<div class="gauge-top">
+<span class="gauge-label">Overall</span>
+<span class="gauge-val" id="cpu-pct">—</span>
+</div>
+<div class="gauge-bar"><div class="gauge-fill fill-green" id="cpu-bar" style="width:0%"></div></div>
+</div>
+<div class="core-grid" id="core-grid"></div>
+</div>
+<!-- RAM -->
+<div class="metric-card" id="card-ram">
+<div class="metric-header">
+<div class="metric-icon" style="background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(110,231,183,0.15))">
+<svg class="icon icon-18" style="color:var(--g2)"><use href="#ic-database"></use></svg>
+</div>
+<div>
+<div class="metric-title">Memory (RAM)</div>
+<div class="metric-sub" id="ram-sub">Loading…</div>
+</div>
+</div>
+<div class="gauge-wrap">
+<div class="gauge-top">
+<span class="gauge-label">Used</span>
+<span class="gauge-val" id="ram-pct">—</span>
+</div>
+<div class="gauge-bar"><div class="gauge-fill fill-blue" id="ram-bar" style="width:0%"></div></div>
+</div>
+<div class="gauge-details">
+<div class="gauge-detail">Used <span id="ram-used">—</span> GB</div>
+<div class="gauge-detail">Free <span id="ram-free">—</span> GB</div>
+<div class="gauge-detail">Total <span id="ram-total">—</span> GB</div>
+</div>
+</div>
+<!-- Disk -->
+<div class="metric-card" id="card-disk">
+<div class="metric-header">
+<div class="metric-icon" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(61,214,140,0.15))">
+<svg class="icon icon-18" style="color:#a855f7"><use href="#ic-hdd"></use></svg>
+</div>
+<div>
+<div class="metric-title">Disk</div>
+<div class="metric-sub" id="disk-sub">Root filesystem</div>
+</div>
+</div>
+<div class="gauge-wrap">
+<div class="gauge-top">
+<span class="gauge-label">Used</span>
+<span class="gauge-val" id="disk-pct">—</span>
+</div>
+<div class="gauge-bar"><div class="gauge-fill fill-purple" id="disk-bar" style="width:0%"></div></div>
+</div>
+<div class="gauge-details">
+<div class="gauge-detail">Used <span id="disk-used">—</span> GB</div>
+<div class="gauge-detail">Free <span id="disk-free">—</span> GB</div>
+<div class="gauge-detail">Total <span id="disk-total">—</span> GB</div>
+</div>
+</div>
+<!-- Flask process -->
+<div class="metric-card" id="card-proc">
+<div class="metric-header">
+<div class="metric-icon" style="background:linear-gradient(135deg,rgba(251,191,36,0.15),rgba(248,113,113,0.15))">
+<svg class="icon icon-18" style="color:#fbbf24"><use href="#ic-zap"></use></svg>
+</div>
+<div>
+<div class="metric-title">Flask Process</div>
+<div class="metric-sub">Armu server RAM</div>
+</div>
+</div>
+<div style="margin-top:8px;">
+<div id="proc-mem" style="font-size:30px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;">—</div>
+<div style="font-size:12px;color:var(--text3);margin-top:4px;">MB resident memory</div>
+</div>
+</div>
+</div>
+<!-- Ollama AI -->
+<div class="section-head">
+<svg class="icon icon-20" style="color:#a855f7"><use href="#ic-zap"></use></svg>
+<span class="section-title">Ollama AI</span>
+<span class="status-pill" id="ollama-status"><span class="dot"></span> Checking…</span>
+<span id="ollama-url" style="font-size:12px;color:var(--text3);margin-left:4px;"></span>
+</div>
+<div class="model-table" id="modelTable">
+<div class="model-row header">
+<span>Model</span>
+<span class="model-stat">RAM</span>
+<span class="model-stat">VRAM</span>
+<span class="model-stat">Expires</span>
+</div>
+<div class="model-empty">Checking Ollama…</div>
+</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+  drawHistory();
+}
+window.addEventListener('resize', drawHistory);
+
+// ── History ──────────────────────────────────────────────────────────────────
+const HISTORY = 60;
+const hist = { cpu: [], ram: [], disk: [] };
+
+function pushHistory(cpu, ram, disk) {
+  hist.cpu.push(cpu);
+  hist.ram.push(ram);
+  hist.disk.push(disk);
+  if (hist.cpu.length  > HISTORY) hist.cpu.shift();
+  if (hist.ram.length  > HISTORY) hist.ram.shift();
+  if (hist.disk.length > HISTORY) hist.disk.shift();
+}
+
+function drawHistory() {
+  const canvas = document.getElementById('histCanvas');
+  if (!canvas) return;
+
+  // Match CSS pixel width
+  const rect = canvas.getBoundingClientRect();
+  const dpr  = window.devicePixelRatio || 1;
+  canvas.width  = rect.width  * dpr;
+  canvas.height = canvas.height || 140 * dpr;
+  const W = canvas.width;
+  const H = canvas.height;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // Dark background
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+  const bg     = isDark ? '#1a1a1a' : '#f5f7fa';
+  const grid   = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+  const lblClr = isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.3)';
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  const PAD_L = 36 * dpr, PAD_R = 10 * dpr, PAD_T = 10 * dpr, PAD_B = 20 * dpr;
+  const gW = W - PAD_L - PAD_R;
+  const gH = H - PAD_T - PAD_B;
+
+  // Grid lines at 0, 25, 50, 75, 100 %
+  ctx.font = `${10 * dpr}px DM Sans, sans-serif`;
+  ctx.fillStyle = lblClr;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  [0, 25, 50, 75, 100].forEach(v => {
+    const y = PAD_T + gH * (1 - v / 100);
+    ctx.strokeStyle = grid;
+    ctx.lineWidth = dpr;
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(PAD_L + gW, y); ctx.stroke();
+    ctx.fillText(v + '%', PAD_L - 5 * dpr, y);
+  });
+
+  // X-axis time labels
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = lblClr;
+  [-60, -45, -30, -15, 0].forEach(sec => {
+    const frac = (sec + 60) / 60;
+    const x = PAD_L + gW * frac;
+    ctx.fillText(sec === 0 ? 'now' : sec + 's', x, PAD_T + gH + 4 * dpr);
+  });
+
+  // Draw a series
+  function drawLine(data, color, alpha) {
+    if (data.length < 2) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2 * dpr;
+    ctx.lineJoin    = 'round';
+    ctx.lineCap     = 'round';
+
+    // Filled area
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = PAD_L + gW * (i / (HISTORY - 1));
+      const y = PAD_T + gH * (1 - v / 100);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    const endX = PAD_L + gW * ((data.length - 1) / (HISTORY - 1));
+    ctx.lineTo(endX, PAD_T + gH);
+    ctx.lineTo(PAD_L, PAD_T + gH);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, PAD_T, 0, PAD_T + gH);
+    grad.addColorStop(0,   color.replace(')', ', 0.18)').replace('rgb', 'rgba'));
+    grad.addColorStop(1,   color.replace(')', ', 0)').replace('rgb', 'rgba'));
+    ctx.fillStyle = grad;
+    ctx.globalAlpha = alpha * 0.6;
+    ctx.fill();
+
+    // Line on top
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = PAD_L + gW * (i / (HISTORY - 1));
+      const y = PAD_T + gH * (1 - v / 100);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Pad shorter arrays to HISTORY slots (left-align with gaps at start)
+  function padded(arr) {
+    const out = new Array(HISTORY).fill(null);
+    arr.forEach((v, i) => { out[HISTORY - arr.length + i] = v; });
+    return out.filter(v => v !== null);
+  }
+
+  drawLine(padded(hist.disk), '#a855f7', 0.7);
+  drawLine(padded(hist.ram),  '#38bdf8', 0.85);
+  drawLine(padded(hist.cpu),  '#3dd68c', 1);
+}
+
+function fillColor(pct) {
+  if (pct >= 85) return 'fill-red';
+  if (pct >= 60) return 'fill-yellow';
+  return null;
+}
+
+function setGauge(barId, pctElId, pct, defaultClass) {
+  const bar = document.getElementById(barId);
+  const el  = document.getElementById(pctElId);
+  if (!bar || !el) return;
+  bar.style.width = pct + '%';
+  const col = fillColor(pct) || defaultClass;
+  bar.className = 'gauge-fill ' + col;
+  el.textContent = pct.toFixed(1) + '%';
+}
+
+function timeTo(iso) {
+  if (!iso) return '—';
+  const diff = (new Date(iso) - Date.now()) / 1000;
+  if (diff <= 0) return 'idle';
+  if (diff < 60) return Math.round(diff) + 's';
+  return Math.round(diff / 60) + 'm';
+}
+
+function render(d) {
+  // Record history and redraw graph
+  pushHistory(d.cpu.percent, d.ram.percent, d.disk.percent);
+  drawHistory();
+
+  // CPU overall
+  setGauge('cpu-bar', 'cpu-pct', d.cpu.percent, 'fill-green');
+  document.getElementById('cpu-sub').textContent =
+    d.cpu.cores + ' cores' + (d.cpu.freq_mhz ? ' · ' + (d.cpu.freq_mhz / 1000).toFixed(2) + ' GHz' : '');
+
+  // Per-core bars
+  const grid = document.getElementById('core-grid');
+  const cores = d.cpu.per_core || [];
+  if (grid.children.length !== cores.length) {
+    grid.innerHTML = cores.map((_, i) => `
+      <div class="core-cell">
+        <div class="core-bar-wrap">
+          <div class="core-bar-fill" id="core-${i}" style="height:0%"></div>
+        </div>
+        <div class="core-label">C${i}</div>
+        <div class="core-val" id="core-val-${i}">0%</div>
+      </div>`).join('');
+  }
+  cores.forEach((pct, i) => {
+    const bar = document.getElementById(`core-${i}`);
+    const val = document.getElementById(`core-val-${i}`);
+    if (!bar || !val) return;
+    const col = pct >= 85 ? '#f87171' : pct >= 60 ? '#fbbf24' : 'var(--g1)';
+    bar.style.height = Math.max(pct, 2) + '%';
+    bar.style.background = col;
+    val.textContent = Math.round(pct) + '%';
+  });
+
+  // RAM
+  setGauge('ram-bar', 'ram-pct', d.ram.percent, 'fill-blue');
+  document.getElementById('ram-sub').textContent  = d.ram.total_gb + ' GB total';
+  document.getElementById('ram-used').textContent  = d.ram.used_gb;
+  document.getElementById('ram-free').textContent  = d.ram.avail_gb;
+  document.getElementById('ram-total').textContent = d.ram.total_gb;
+
+  // Disk
+  setGauge('disk-bar', 'disk-pct', d.disk.percent, 'fill-purple');
+  document.getElementById('disk-used').textContent  = d.disk.used_gb;
+  document.getElementById('disk-free').textContent  = d.disk.free_gb;
+  document.getElementById('disk-total').textContent = d.disk.total_gb;
+
+  // Flask process
+  document.getElementById('proc-mem').textContent = d.process_mem_mb;
+
+  // Ollama
+  const pill = document.getElementById('ollama-status');
+  if (d.ollama.reachable) {
+    pill.className = 'status-pill status-ok';
+    pill.innerHTML = '<span class="dot"></span> Connected';
+  } else {
+    pill.className = 'status-pill status-err';
+    pill.innerHTML = '<span class="dot"></span> Unreachable';
+  }
+  document.getElementById('ollama-url').textContent = d.ollama.url;
+
+  const table = document.getElementById('modelTable');
+  const models = d.ollama.models || [];
+  const headerRow = `<div class="model-row header"><span>Model</span><span class="model-stat">RAM</span><span class="model-stat">VRAM</span><span class="model-stat">Expires</span></div>`;
+  if (models.length === 0) {
+    const msg = d.ollama.reachable ? 'No models currently loaded' : 'Cannot reach Ollama';
+    table.innerHTML = headerRow + `<div class="model-empty">${msg}</div>`;
+  } else {
+    const rows = models.map(m => `
+      <div class="model-row">
+        <span class="model-name">${esc(m.name)}</span>
+        <span class="model-stat">${m.size_gb} GB</span>
+        <span class="model-stat">${m.vram_gb > 0 ? m.vram_gb + ' GB' : '—'}</span>
+        <span class="model-stat">${timeTo(m.expires_at)}</span>
+      </div>`).join('');
+    table.innerHTML = headerRow + rows;
+  }
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+}
+
+let fetching = false;
+async function refresh() {
+  if (fetching) return;
+  fetching = true;
+  try {
+    const d = await fetch('/api/admin/performance').then(r => r.ok ? r.json() : null);
+    if (d) render(d);
+    document.getElementById('refreshLabel').textContent =
+      'Last updated ' + new Date().toLocaleTimeString();
+  } catch (_) {}
+  fetching = false;
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  
+
+  await refresh();
+  setInterval(refresh, 1000);
+}
+boot();
+
+
+</script>

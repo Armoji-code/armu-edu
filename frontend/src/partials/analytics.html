@@ -1,0 +1,137 @@
+
+<div class="topbar">
+<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-chart"></use></svg>
+<span class="topbar-title">Analytics</span>
+<div class="topbar-right">
+<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+</div>
+</div>
+</div>
+<div class="content">
+<div class="tab-row" id="subjectTabs"></div>
+<div id="analyticsContent" style="color:var(--text3);font-size:13px;">Loading…</div>
+</div>
+
+<script>
+
+
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
+  if (currentData) renderSubject(currentData[activeIndex]);
+}
+
+let analyticsData = [];
+let activeIndex  = 0;
+let currentData  = null;
+
+function gradeColor(score) {
+  if (score === null) return 'var(--text3)';
+  if (score >= 90) return '#3dd68c';
+  if (score >= 75) return '#38bdf8';
+  if (score >= 60) return '#fbbf24';
+  if (score >= 50) return '#fb923c';
+  return '#f87171';
+}
+
+function gradeLetter(score) {
+  if (score === null) return '—';
+  if (score >= 90) return 'A';
+  if (score >= 75) return 'B';
+  if (score >= 60) return 'C';
+  if (score >= 50) return 'D';
+  return 'F';
+}
+
+function renderSubject(s) {
+  const dist = s.distribution;
+  const maxCount = Math.max(...Object.values(dist), 1);
+  const grades = ['A','B','C','D','F'];
+  const gradeColors = {A:'#3dd68c',B:'#38bdf8',C:'#fbbf24',D:'#fb923c',F:'#f87171'};
+
+  const content = document.getElementById('analyticsContent');
+  content.innerHTML = `
+    <div class="stat-row">
+      <div class="stat-card"><div class="stat-label">Class Average</div><div class="stat-val" style="color:${gradeColor(s.avg)}">${s.avg !== null ? s.avg : '—'}</div></div>
+      <div class="stat-card"><div class="stat-label">Assignments</div><div class="stat-val">${s.assignment_count}</div></div>
+      <div class="stat-card"><div class="stat-label">Grades Recorded</div><div class="stat-val">${s.graded_count}</div></div>
+      <div class="stat-card"><div class="stat-label">Students</div><div class="stat-val">${s.student_count}</div></div>
+    </div>
+
+    <div class="section-title">Grade Distribution</div>
+    <div class="dist-grid">
+      ${grades.map(g => {
+        const cnt = dist[g] || 0;
+        const pct = Math.round(cnt / maxCount * 100);
+        return `<div class="dist-card">
+          <div class="dist-grade grade-${g}" style="color:${gradeColors[g]}">${g}</div>
+          <div class="dist-count">${cnt} student${cnt !== 1 ? 's' : ''}</div>
+          <div class="dist-bar-wrap">
+            <div class="dist-bar" style="height:${Math.max(4, pct * 0.6)}px;background:${gradeColors[g]};opacity:0.8;"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <div class="section-title" style="margin-top:4px;">Per-Student Averages</div>
+    <div class="student-table">
+      <div class="st-row header"><div>Student</div><div style="text-align:center;">Avg</div><div style="text-align:center;">Grade</div></div>
+      ${s.per_student.map((st, i) => {
+        const col = gradeColor(st.avg);
+        return `<div class="st-row">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:22px;height:22px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#000;flex-shrink:0;">${i+1}</div>
+            <span style="font-size:13px;">${st.name}</span>
+            <span style="font-size:11px;color:var(--text3);">${st.count} grade${st.count !== 1 ? 's' : ''}</span>
+          </div>
+          <div style="text-align:center;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:${col};">${st.avg !== null ? st.avg : '—'}</div>
+          <div style="text-align:center;"><span class="score-pill" style="background:${col}22;color:${col};">${gradeLetter(st.avg)}</span></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+async function boot() {
+  const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
+  
+  
+  const initials = (me.name || me.email).split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  
+
+  analyticsData = await fetch('/api/teacher/analytics').then(r => r.json()).catch(() => []);
+  currentData = analyticsData;
+
+  if (!analyticsData.length) {
+    document.getElementById('analyticsContent').textContent = 'No subjects assigned yet.';
+    return;
+  }
+
+  const tabs = document.getElementById('subjectTabs');
+  tabs.innerHTML = analyticsData.map((s, i) =>
+    `<div class="tab${i === 0 ? ' active' : ''}" onclick="selectSubject(${i})">${s.subject_name} <span style="opacity:0.5;font-size:11px;">${s.class_name}</span></div>`
+  ).join('');
+
+  renderSubject(analyticsData[0]);
+}
+
+function selectSubject(i) {
+  activeIndex = i;
+  document.querySelectorAll('.tab').forEach((el, j) => el.classList.toggle('active', j === i));
+  renderSubject(analyticsData[i]);
+}
+
+boot();
+
+
+</script>
