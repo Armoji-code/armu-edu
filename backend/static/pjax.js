@@ -64,16 +64,8 @@
     document.querySelectorAll('.nav-item').forEach(el => {
       const href = el.getAttribute('href');
       if (!href) return;
-      const active = href === url || (href !== '/' && url.startsWith(href + '/'));
-      el.classList.toggle('active', active);
-      // Re-apply gradient to icon when active
-      const icon = el.querySelector('.nav-icon');
-      if (icon) {
-        icon.style.background = active ? 'var(--gradient-text)' : '';
-        icon.style['-webkit-background-clip'] = active ? 'text' : '';
-        icon.style['-webkit-text-fill-color'] = active ? 'transparent' : '';
-        icon.style['background-clip'] = active ? 'text' : '';
-      }
+      // Exact match only — no startsWith, so /teacher never stays lit on /teacher/classes
+      el.classList.toggle('active', href === url);
     });
   }
 
@@ -129,4 +121,7 @@
 
   // Record starting page so back button works from the first page
   history.replaceState({ pjax: location.pathname }, '', location.pathname);
+
+  // Correct any hardcoded active class in the HTML to match the actual URL
+  updateActiveNav(location.pathname);
 })();
