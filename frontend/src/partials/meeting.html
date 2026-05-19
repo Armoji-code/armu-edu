@@ -31,37 +31,45 @@
 </div>
 <!-- In-call overlay -->
 <div class="call-overlay" id="callOverlay">
-<div class="call-topbar">
-<svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-meeting"></use></svg>
-<span class="call-title" id="callTitle">Meeting</span>
-<span class="call-duration" id="callDuration"></span>
-<div class="call-spacer"></div>
-</div>
-<div class="call-body">
-<div class="video-grid" id="videoGrid"></div>
-<div class="call-sidebar" id="callSidebar">
-<div class="call-sidebar-title">Participants</div>
-<div id="participantList"></div>
-</div>
-</div>
-<div class="call-controls">
-<div class="ctrl-wrap">
-<button class="ctrl-btn on" id="btnMic" onclick="toggleMic()">🎤</button>
-<div class="ctrl-label">Mic</div>
-</div>
-<div class="ctrl-wrap">
-<button class="ctrl-btn on" id="btnCam" onclick="toggleCam()">📷</button>
-<div class="ctrl-label">Camera</div>
-</div>
-<div class="ctrl-wrap">
-<button class="ctrl-btn on" id="btnScreen" onclick="toggleScreen()">🖥</button>
-<div class="ctrl-label">Share</div>
-</div>
-<div class="ctrl-wrap">
-<button class="ctrl-btn leave" onclick="leaveMeeting()">📵</button>
-<div class="ctrl-label" style="color:#ef4444">Leave</div>
-</div>
-</div>
+  <div class="call-topbar">
+    <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-meeting"/></svg>
+    <span class="call-title" id="callTitle">Meeting</span>
+    <span class="call-duration" id="callDuration"></span>
+    <div class="call-spacer"></div>
+  </div>
+  <div class="call-body">
+    <div class="video-grid" id="videoGrid"></div>
+    <div class="call-sidebar" id="callSidebar">
+      <div class="call-sidebar-title">Participants</div>
+      <div id="participantList"></div>
+    </div>
+  </div>
+  <div class="call-controls">
+    <div class="ctrl-wrap">
+      <button class="ctrl-btn on" id="btnMic" onclick="toggleMic()">
+        <svg class="icon icon-18"><use href="#ic-mic"/></svg>
+      </button>
+      <div class="ctrl-label">Mic</div>
+    </div>
+    <div class="ctrl-wrap">
+      <button class="ctrl-btn on" id="btnCam" onclick="toggleCam()">
+        <svg class="icon icon-18"><use href="#ic-cam"/></svg>
+      </button>
+      <div class="ctrl-label">Camera</div>
+    </div>
+    <div class="ctrl-wrap">
+      <button class="ctrl-btn on" id="btnScreen" onclick="toggleScreen()">
+        <svg class="icon icon-18"><use href="#ic-screen"/></svg>
+      </button>
+      <div class="ctrl-label">Share</div>
+    </div>
+    <div class="ctrl-wrap">
+      <button class="ctrl-btn leave" onclick="leaveMeeting()">
+        <svg class="icon icon-18"><use href="#ic-phone-off"/></svg>
+      </button>
+      <div class="ctrl-label" style="color:#ef4444">Leave</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -407,10 +415,10 @@ function renderLobby() {
 
   const grid = document.getElementById('meetingGrid');
   if (!meetings.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-      <div class="empty-icon">📹</div>
-      <div class="empty-title">No active meetings</div>
-      <div style="font-size:13px;margin-top:4px">Start one and share the link with your class.</div>
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:48px;text-align:center;color:var(--text3);">
+      <svg class="icon" style="width:40px;height:40px;opacity:0.25;margin-bottom:12px;"><use href="#ic-meeting"/></svg>
+      <div style="font-size:14px;font-weight:500;margin-bottom:6px;">No active meetings</div>
+      <div style="font-size:13px;">Start one and share the link with your class.</div>
     </div>`;
     return;
   }
