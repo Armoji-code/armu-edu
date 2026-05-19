@@ -152,6 +152,10 @@ def admin_get_settings(user):
         "tutor_top_p":                 float(s.get("tutor_top_p", 1.0)),
         "max_tokens":                  int(s.get("max_tokens", 2048)),
         "tutor_system_prompt":         s.get("tutor_system_prompt", ""),
+        # TURN server
+        "turn_url":                    s.get("turn_url",      cfg.get("TURN_URL", "")),
+        "turn_username":               s.get("turn_username", cfg.get("TURN_USERNAME", "")),
+        "turn_credential_set":         bool(s.get("turn_credential", cfg.get("TURN_CREDENTIAL", ""))),
     })
 
 
@@ -196,6 +200,13 @@ def admin_update_settings(user):
             settings["max_tokens"] = max(64, min(32768, int(data["max_tokens"])))
         except (TypeError, ValueError):
             pass
+
+    # TURN server
+    for key in ("turn_url", "turn_username"):
+        if key in data:
+            settings[key] = str(data[key]).strip()
+    if "turn_credential" in data and str(data["turn_credential"]).strip():
+        settings["turn_credential"] = str(data["turn_credential"]).strip()
 
     school.settings = settings
     db.session.commit()

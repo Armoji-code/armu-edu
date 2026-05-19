@@ -15,6 +15,10 @@ class Config:
     DEBUG        = os.environ.get("FLASK_DEBUG", "0") == "1"
     CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5000")
 
+    TURN_URL        = os.environ.get("TURN_URL",        "")
+    TURN_USERNAME   = os.environ.get("TURN_USERNAME",   "")
+    TURN_CREDENTIAL = os.environ.get("TURN_CREDENTIAL", "")
+
     AI_PROVIDER           = os.environ.get("AI_PROVIDER",           "ollama")
     OLLAMA_BASE_URL       = os.environ.get("OLLAMA_BASE_URL",       "http://localhost:11434")
     OLLAMA_TRACKER_MODEL  = os.environ.get("OLLAMA_TRACKER_MODEL",  "llama3.2:3b")

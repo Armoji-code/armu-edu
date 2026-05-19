@@ -9,10 +9,6 @@ _board_states = {}
 def on_connect():
     pass
 
-@socketio.on("disconnect")
-def on_disconnect():
-    pass
-
 @socketio.on("user_join")
 def on_user_join(data):
     """Client sends their user_id so we can push notifications to them."""

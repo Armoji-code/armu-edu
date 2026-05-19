@@ -218,10 +218,40 @@ fi
     echo "TRACKER_MODEL=${TRACK_MODEL}"
 } >> "$ENV_FILE"
 
+# ── TURN server (optional) ───────────────────────────────────────────────────
+printf "\n"
+hr
+printf "  ${BOLD}4. Video Calls (TURN server)${W}\n"
+hr
+printf "  Video calls use WebRTC with Google STUN by default — this works on most\n"
+printf "  school networks. For calls over home WiFi (symmetric NAT), a TURN relay\n"
+printf "  server is needed. You can configure one later in Admin → Settings.\n\n"
+ask "Configure a TURN server now? [y/N]:"
+read -r TURN_CHOICE
+if [[ "${TURN_CHOICE:-N}" =~ ^[Yy]$ ]]; then
+    ask "  TURN URL (e.g. turn:your-server.com:3478):"
+    read -r TURN_URL
+    ask "  TURN username:"
+    read -r TURN_USERNAME
+    ask "  TURN credential (password):"
+    read -r -s TURN_CREDENTIAL
+    printf "\n"
+    {
+        echo ""
+        echo "# TURN server for video calls"
+        [[ -n "${TURN_URL:-}" ]]        && echo "TURN_URL=${TURN_URL}"
+        [[ -n "${TURN_USERNAME:-}" ]]   && echo "TURN_USERNAME=${TURN_USERNAME}"
+        [[ -n "${TURN_CREDENTIAL:-}" ]] && echo "TURN_CREDENTIAL=${TURN_CREDENTIAL}"
+    } >> "$ENV_FILE"
+    ok "TURN server saved to .env."
+else
+    inf "Skipped. Configure TURN later in Admin → Settings → Video Call."
+fi
+
 # ── Database ──────────────────────────────────────────────────────────────────
 printf "\n"
 hr
-printf "  ${BOLD}4. Database${W}\n"
+printf "  ${BOLD}5. Database${W}\n"
 hr
 inf "Running database migrations…"
 (cd "$BACKEND" && FLASK_APP=app.py "$FLASK" db upgrade 2>&1 | grep -v UserWarning | grep -v "app = app_factory" || true)
@@ -230,7 +260,7 @@ ok "Database ready."
 # ── Demo accounts ─────────────────────────────────────────────────────────────
 printf "\n"
 hr
-printf "  ${BOLD}5. Demo accounts${W}\n"
+printf "  ${BOLD}6. Demo accounts${W}\n"
 hr
 printf "  Seeding creates:\n"
 printf "    · admin@test.com  / password  (admin)\n"

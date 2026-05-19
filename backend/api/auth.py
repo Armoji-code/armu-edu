@@ -17,8 +17,9 @@ def login():
     if not user or not user.check_password(password):
         return jsonify({"error": "invalid credentials"}), 401
 
-    session["user_id"] = user.id
-    session.permanent = True
+    session["user_id"]   = user.id
+    session["user_name"] = user.name
+    session.permanent    = True
     return jsonify(user.to_dict())
 
 @blueprint.route("/auth/logout", methods=["POST"])

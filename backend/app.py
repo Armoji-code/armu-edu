@@ -31,7 +31,8 @@ def create_app(config=Config):
     from api import blueprint as api_bp
     app.register_blueprint(api_bp, url_prefix="/api")
 
-    import websocket  # registers SocketIO event handlers
+    import websocket          # registers SocketIO event handlers
+    import websocket.meeting   # registers meeting signaling handlers
 
     @app.route("/")
     @app.route("/login")
@@ -157,6 +158,10 @@ def create_app(config=Config):
     @app.route("/librarian/loans")
     def librarian_loans_page():
         return send_from_directory(FRONTEND_DIR, "librarian_loans.html")
+
+    @app.route("/meeting")
+    def meeting_page():
+        return send_from_directory(FRONTEND_DIR, "meeting.html")
 
     @app.route("/static/<path:filename>")
     def serve_static(filename):
