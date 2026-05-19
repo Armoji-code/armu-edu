@@ -610,10 +610,10 @@ function joinRoom(newRoom){
   if(roomMode === 'group'){
     groupCode = room.replace('group_','');
     document.getElementById('room-code-val').textContent = groupCode;
-    window.location.hash = groupCode;
+    history.replaceState(history.state, '', location.pathname + '#' + groupCode);
     localStorage.setItem('wb_own_hash', groupCode);  // mark as ours so reload stays on personal
   } else {
-    history.replaceState(null, '', window.location.pathname);  // clear hash when going personal
+    history.replaceState(history.state, '', location.pathname);  // clear hash when going personal
     localStorage.removeItem('wb_own_hash');
   }
   strokes = [];

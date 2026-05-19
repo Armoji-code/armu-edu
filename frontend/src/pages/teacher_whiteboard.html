@@ -594,10 +594,10 @@ function joinRoom(newRoom){
   if(roomMode === 'group'){
     groupCode = room.replace('group_','');
     document.getElementById('room-code-val').textContent = groupCode;
-    window.location.hash = groupCode;
+    history.replaceState(history.state, '', location.pathname + '#' + groupCode);
     localStorage.setItem('wb_own_hash', groupCode);
   } else {
-    history.replaceState(null, '', window.location.pathname);
+    history.replaceState(history.state, '', location.pathname);
     localStorage.removeItem('wb_own_hash');
   }
   strokes = [];
