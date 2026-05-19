@@ -135,6 +135,10 @@ def create_app(config=Config):
     def teacher_profile_page():
         return send_from_directory(FRONTEND_DIR, "teacher_profile.html")
 
+    @app.route("/teacher/whiteboard")
+    def teacher_whiteboard_page():
+        return send_from_directory(FRONTEND_DIR, "teacher_whiteboard.html")
+
     @app.route("/admin")
     def admin_dashboard_page():
         return send_from_directory(FRONTEND_DIR, "admin_dashboard.html")
