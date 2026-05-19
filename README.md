@@ -17,8 +17,8 @@ Licensed under **AGPL-3.0** — free to use, modify, and self-host. Distribution
 The quickest way to get running is the interactive setup script:
 
 ```bash
-git clone https://github.com/your-org/armu
-cd armu
+git clone https://github.com/Armoji-code/armu-edu
+cd armu-edu
 bash setup.sh
 ```
 
