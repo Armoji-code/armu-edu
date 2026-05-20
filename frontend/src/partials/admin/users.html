@@ -25,6 +25,54 @@
 </div>
 </div>
 
+<style>
+.usr-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:200;padding:16px;}
+.usr-backdrop.open{display:flex;}
+.usr-modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:440px;max-width:100%;box-shadow:var(--shadow);}
+.usr-field{margin-bottom:14px;}
+.usr-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;display:block;}
+.usr-input,.usr-select{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color var(--transition);}
+.usr-input:focus,.usr-select:focus{border-color:var(--border-accent);}
+</style>
+
+<div class="usr-backdrop" id="userModal" onclick="if(event.target===this)closeModal()">
+  <div class="usr-modal">
+    <div class="modal-title" id="modalTitle">Add User</div>
+    <input type="hidden" id="editId"/>
+    <div class="usr-field">
+      <label class="usr-label">Name</label>
+      <input class="usr-input" id="fName" type="text" placeholder="Full name"/>
+    </div>
+    <div class="usr-field">
+      <label class="usr-label">Email</label>
+      <input class="usr-input" id="fEmail" type="email" placeholder="email@school.com"/>
+    </div>
+    <div class="usr-field">
+      <label class="usr-label">Role</label>
+      <select class="usr-select" id="fRole" onchange="toggleClassField()">
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+        <option value="admin">Admin</option>
+        <option value="librarian">Librarian</option>
+      </select>
+    </div>
+    <div class="usr-field" id="classRow">
+      <label class="usr-label">Class</label>
+      <select class="usr-select" id="fClass">
+        <option value="">No class</option>
+      </select>
+    </div>
+    <div class="usr-field">
+      <label class="usr-label" id="pwLabel">Password</label>
+      <input class="usr-input" id="fPassword" type="password" placeholder="••••••••"/>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitUser()">Save</button>
+    </div>
+  </div>
+</div>
+
 <script>
 
 
@@ -156,7 +204,14 @@ async function boot() {
 
   renderUsers();
 }
+window.toggleTheme     = toggleTheme;
+window.setFilter       = setFilter;
+window.openCreate      = openCreate;
+window.openEdit        = openEdit;
+window.closeModal      = closeModal;
+window.toggleClassField = toggleClassField;
+window.submitUser      = submitUser;
+window.deleteUser      = deleteUser;
+
 boot();
-
-
 </script>
