@@ -30,6 +30,58 @@
 </div>
 </div>
 
+<!-- Create / Edit modal -->
+<style>
+.asn-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;z-index:200;padding:16px;}
+.asn-backdrop.open{display:flex;}
+.asn-modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:460px;max-width:100%;box-shadow:var(--shadow);}
+.asn-field{margin-bottom:14px;}
+.asn-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;display:block;}
+.asn-input,.asn-select,.asn-textarea{width:100%;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color var(--transition);}
+.asn-input:focus,.asn-select:focus,.asn-textarea:focus{border-color:var(--border-accent);}
+.asn-textarea{resize:vertical;min-height:72px;}
+.asn-row{display:flex;gap:10px;}
+.asn-row .asn-field{flex:1;}
+</style>
+<div class="asn-backdrop" id="asnModal" onclick="if(event.target===this)closeModal()">
+  <div class="asn-modal">
+    <div class="modal-title" id="asnModalTitle">New Assignment</div>
+    <input type="hidden" id="asnId"/>
+    <div class="asn-field">
+      <label class="asn-label">Title</label>
+      <input class="asn-input" id="asnTitle" placeholder="Assignment title" type="text"/>
+    </div>
+    <div class="asn-field">
+      <label class="asn-label">Description</label>
+      <textarea class="asn-textarea" id="asnDesc" placeholder="Optional description…"></textarea>
+    </div>
+    <div class="asn-row">
+      <div class="asn-field">
+        <label class="asn-label">Subject</label>
+        <select class="asn-select" id="asnSubject"></select>
+      </div>
+      <div class="asn-field">
+        <label class="asn-label">Type</label>
+        <select class="asn-select" id="asnType">
+          <option value="homework">Homework</option>
+          <option value="test">Test</option>
+          <option value="project">Project</option>
+          <option value="quiz">Quiz</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="asn-field">
+      <label class="asn-label">Due date</label>
+      <input class="asn-input" id="asnDue" type="datetime-local"/>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="asnSubmitBtn" onclick="submitAssignment()">Create</button>
+    </div>
+  </div>
+</div>
+
 <script>
 
 
