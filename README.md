@@ -152,6 +152,27 @@ All AI settings can also be changed at runtime via Admin → Settings.
 
 ---
 
+## Security
+
+### Data at rest
+
+The SQLite database is **not encrypted by default**. Anyone who obtains the file can read its contents. Passwords are bcrypt-hashed, but everything else (names, emails, grades, messages) is plaintext.
+
+The simplest protection for a self-hosted deployment is **full-disk encryption** on the server machine — the OS encrypts everything on the drive, so a stolen disk or file is unreadable without the login credentials.
+
+| OS | Built-in tool | Guide |
+|---|---|---|
+| Linux | LUKS (via `cryptsetup`) | [Arch Wiki — dm-crypt](https://wiki.archlinux.org/title/Dm-crypt/Encrypting_an_entire_system) |
+| Windows | BitLocker | [Microsoft Docs — BitLocker](https://support.microsoft.com/en-us/windows/turn-on-device-encryption-0c7b0e5c-9b8e-d5dc-f9ef-1aa6e1f4) |
+| macOS | FileVault | [Apple Support — FileVault](https://support.apple.com/en-us/102665) |
+
+For additional protection, also:
+- Restrict the database file to the server user: `chmod 600 armu.db`
+- Keep the server on a LAN and off the public internet
+- Back up the database to an encrypted location
+
+---
+
 ## Changelog
 
 ### v0.3
