@@ -29,7 +29,7 @@
 <!-- LEGEND -->
 <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
 <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Key:</div>
-<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.35);"></div>School Break</div>
+<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(var(--g2-rgb),0.18);border:1px solid rgba(var(--g2-rgb),0.35);"></div>School Break</div>
 <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.35);"></div>Missed Day</div>
 </div>
 <!-- NAV + VIEW TOGGLE -->
@@ -77,11 +77,12 @@ let userAddedEvents = [];
 const vacationRanges = [];
 
 // Event type config
+function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
 const TYPE_COLOR = {
-  homework:'#38bdf8', test:'#f87171', grade:'#3dd68c',
+  homework: cssVar('--g2') || '#38bdf8', test:'#f87171', grade: cssVar('--g1') || '#3dd68c',
   activity:'#a78bfa', service:'#34d399',
-  personal:'#8892b0', group:'#38bdf8',
-  school_vac:'#38bdf8', missed:'#f87171',
+  personal:'#8892b0', group: cssVar('--g2') || '#38bdf8',
+  school_vac: cssVar('--g2') || '#38bdf8', missed:'#f87171',
 };
 const TYPE_LABEL = {
   homework:'Homework', test:'Test', grade:'Grade',
@@ -95,8 +96,9 @@ const TYPE_ICON = {
   personal:'ic-user', group:'ic-groups',
   school_vac:'ic-school', missed:'ic-medical',
 };
+const g2rgb = getComputedStyle(document.documentElement).getPropertyValue('--g2-rgb').trim() || '56,189,248';
 const VAC_BG = {
-  school_vac:'rgba(56,189,248,0.07)',
+  school_vac:`rgba(${g2rgb},0.07)`,
   missed:'rgba(248,113,113,0.07)',
 };
 
@@ -198,7 +200,8 @@ function renderMonth() {
     const dayEvs  = evMap[key] || [];
     const vacEv   = dayEvs.find(e => e.isRange);
     const vacTint = vacEv ? (VAC_BG[vacEv.type] || '') : '';
-    const baseBg  = isSel ? 'rgba(61,214,140,0.07)' : isToday ? 'rgba(56,189,248,0.04)' : vacTint || 'var(--bg2)';
+    const g1rgb = getComputedStyle(document.documentElement).getPropertyValue('--g1-rgb').trim() || '61,214,140';
+    const baseBg  = isSel ? `rgba(${g1rgb},0.07)` : isToday ? `rgba(${g2rgb},0.04)` : vacTint || 'var(--bg2)';
     const borderC = isSel ? 'var(--g1)' : isToday ? 'var(--g2)' : vacEv ? vacEv.color + '55' : 'var(--border)';
     const extra   = dayEvs.length > 2 ? dayEvs.length - 2 : 0;
 

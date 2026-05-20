@@ -13,8 +13,8 @@
     --radius:14px;--radius-sm:8px;--sidebar-w:220px;
     --transition:0.2s cubic-bezier(0.4,0,0.2,1);
   }
-  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);--shadow-accent:0 4px 24px rgba(61,214,140,0.15);}
-  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);--shadow-accent:0 4px 24px rgba(61,214,140,0.2);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(var(--g1-rgb),0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);--shadow-accent:0 4px 24px rgba(var(--g1-rgb),0.15);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(var(--g1-rgb),0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);--shadow-accent:0 4px 24px rgba(var(--g1-rgb),0.2);}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;transition:background var(--transition),color var(--transition);}
 
@@ -27,7 +27,7 @@
   .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
   .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
   .nav-item:hover{background:var(--bg3);color:var(--text);}
-  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(var(--g1-rgb),0.12),rgba(var(--g2-rgb),0.12));border-color:var(--border-accent);color:var(--text);}
   .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
   .nav-icon{font-size:16px;width:20px;text-align:center;}.nav-icon svg{width:16px;height:16px;}
   .nav-badge{margin-left:auto;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;font-size:10px;font-weight:600;padding:2px 7px;border-radius:20px;min-width:20px;text-align:center;}
@@ -55,11 +55,11 @@
 
   /* FILTER CHIPS */
   .cal-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--bg3);color:var(--text3);cursor:pointer;transition:all var(--transition);user-select:none;}
-  .cal-chip.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .cal-chip.active{background:linear-gradient(135deg,rgba(var(--g1-rgb),0.12),rgba(var(--g2-rgb),0.12));border-color:var(--border-accent);color:var(--text);}
 
   /* VIEW TOGGLE */
   .mode-btn{padding:6px 16px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all var(--transition);font-family:'DM Sans',sans-serif;display:inline-flex;align-items:center;gap:5px;}
-  .mode-btn.active{background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));border-color:var(--border-accent);color:var(--text);}
+  .mode-btn.active{background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15));border-color:var(--border-accent);color:var(--text);}
 
   /* SEARCH */
   .search-wrap{flex:1;min-width:180px;position:relative;}
@@ -214,7 +214,7 @@
     <!-- LEGEND -->
     <div style="display:flex;gap:14px;align-items:center;margin-bottom:14px;flex-wrap:wrap;">
       <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Key:</div>
-      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.35);"></div>School Break</div>
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(var(--g2-rgb),0.18);border:1px solid rgba(var(--g2-rgb),0.35);"></div>School Break</div>
       <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.35);"></div>Missed Day</div>
       <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.35);"></div>Family Vacation</div>
     </div>
@@ -322,7 +322,7 @@ const TYPE_ICON = {
   school_vac:'ic-school', missed:'ic-medical', family_vac:'ic-plane',
 };
 const VAC_BG = {
-  school_vac:'rgba(56,189,248,0.07)',
+  school_vac:'rgba(var(--g2-rgb),0.07)',
   missed:'rgba(248,113,113,0.07)',
   family_vac:'rgba(167,139,250,0.08)',
 };
@@ -425,7 +425,7 @@ function renderMonth() {
     const dayEvs  = evMap[key] || [];
     const vacEv   = dayEvs.find(e => e.isRange);
     const vacTint = vacEv ? (VAC_BG[vacEv.type] || '') : '';
-    const baseBg  = isSel ? 'rgba(61,214,140,0.07)' : isToday ? 'rgba(56,189,248,0.04)' : vacTint || 'var(--bg2)';
+    const baseBg  = isSel ? 'rgba(var(--g1-rgb),0.07)' : isToday ? 'rgba(var(--g2-rgb),0.04)' : vacTint || 'var(--bg2)';
     const borderC = isSel ? 'var(--g1)' : isToday ? 'var(--g2)' : vacEv ? vacEv.color + '55' : 'var(--border)';
     const extra   = dayEvs.length > 2 ? dayEvs.length - 2 : 0;
 

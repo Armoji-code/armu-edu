@@ -256,7 +256,7 @@ function renderCal() {
     const dayGrades = allGrades.filter(g => g.created_at && g.created_at.startsWith(dateStr));
 
     const borderC = isSelected ? 'var(--g1)' : isToday ? 'var(--g2)' : 'var(--border)';
-    const baseBg  = isSelected ? 'rgba(61,214,140,0.07)' : isToday ? 'rgba(56,189,248,0.04)' : 'var(--bg2)';
+    const baseBg  = isSelected ? 'rgba(var(--g1-rgb),0.07)' : isToday ? 'rgba(var(--g2-rgb),0.04)' : 'var(--bg2)';
     const extra   = dayGrades.length > 2 ? dayGrades.length - 2 : 0;
 
     const pills = dayGrades.slice(0, 2).map(g => {

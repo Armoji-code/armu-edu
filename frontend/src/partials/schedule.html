@@ -127,7 +127,7 @@ function renderSchedule(apiData) {
       ? `<div class="sched-period-num">${period.label}</div><div class="sched-period-time">${period.time}</div>`
       : `<div class="sched-period-num">${period.label}</div><div class="sched-period-time">${period.time}</div>`;
     if (isCurPeriod) {
-      tc.style.background = 'linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.08))';
+      tc.style.background = 'linear-gradient(135deg,rgba(var(--g1-rgb),0.12),rgba(var(--g2-rgb),0.08))';
       tc.querySelector('.sched-period-num').style.color = 'var(--g1)';
     }
     row.appendChild(tc);
@@ -139,7 +139,7 @@ function renderSchedule(apiData) {
       cell.className = `sched-cell${isToday ? ' today-col' : ''}${isCur ? ' current-period' : ''}`;
 
       if (period.num === 'lunch') {
-        cell.style.cssText = `display:flex;align-items:center;padding:10px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);${isToday ? 'background:rgba(61,214,140,0.04);' : 'background:var(--bg3);'}`;
+        cell.style.cssText = `display:flex;align-items:center;padding:10px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);${isToday ? 'background:rgba(var(--g1-rgb),0.04);' : 'background:var(--bg3);'}`;
         cell.innerHTML = `<div style="font-size:11px;color:var(--text3);">${isToday ? '🍽 Lunch Break' : 'Lunch'}</div>`;
         row.appendChild(cell);
         return;

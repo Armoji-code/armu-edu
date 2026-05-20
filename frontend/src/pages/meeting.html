@@ -6,9 +6,9 @@
 <title>Armu — Meeting</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
 <style>
-  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
-  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
-  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
+  :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--g1-rgb:61,214,140;--g2-rgb:56,189,248;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(var(--g1-rgb),0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(var(--g1-rgb),0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;}
   .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
@@ -20,7 +20,7 @@
   .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
   .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;font-weight:400;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
   .nav-item:hover{background:var(--bg3);color:var(--text);}
-  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(var(--g1-rgb),0.12),rgba(var(--g2-rgb),0.12));border-color:var(--border-accent);color:var(--text);}
   .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
   .nav-icon{font-size:16px;width:20px;text-align:center;}
   .nav-badge{background:var(--g1);color:#fff;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:auto;}
@@ -85,7 +85,7 @@
   .video-grid{flex:1;display:grid;gap:6px;padding:10px;align-items:center;justify-items:center;}
   .video-tile{position:relative;background:#1a1a1a;border-radius:10px;overflow:hidden;width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
   .video-tile video{width:100%;height:100%;object-fit:cover;}
-  .video-tile.local{border:2px solid rgba(61,214,140,0.4);}
+  .video-tile.local{border:2px solid rgba(var(--g1-rgb),0.4);}
   .tile-label{position:absolute;bottom:8px;left:10px;font-size:12px;font-weight:500;color:#fff;background:rgba(0,0,0,0.55);padding:2px 8px;border-radius:6px;}
   .tile-avatar{width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#3dd68c,#38bdf8);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#fff;}
   .tile-muted{position:absolute;top:8px;right:8px;background:rgba(239,68,68,0.85);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;}

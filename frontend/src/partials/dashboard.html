@@ -280,7 +280,7 @@
       const items = itemsByDay[d] || [];
       const extra = items.length > 2 ? items.length - 2 : 0;
       const borderC = isToday ? 'var(--g2)' : 'var(--border)';
-      const baseBg  = isToday ? 'rgba(56,189,248,0.04)' : 'var(--bg2)';
+      const baseBg  = isToday ? 'rgba(var(--g2-rgb),0.04)' : 'var(--bg2)';
       const pills = items.slice(0,2).map(it => {
         const col = CAL_COLOR[it.type] || '#888';
         const label = esc((it.subject_name ? it.subject_name + ': ' : '') + it.title);

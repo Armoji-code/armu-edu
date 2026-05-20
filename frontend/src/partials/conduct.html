@@ -10,7 +10,7 @@
 </div>
 <div class="content">
 <!-- Score banner -->
-<div style="background:linear-gradient(135deg,rgba(61,214,140,0.08),rgba(56,189,248,0.08));border:1px solid var(--border-accent);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+<div style="background:linear-gradient(135deg,rgba(var(--g1-rgb),0.08),rgba(var(--g2-rgb),0.08));border:1px solid var(--border-accent);border-radius:var(--radius);padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
 <div style="text-align:center;flex-shrink:0;">
 <div id="banner-total" style="font-size:42px;font-weight:700;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;">—</div>
 <div style="font-size:11px;color:var(--text3);margin-top:4px;">Total Points</div>
@@ -165,8 +165,8 @@ function render(data) {
     const pts = e.points;
     const isPos = pts > 0, isNeg = pts < 0;
     const col    = isPos ? '#3dd68c' : isNeg ? '#f87171' : 'var(--text3)';
-    const bgCol  = isPos ? 'rgba(61,214,140,0.08)' : isNeg ? 'rgba(248,113,113,0.08)' : 'rgba(148,163,184,0.08)';
-    const border = isPos ? 'rgba(61,214,140,0.2)'  : isNeg ? 'rgba(248,113,113,0.2)'  : 'rgba(148,163,184,0.15)';
+    const bgCol  = isPos ? 'rgba(var(--g1-rgb),0.08)' : isNeg ? 'rgba(248,113,113,0.08)' : 'rgba(148,163,184,0.08)';
+    const border = isPos ? 'rgba(var(--g1-rgb),0.2)'  : isNeg ? 'rgba(248,113,113,0.2)'  : 'rgba(148,163,184,0.15)';
     const icon   = isPos ? '#ic-check' : isNeg ? '#ic-x' : '#ic-conduct';
     const date   = e.date ? new Date(e.date).toLocaleDateString('en-US', {month:'short',day:'numeric',year:'numeric'}) : '';
     return `<div style="display:flex;align-items:flex-start;gap:14px;padding:12px 14px;background:${bgCol};border:1px solid ${border};border-radius:var(--radius-sm);margin-bottom:8px;">

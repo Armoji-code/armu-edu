@@ -7,8 +7,8 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
 <style>
   :root{--g1:#3dd68c;--g2:#38bdf8;--g3:#6ee7b7;--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3));--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%);--radius:14px;--radius-sm:8px;--sidebar-w:220px;--transition:0.2s cubic-bezier(0.4,0,0.2,1);}
-  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(61,214,140,0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
-  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(61,214,140,0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
+  [data-theme="dark"]{--bg:#111111;--bg2:#1a1a1a;--bg3:#222222;--bg4:#2c2c2c;--border:rgba(255,255,255,0.08);--border-accent:rgba(var(--g1-rgb),0.2);--text:#f0f0f0;--text2:#888888;--text3:#444444;--card:#1a1a1a;--shadow:0 4px 24px rgba(0,0,0,0.5);}
+  [data-theme="light"]{--bg:#f5f7fa;--bg2:#ffffff;--bg3:#eef1f7;--bg4:#e4e8f2;--border:rgba(0,0,0,0.07);--border-accent:rgba(var(--g1-rgb),0.3);--text:#111827;--text2:#4b5563;--text3:#9ca3af;--card:#ffffff;--shadow:0 4px 24px rgba(0,0,0,0.08);}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;}
   .sidebar{width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;flex-shrink:0;}
@@ -19,7 +19,7 @@
   .nav-label{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;padding:0 8px;margin-bottom:6px;margin-top:12px;}
   .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all var(--transition);font-size:13.5px;color:var(--text2);border:1px solid transparent;margin-bottom:2px;text-decoration:none;}
   .nav-item:hover{background:var(--bg3);color:var(--text);}
-  .nav-item.active{background:linear-gradient(135deg,rgba(61,214,140,0.12),rgba(56,189,248,0.12));border-color:var(--border-accent);color:var(--text);}
+  .nav-item.active{background:linear-gradient(135deg,rgba(var(--g1-rgb),0.12),rgba(var(--g2-rgb),0.12));border-color:var(--border-accent);color:var(--text);}
   .nav-item.active .nav-icon{background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
   .nav-icon{font-size:16px;width:20px;text-align:center;}
   .sidebar-bottom{margin-top:auto;padding:16px 12px 0;border-top:1px solid var(--border);}
@@ -85,7 +85,7 @@
   .provider-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;}
   .provider-pill{padding:7px 16px;border-radius:100px;border:1px solid var(--border);background:var(--bg3);font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all var(--transition);}
   .provider-pill:hover{border-color:var(--border-accent);color:var(--text);}
-  .provider-pill.active{background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));border-color:var(--border-accent);color:var(--text);}
+  .provider-pill.active{background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15));border-color:var(--border-accent);color:var(--text);}
 
   /* ── Sliders ─────────────────────────────────────────────────────────── */
   .slider-row{display:flex;align-items:center;gap:12px;margin-bottom:4px;}
@@ -100,7 +100,7 @@
   .pull-row{display:flex;gap:8px;align-items:center;margin-top:12px;}
   .pull-input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:13px;color:var(--text);font-family:inherit;outline:none;transition:border-color var(--transition);}
   .pull-input:focus{border-color:var(--border-accent);}
-  .pull-btn{padding:8px 16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15));border:1px solid var(--border-accent);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity var(--transition);white-space:nowrap;}
+  .pull-btn{padding:8px 16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15));border:1px solid var(--border-accent);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity var(--transition);white-space:nowrap;}
   .pull-btn:disabled{opacity:0.4;cursor:not-allowed;}
   .pull-status{font-size:12px;color:var(--text3);margin-top:8px;min-height:18px;}
 
@@ -268,7 +268,7 @@ function renderAll(s) {
     <!-- School Name -->
     <div class="section" id="section-school">
       <div class="section-head">
-        <div class="section-icon" style="background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15))">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15))">
           <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-school"/></svg>
         </div>
         <div><div class="section-title">School</div><div class="section-desc">Basic school information</div></div>
@@ -282,7 +282,7 @@ function renderAll(s) {
     <!-- Page Visibility -->
     <div class="section" id="section-tabs">
       <div class="section-head">
-        <div class="section-icon" style="background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(110,231,183,0.15))">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(var(--g2-rgb),0.15),rgba(110,231,183,0.15))">
           <svg class="icon icon-18" style="color:var(--g2)"><use href="#ic-eye"/></svg>
         </div>
         <div><div class="section-title">Page Visibility</div><div class="section-desc">Hide nav tabs school-wide — students on hidden pages are redirected to Dashboard</div></div>
@@ -293,7 +293,7 @@ function renderAll(s) {
     <!-- AI Features (toggles) -->
     <div class="section" id="section-ai">
       <div class="section-head">
-        <div class="section-icon" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(61,214,140,0.15))">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(var(--g1-rgb),0.15))">
           <svg class="icon icon-18" style="color:#a855f7"><use href="#ic-cpu"/></svg>
         </div>
         <div><div class="section-title">AI Features</div><div class="section-desc">Enable or disable individual AI features school-wide</div></div>
@@ -304,7 +304,7 @@ function renderAll(s) {
     <!-- AI Configuration -->
     <div class="section" id="section-ai-config">
       <div class="section-head">
-        <div class="section-icon" style="background:linear-gradient(135deg,rgba(56,189,248,0.15),rgba(168,85,247,0.15))">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(var(--g2-rgb),0.15),rgba(168,85,247,0.15))">
           <svg class="icon icon-18" style="color:var(--g2)"><use href="#ic-cpu"/></svg>
         </div>
         <div><div class="section-title">AI Configuration</div><div class="section-desc">Choose provider, set API keys, models, and generation parameters</div></div>
@@ -417,7 +417,7 @@ function renderAll(s) {
     <!-- TURN Server -->
     <div class="section" id="section-turn">
       <div class="section-head">
-        <div class="section-icon" style="background:linear-gradient(135deg,rgba(61,214,140,0.15),rgba(56,189,248,0.15))">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15))">
           <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-meeting"/></svg>
         </div>
         <div><div class="section-title">Video Call (TURN Server)</div><div class="section-desc">Optional — needed for calls through strict NAT / home routers. Leave blank for STUN-only (works on most school networks).</div></div>
