@@ -23,7 +23,6 @@
 <div class="cal-chip active" data-type="group" onclick="toggleChip(this)"><svg class="icon icon-14"><use href="#ic-groups"></use></svg> Group</div>
 <div class="cal-chip active" data-type="school_vac" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-school"></use></svg> School Break</div>
 <div class="cal-chip active" data-type="missed" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-medical"></use></svg> Missed Day</div>
-<div class="cal-chip active" data-type="family_vac" onclick="toggleChip(this)"><svg class="icon icon-13"><use href="#ic-plane"></use></svg> Family Vacation</div>
 </div>
 <button class="btn-add-event" onclick="openModal()"><svg class="icon icon-14"><use href="#ic-plus"></use></svg> Add Event</button>
 </div>
@@ -32,7 +31,6 @@
 <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Key:</div>
 <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.35);"></div>School Break</div>
 <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.35);"></div>Missed Day</div>
-<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3);"><div style="width:12px;height:12px;border-radius:2px;background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.35);"></div>Family Vacation</div>
 </div>
 <!-- NAV + VIEW TOGGLE -->
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -69,7 +67,7 @@ let year = new Date().getFullYear();
 let month = new Date().getMonth();
 let view = 'month';
 let selected = null;
-let activeFilters = new Set(['homework','test','grade','activity','service','personal','group','school_vac','missed','family_vac']);
+let activeFilters = new Set(['homework','test','grade','activity','service','personal','group','school_vac','missed']);
 
 // API data
 let hwEvents = [], testEvents = [], gradeEvents = [], activityEvents = [], serviceEvents = [];
@@ -83,24 +81,23 @@ const TYPE_COLOR = {
   homework:'#38bdf8', test:'#f87171', grade:'#3dd68c',
   activity:'#a78bfa', service:'#34d399',
   personal:'#8892b0', group:'#38bdf8',
-  school_vac:'#38bdf8', missed:'#f87171', family_vac:'#a78bfa',
+  school_vac:'#38bdf8', missed:'#f87171',
 };
 const TYPE_LABEL = {
   homework:'Homework', test:'Test', grade:'Grade',
   activity:'Activity', service:'Service',
   personal:'Personal', group:'Group',
-  school_vac:'School Break', missed:'Missed Day', family_vac:'Family Vacation',
+  school_vac:'School Break', missed:'Missed Day',
 };
 const TYPE_ICON = {
   homework:'ic-book', test:'ic-pencil', grade:'ic-grades',
   activity:'ic-activities', service:'ic-heart',
   personal:'ic-user', group:'ic-groups',
-  school_vac:'ic-school', missed:'ic-medical', family_vac:'ic-plane',
+  school_vac:'ic-school', missed:'ic-medical',
 };
 const VAC_BG = {
   school_vac:'rgba(56,189,248,0.07)',
   missed:'rgba(248,113,113,0.07)',
-  family_vac:'rgba(167,139,250,0.08)',
 };
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
