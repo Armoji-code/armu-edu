@@ -70,6 +70,19 @@
 </div>
 </div>
 </div>
+<!-- Sign out -->
+<div class="card">
+<div class="card-title">Session</div>
+<div class="setting-row">
+  <div class="setting-info">
+    <div class="setting-label">Sign out</div>
+    <div class="setting-desc">You will be redirected to the login page</div>
+  </div>
+  <button class="btn btn-danger" onclick="logout()">
+    <svg class="icon icon-14"><use href="#ic-logout"></use></svg> Sign out
+  </button>
+</div>
+</div>
 <!-- Password -->
 <div class="card">
 <div class="card-title">Change Password</div>
@@ -282,7 +295,17 @@ async function boot() {
   document.getElementById('statGroups').textContent = Array.isArray(groups) ? groups.length : 0;
 }
 
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  location.href = '/login';
+}
+
+window.toggleTheme   = toggleTheme;
+window.startEditName = startEditName;
+window.saveName      = saveName;
+window.cancelEditName = cancelEditName;
+window.changePassword = changePassword;
+window.logout        = logout;
+
 boot();
-
-
 </script>

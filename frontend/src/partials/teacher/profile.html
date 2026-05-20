@@ -49,6 +49,19 @@
   </div>
 
   <div class="card">
+    <div class="card-title">Session</div>
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-label">Sign out</div>
+        <div class="setting-desc">You will be redirected to the login page</div>
+      </div>
+      <button class="btn btn-danger" onclick="logout()">
+        <svg class="icon icon-14"><use href="#ic-logout"></use></svg> Sign out
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-title">Change Password</div>
     <div class="pw-form">
       <div class="pw-field">
@@ -165,10 +178,16 @@ async function changePassword() {
   }
 }
 
+async function logout() {
+  await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+  location.href = '/login';
+}
+
 window.startEditName  = startEditName;
 window.cancelEditName = cancelEditName;
 window.saveName       = saveName;
 window.changePassword = changePassword;
+window.logout         = logout;
 
 async function boot() {
   const [meData, sessions, groups] = await Promise.all([
