@@ -4,6 +4,7 @@
 .browse-tab{background:none;border:none;color:var(--text3);cursor:pointer;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:background .15s,color .15s;}
 .browse-tab.active{background:var(--surface1);color:var(--text1);}
 .browse-tab:hover:not(.active){background:var(--hover1);}
+.pip-minimize-btn.dimmed{opacity:0.35;}
 </style>
 
 <div class="topbar">
@@ -47,6 +48,9 @@
     <span class="call-title" id="callTitle">Meeting</span>
     <span class="call-duration" id="callDuration"></span>
     <div class="call-spacer"></div>
+    <button class="pip-minimize-btn" id="btnToggleParticipants" onclick="toggleParticipants()" title="Toggle participants">
+      <svg class="icon icon-18"><use href="#ic-users"/></svg>
+    </button>
     <button class="pip-minimize-btn" onclick="toggleBrowsePanel()" title="Open whiteboard">
       <svg class="icon icon-18"><use href="#ic-menu"/></svg>
     </button>
@@ -123,6 +127,15 @@ let currentMeeting = null;
 let callStartTime = null;
 let durationInterval = null;
 let micOn = true, camOn = true, screenOn = false;
+
+// ── Participants panel toggle ─────────────────────────────────────────────────
+function toggleParticipants() {
+  const panel = document.getElementById('callRightPanel');
+  const btn   = document.getElementById('btnToggleParticipants');
+  const hidden = panel.style.display === 'none';
+  panel.style.display = hidden ? '' : 'none';
+  btn.classList.toggle('dimmed', !hidden);
+}
 
 // ── Left-panel browse (tabs) ──────────────────────────────────────────────────
 let activeBrowsePage = null;
