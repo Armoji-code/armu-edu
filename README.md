@@ -1,5 +1,9 @@
 # Armu · v0.3.1
 
+<p align="center">
+  <img src="docs/login_laptop.png" alt="Armu login" width="680"/>
+</p>
+
 A free, open source, self-hosted school platform. Replaces fragmented school software (diary systems, Google Classroom, messaging, grades, library) with a single unified platform that schools own and run themselves.
 
 Licensed under **AGPL-3.0** — free to use, modify, and self-host. Distributions and hosted services must release source code.
@@ -53,6 +57,44 @@ Licensed under **AGPL-3.0** — free to use, modify, and self-host. Distribution
 | Frontend | Vanilla JS SPA (no framework) · single-shell router · partial HTML pages |
 | Real-time | WebSockets via Flask-SocketIO (chat, whiteboard, meetings, notifications) |
 | Scheduling | APScheduler (deadline reminders, weekly digests) |
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/dark_mode.png" alt="Dark mode — student dashboard" width="780"/>
+  <br/><em>Dark mode</em>
+</p>
+
+<p align="center">
+  <img src="docs/light_mode.png" alt="Light mode — student dashboard" width="780"/>
+  <br/><em>Light mode</em>
+</p>
+
+---
+
+## Minimum server specs
+
+### Without local AI (using OpenAI / Anthropic API)
+
+| Component | Minimum | Recommended |
+|---|---|---|
+| CPU | 1 core | 2+ cores |
+| RAM | 512 MB | 1 GB |
+| Storage | 1 GB | 5 GB |
+| OS | Linux, Windows 10+, macOS 12+ | Ubuntu 22.04 LTS |
+| Network | LAN or internet | — |
+
+### With Ollama (local AI, no API costs)
+
+| Model | RAM required | Storage for model |
+|---|---|---|
+| `llama3.2:3b` (tracker / digest) | 4 GB | ~2 GB |
+| `gemma3:12b` (tutor / advanced) | 10 GB | ~8 GB |
+| Both models together | 10 GB | ~10 GB |
+
+> A GPU is not required but will significantly speed up responses. A CPU-only server with 10 GB RAM can run both models, but generation will be slower (~5–15 tokens/sec on a modern quad-core).
 
 ---
 
