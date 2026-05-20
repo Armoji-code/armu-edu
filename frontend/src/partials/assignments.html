@@ -368,7 +368,15 @@ async function boot() {
   if (ungraded) selectAsn(ungraded.id);
 }
 
+window.toggleTheme      = toggleTheme;
+window.openCreate       = openCreate;
+window.closeModal       = closeModal;
+window.submitAssignment = submitAssignment;
+window.openEdit         = openEdit;
+window.deleteAsn        = deleteAsn;
+window.selectAsn        = selectAsn;
+window.renderList       = renderList;
+window.saveGrade        = saveGrade;
+
 boot();
-
-
 </script>

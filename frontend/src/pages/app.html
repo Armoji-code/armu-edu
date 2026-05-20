@@ -1461,7 +1461,9 @@ async function navigate(path, push = true) {
         }
       } else if (text) {
         const el = document.createElement('script');
-        el.textContent = `(function(){\n${text}\n})();`;
+        el.textContent = text
+          .replace(/^(\s*)const\b/gm, '$1var')
+          .replace(/^(\s*)let\b/gm, '$1var');
         document.body.appendChild(el);
         document.body.removeChild(el);
       }
