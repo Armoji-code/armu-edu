@@ -1,4 +1,11 @@
 
+<style>
+.browse-tab-bar{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border1);flex-shrink:0;background:var(--bg2);}
+.browse-tab{background:none;border:none;color:var(--text3);cursor:pointer;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:background .15s,color .15s;}
+.browse-tab.active{background:var(--surface1);color:var(--text1);}
+.browse-tab:hover:not(.active){background:var(--hover1);}
+</style>
+
 <div class="topbar">
 <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-meeting"></use></svg>
 <span class="topbar-title">Meeting</span>
@@ -46,21 +53,19 @@
   </div>
   <div class="call-body">
     <div class="video-grid" id="videoGrid"></div>
-    <!-- Right panel: participants OR whiteboard -->
-    <div class="call-sidebar" id="callRightPanel">
-      <div class="call-sidebar-title" style="display:flex;align-items:center;gap:6px;">
-        <span id="sidebarPanelTitle">Participants</span>
-        <button class="pip-minimize-btn" id="btnCloseBrowse" onclick="hideBrowsePanel()"
-                style="display:none;margin-left:auto;" title="Back to participants">
-          <svg class="icon icon-14"><use href="#ic-x"/></svg>
-        </button>
+    <!-- Left browse panel (replaces video grid when open) -->
+    <div id="leftBrowsePanel" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;background:var(--bg1);">
+      <div class="browse-tab-bar">
+        <button class="browse-tab active" data-page="whiteboard" onclick="selectTab('whiteboard')">Whiteboard</button>
       </div>
-      <!-- Participants list -->
+      <div id="leftBrowseContent" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;"></div>
+    </div>
+    <!-- Right panel: participants -->
+    <div class="call-sidebar" id="callRightPanel">
+      <div class="call-sidebar-title">Participants</div>
       <div id="participantView" style="flex:1;overflow-y:auto;">
         <div id="participantList"></div>
       </div>
-      <!-- Whiteboard pane (hidden until toggled) -->
-      <div id="browseView" style="display:none;flex:1;overflow:hidden;flex-direction:column;min-height:0;"></div>
     </div>
   </div>
   <div class="call-controls">
@@ -119,22 +124,19 @@ let callStartTime = null;
 let durationInterval = null;
 let micOn = true, camOn = true, screenOn = false;
 
-// ── Right-panel browse (whiteboard) ───────────────────────────────────────────
+// ── Left-panel browse (tabs) ──────────────────────────────────────────────────
+let activeBrowsePage = null;
+
 function toggleBrowsePanel() {
-  const bv = document.getElementById('browseView');
-  if (bv.style.display === 'none') showBrowsePanel();
+  const panel = document.getElementById('leftBrowsePanel');
+  if (panel.style.display === 'none') showBrowsePanel();
   else hideBrowsePanel();
 }
 
 function showBrowsePanel() {
-  document.getElementById('participantView').style.display = 'none';
-  const bv = document.getElementById('browseView');
-  bv.style.display = 'flex';
-  bv.style.flexDirection = 'column';
-  document.getElementById('callRightPanel').style.width = '380px';
-  document.getElementById('sidebarPanelTitle').textContent = 'Whiteboard';
-  document.getElementById('btnCloseBrowse').style.display = '';
-  browseLoad('whiteboard');
+  document.getElementById('videoGrid').style.display = 'none';
+  document.getElementById('leftBrowsePanel').style.display = 'flex';
+  if (!activeBrowsePage) selectTab('whiteboard');
 }
 
 function hideBrowsePanel() {
@@ -142,17 +144,27 @@ function hideBrowsePanel() {
     try { window.__browseCleanup(); } catch(e) {}
     window.__browseCleanup = null;
   }
-  const bv = document.getElementById('browseView');
-  bv.style.display = 'none';
-  bv.innerHTML = '';
-  document.getElementById('participantView').style.display = '';
-  document.getElementById('callRightPanel').style.width = '';
-  document.getElementById('sidebarPanelTitle').textContent = 'Participants';
-  document.getElementById('btnCloseBrowse').style.display = 'none';
+  activeBrowsePage = null;
+  document.getElementById('leftBrowseContent').innerHTML = '';
+  document.getElementById('leftBrowsePanel').style.display = 'none';
+  document.getElementById('videoGrid').style.display = '';
+}
+
+function selectTab(page) {
+  if (activeBrowsePage === page) return;
+  if (window.__browseCleanup) {
+    try { window.__browseCleanup(); } catch(e) {}
+    window.__browseCleanup = null;
+  }
+  activeBrowsePage = page;
+  document.querySelectorAll('.browse-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.page === page);
+  });
+  browseLoad(page);
 }
 
 async function browseLoad(page) {
-  const bv = document.getElementById('browseView');
+  const bv = document.getElementById('leftBrowseContent');
   bv.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);">Loading…</div>';
 
   const html = await fetch('/partials/' + page + '.html').then(r => r.ok ? r.text() : null).catch(() => null);
