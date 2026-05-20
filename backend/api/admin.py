@@ -295,6 +295,8 @@ def admin_update_user(user, uid):
         target.class_id = data["class_id"] or None
     if "password" in data and str(data["password"]).strip():
         target.set_password(str(data["password"]).strip())
+    if "can_change_password" in data:
+        target.can_change_password = bool(data["can_change_password"])
 
     db.session.commit()
     return jsonify(target.to_dict())

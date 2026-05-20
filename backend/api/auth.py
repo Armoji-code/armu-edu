@@ -52,6 +52,8 @@ def update_me(user):
 @blueprint.route("/auth/password", methods=["POST"])
 @login_required()
 def change_password(user):
+    if not user.can_change_password:
+        return jsonify({"error": "Password changes are disabled for this account."}), 403
     data = request.get_json(silent=True) or {}
     current = data.get("current", "")
     new_pw = data.get("new", "")

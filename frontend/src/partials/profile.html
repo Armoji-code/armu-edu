@@ -84,7 +84,7 @@
 </div>
 </div>
 <!-- Password -->
-<div class="card">
+<div class="card" id="pwCard">
 <div class="card-title">Change Password</div>
 <div class="pw-form">
 <div class="pw-field">
@@ -290,6 +290,7 @@ async function boot() {
   me = meData;
   if (me.role === 'teacher') { location.href = '/teacher/profile'; return; }
   renderProfile();
+  if (!me.can_change_password) document.getElementById('pwCard').style.display = 'none';
 
   document.getElementById('statSessions').textContent = Array.isArray(sessions) ? sessions.length : 0;
   document.getElementById('statGroups').textContent = Array.isArray(groups) ? groups.length : 0;

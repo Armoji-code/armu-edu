@@ -66,6 +66,17 @@
       <label class="usr-label" id="pwLabel">Password</label>
       <input class="usr-input" id="fPassword" type="password" placeholder="••••••••"/>
     </div>
+    <div class="usr-field" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);margin-top:4px;">
+      <div>
+        <div style="font-size:13px;font-weight:500;">Allow password changes</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">User can change their own password from the profile page</div>
+      </div>
+      <label class="toggle" style="flex-shrink:0;">
+        <input type="checkbox" id="fCanChangePw" checked/>
+        <div class="toggle-track"></div>
+        <div class="toggle-thumb"></div>
+      </label>
+    </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
       <button class="btn" onclick="closeModal()">Cancel</button>
       <button class="btn btn-primary" onclick="submitUser()">Save</button>
@@ -130,6 +141,7 @@ function openCreate() {
   document.getElementById('fClass').value = '';
   document.getElementById('fPassword').value = '';
   document.getElementById('pwLabel').textContent = 'Password';
+  document.getElementById('fCanChangePw').checked = true;
   toggleClassField();
   document.getElementById('userModal').classList.add('open');
 }
@@ -145,6 +157,7 @@ function openEdit(id) {
   document.getElementById('fClass').value = u.class_id || '';
   document.getElementById('fPassword').value = '';
   document.getElementById('pwLabel').textContent = 'New Password (leave blank to keep)';
+  document.getElementById('fCanChangePw').checked = u.can_change_password !== false;
   toggleClassField();
   document.getElementById('userModal').classList.add('open');
 }
@@ -159,11 +172,12 @@ function toggleClassField() {
 async function submitUser() {
   const id = document.getElementById('editId').value;
   const payload = {
-    name:     document.getElementById('fName').value.trim(),
-    email:    document.getElementById('fEmail').value.trim(),
-    role:     document.getElementById('fRole').value,
-    class_id: document.getElementById('fClass').value || null,
-    password: document.getElementById('fPassword').value,
+    name:               document.getElementById('fName').value.trim(),
+    email:              document.getElementById('fEmail').value.trim(),
+    role:               document.getElementById('fRole').value,
+    class_id:           document.getElementById('fClass').value || null,
+    password:           document.getElementById('fPassword').value,
+    can_change_password: document.getElementById('fCanChangePw').checked,
   };
   if (!payload.password) delete payload.password;
   if (!id && !payload.password) { alert('Password is required for new users.'); return; }
