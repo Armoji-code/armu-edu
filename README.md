@@ -92,22 +92,9 @@ python -c "import secrets; print(secrets.token_hex(32))"
 # 3. Initialise the database
 cd backend && flask --app app db upgrade
 
-# 4. (Optional) load demo accounts
-python seed.py
-
 # 5. Run
 python app.py
 ```
-
-### Demo accounts
-
-All demo accounts use password `password`.
-
-| Email | Role |
-|---|---|
-| student@test.com | Student |
-| teacher@test.com | Teacher |
-| admin@test.com | Admin |
 
 ---
 

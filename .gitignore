@@ -1,10 +1,30 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
-.env
-armu.db
-frontend/dist/
+*.pyd
+*.egg-info/
+
+# Virtual envs
 .venv/
 venv/
-*.egg-info/
-mokyai.db
+env/
+
+# Environment / secrets
+.env
+*.env
+
+# Database files — never commit data
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# Build output
+frontend/dist/
+
+# OS
+.DS_Store
+Thumbs.db
