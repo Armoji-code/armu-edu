@@ -565,9 +565,9 @@ def teacher_nudge(user):
         f"Current tasks:\n{context}\n\n"
         f"Return a JSON array of exactly 3 short action chips. "
         f"Each item: \"label\" (3-6 words, starts with a verb) and "
-        f"\"href\" (one of: \"/teacher/assignments\", \"/teacher/classes\", \"/teacher\"). "
+        f"\"href\" (one of: \"/assignments\", \"/classes\", \"/dashboard\"). "
         f"Base on the actual tasks above. "
-        f'Example: [{{"label":"Grade Physics test","href":"/teacher/assignments"}}]\n'
+        f'Example: [{{"label":"Grade Physics test","href":"/assignments"}}]\n'
         f"Return only the JSON array, nothing else."
     )
 
@@ -584,8 +584,8 @@ def teacher_nudge(user):
 
     if not nudges:
         nudges = [
-            {"label": "Review ungraded work", "href": "/teacher/assignments"},
-            {"label": "Check class roster",   "href": "/teacher/classes"},
+            {"label": "Review ungraded work", "href": "/assignments"},
+            {"label": "Check class roster",   "href": "/classes"},
         ]
 
     return jsonify({"nudges": nudges})
