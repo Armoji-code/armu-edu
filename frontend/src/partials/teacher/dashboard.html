@@ -114,8 +114,8 @@ async function loadDigest(force = false) {
 }
 
 async function loadNudges() {
-  const CACHE_KEY = 'armu_teacher_nudges';
-  const CACHE_DATE_KEY = 'armu_teacher_nudges_date';
+  const CACHE_KEY = 'armu_teacher_nudges_v2';
+  const CACHE_DATE_KEY = 'armu_teacher_nudges_date_v2';
   const today = new Date().toISOString().slice(0, 10);
   let nudges = null;
   if (localStorage.getItem(CACHE_DATE_KEY) === today) {
@@ -132,9 +132,10 @@ async function loadNudges() {
   if (!nudges.length) return;
   const row = document.getElementById('nudgeRow');
   row.style.display = 'flex';
-  row.innerHTML = nudges.map(n =>
-    `<a class="nudge-chip" href="${n.href}"><svg class="icon icon-14"><use href="#ic-zap"/></svg>${n.label}</a>`
-  ).join('');
+  row.innerHTML = nudges.map(n => {
+    const href = (n.href || '/dashboard').replace(/^\/teacher\//, '/');
+    return `<a class="nudge-chip" href="${href}"><svg class="icon icon-14"><use href="#ic-zap"/></svg>${n.label}</a>`;
+  }).join('');
 }
 
 function openAnnounce() {
