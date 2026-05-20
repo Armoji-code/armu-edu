@@ -275,9 +275,7 @@ async function boot() {
 
   if (!meData || meData.error) { location.href = '/login'; return; }
   me = meData;
-  if (me.role === 'teacher')        { location.href = '/teacher/profile'; return; }
-  else if (me.role === 'admin')     applyAdminNav();
-  else if (me.role === 'librarian') applyLibrarianNav();
+  if (me.role === 'teacher') { location.href = '/teacher/profile'; return; }
   renderProfile();
 
   document.getElementById('statSessions').textContent = Array.isArray(sessions) ? sessions.length : 0;
