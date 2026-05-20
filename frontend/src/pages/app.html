@@ -1231,6 +1231,7 @@
   .btn-sm { padding:5px 12px; font-size:12px; }
 
 </style>
+<style id="brand-override"></style>
 </head>
 <body>
 
@@ -1314,7 +1315,7 @@
 
 <div class="sidebar" id="sidebar">
   <div class="logo">
-    <div class="logo-text">armu</div>
+    <div class="logo-text" id="logoText">armu</div>
     <div class="logo-sub" id="logoSub">loading…</div>
   </div>
   <div id="sidebarNav" class="sidebar-nav"></div>
@@ -1553,6 +1554,53 @@ function toggleTheme() {
 }
 window.toggleTheme = toggleTheme;
 
+/* ── Branding ─────────────────────────────────────────── */
+function applyBrandingData(b) {
+  if (!b) return;
+  const c = b.colors || {};
+  const root = [], dark = [], light = [];
+  if (c.g1) root.push(`--g1:${c.g1}`);
+  if (c.g2) root.push(`--g2:${c.g2}`);
+  if (c.g3) root.push(`--g3:${c.g3}`);
+  if (root.length) {
+    root.push('--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3))');
+    root.push('--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%)');
+  }
+  if (c.dark_bg)   dark.push(`--bg:${c.dark_bg}`);
+  if (c.dark_bg2)  dark.push(`--bg2:${c.dark_bg2}`);
+  if (c.dark_bg3)  dark.push(`--bg3:${c.dark_bg3}`);
+  if (c.dark_bg4)  dark.push(`--bg4:${c.dark_bg4}`);
+  if (c.light_bg)  light.push(`--bg:${c.light_bg}`);
+  if (c.light_bg2) light.push(`--bg2:${c.light_bg2}`);
+  if (c.light_bg3) light.push(`--bg3:${c.light_bg3}`);
+  if (c.light_bg4) light.push(`--bg4:${c.light_bg4}`);
+  let css = '';
+  if (root.length)  css += `:root{${root.join(';')}}`;
+  if (dark.length)  css += `[data-theme="dark"]{${dark.join(';')}}`;
+  if (light.length) css += `[data-theme="light"]{${light.join(';')}}`;
+  document.getElementById('brand-override').textContent = css;
+
+  const logoText = document.getElementById('logoText');
+  if (logoText && b.logo_data) {
+    logoText.style.background = 'none';
+    logoText.style.webkitBackgroundClip = 'unset';
+    logoText.style.webkitTextFillColor = 'unset';
+    logoText.style.backgroundClip = 'unset';
+    logoText.innerHTML = `<img src="${b.logo_data}" style="max-height:36px;max-width:160px;object-fit:${b.logo_fit||'contain'};display:block;" alt="logo">`;
+  } else if (logoText && !b.logo_data) {
+    logoText.style.cssText = '';
+    logoText.innerHTML = 'armu';
+  }
+}
+window.applyBrandingData = applyBrandingData;
+
+async function applyBranding() {
+  try {
+    const b = await fetch('/api/branding').then(r => r.json()).catch(() => null);
+    applyBrandingData(b);
+  } catch {}
+}
+
 /* ── Boot ─────────────────────────────────────────────── */
 async function boot() {
   const theme = localStorage.getItem('theme') || 'dark';
@@ -1561,6 +1609,7 @@ async function boot() {
   const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
   if (!me || me.error) { location.href = '/login'; return; }
   window.__me = me;
+  applyBranding();
 
   document.getElementById('userName').textContent  = me.name || me.email;
   document.getElementById('userAvatar').textContent = initials(me.name || me.email);

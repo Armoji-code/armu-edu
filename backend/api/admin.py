@@ -213,6 +213,34 @@ def admin_update_settings(user):
     return jsonify({"ok": True})
 
 
+@blueprint.route("/admin/branding", methods=["GET"])
+@login_required(roles=["admin"])
+def admin_get_branding(user):
+    school = _school(user)
+    return jsonify((school.settings or {}).get("branding", {}))
+
+
+@blueprint.route("/admin/branding", methods=["PATCH"])
+@login_required(roles=["admin"])
+def admin_save_branding(user):
+    school = _school(user)
+    data = request.get_json(silent=True) or {}
+    settings = dict(school.settings or {})
+    branding = {}
+    if "logo_data" in data:
+        branding["logo_data"] = data["logo_data"]
+    if "logo_fit" in data and data["logo_fit"] in ("contain", "cover", "fill"):
+        branding["logo_fit"] = data["logo_fit"]
+    if isinstance(data.get("colors"), dict):
+        allowed = ("g1","g2","g3","dark_bg","dark_bg2","dark_bg3","dark_bg4",
+                   "light_bg","light_bg2","light_bg3","light_bg4")
+        branding["colors"] = {k: v for k, v in data["colors"].items() if k in allowed}
+    settings["branding"] = branding
+    school.settings = settings
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 @blueprint.route("/admin/ai/pull", methods=["POST"])
 @login_required(roles=["admin"])
 def admin_ai_pull(user):

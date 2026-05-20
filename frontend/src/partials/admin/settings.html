@@ -1,4 +1,11 @@
 
+<style>
+.color-row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;}
+.color-swatch{display:flex;flex-direction:column;align-items:center;gap:5px;}
+.color-swatch span{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
+.color-input{width:48px;height:48px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;padding:2px;background:var(--bg3);}
+.color-input:hover{border-color:var(--border-accent);}
+</style>
 <div class="topbar">
 <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-settings"></use></svg>
 <span class="topbar-title">Settings</span>
@@ -276,6 +283,67 @@ function renderAll(s) {
       <div style="font-size:12px;color:var(--text3);margin-top:10px;">Install <code style="font-family:monospace;background:var(--bg3);padding:1px 5px;border-radius:4px">coturn</code> on your server for self-hosted TURN. See the README for a minimal config.</div>
     </div>
 
+    <!-- Customize -->
+    <div class="section" id="section-customize">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(168,85,247,0.15),rgba(56,189,248,0.15))">
+          <svg class="icon icon-18" style="color:#a855f7"><use href="#ic-edit"/></svg>
+        </div>
+        <div><div class="section-title">Customize</div><div class="section-desc">Logo and color scheme — changes apply to all users school-wide</div></div>
+      </div>
+
+      <div class="sub-label">Logo</div>
+      <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:14px;flex-wrap:wrap;">
+        <div id="logoPreviewBox" style="width:180px;height:52px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;padding:8px 12px;overflow:hidden;">
+          <div id="brandLogoText" style="font-size:20px;font-weight:600;background:var(--gradient-text);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">armu</div>
+          <img id="brandLogoImg" src="" style="display:none;max-height:36px;max-width:156px;" alt="Logo"/>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn" onclick="document.getElementById('logoFileInput').click()"><svg class="icon icon-14"><use href="#ic-plus"/></svg> Upload Image</button>
+            <button class="btn" id="logoRemoveBtn" onclick="removeLogo()" style="display:none;">Remove</button>
+            <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+          </div>
+          <div id="logoFitRow" style="display:none;gap:14px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;">Display</span>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="logoFit" value="contain" checked> Fit</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="logoFit" value="cover"> Crop</label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="logoFit" value="fill"> Stretch</label>
+          </div>
+          <div style="font-size:11px;color:var(--text3);">PNG, JPEG or SVG · max 1 MB · replaces the "armu" text in the sidebar</div>
+        </div>
+      </div>
+
+      <div class="sub-label">Accent Colors</div>
+      <div class="color-row">
+        <div class="color-swatch"><input type="color" class="color-input" id="c_g1" value="#3dd68c"><span>Primary</span></div>
+        <div class="color-swatch"><input type="color" class="color-input" id="c_g2" value="#38bdf8"><span>Secondary</span></div>
+        <div class="color-swatch"><input type="color" class="color-input" id="c_g3" value="#6ee7b7"><span>Tertiary</span></div>
+      </div>
+
+      <div class="sub-label">Dark Mode Backgrounds</div>
+      <div class="color-row">
+        <div class="color-swatch"><input type="color" class="color-input" id="c_dark_bg" value="#111111"><span>Base</span></div>
+        <div class="color-swatch"><input type="color" class="color-input" id="c_dark_bg2" value="#1a1a1a"><span>Surface</span></div>
+        <div class="color-swatch"><input type="color" class="color-input" id="c_dark_bg3" value="#222222"><span>Raised</span></div>
+        <div class="color-swatch"><input type="color" class="color-input" id="c_dark_bg4" value="#2c2c2c"><span>Overlay</span></div>
+      </div>
+
+      <div class="sub-label">Light Mode Backgrounds</div>
+      <div class="color-row">
+        <div class="color-swatch"><input type="color" class="color-input" id="c_light_bg" value="#f5f7fa"><span>Base</span></div>
+        <div class="color-swatch"><input type="color" class="color-input" id="c_light_bg2" value="#ffffff"><span>Surface</span></div>
+        <div class="color-swatch"><input type="color" class="color-input" id="c_light_bg3" value="#eef1f7"><span>Raised</span></div>
+        <div class="color-swatch"><input type="color" class="color-input" id="c_light_bg4" value="#e4e8f2"><span>Overlay</span></div>
+      </div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="saveBranding()"><svg class="icon icon-14"><use href="#ic-save"/></svg> Save Branding</button>
+        <button class="btn" onclick="resetColors()">↺ Reset Colors</button>
+        <span class="save-msg" id="brandMsg">Saved!</span>
+      </div>
+    </div>
+
     <!-- Save bar -->
     <div class="save-bar">
       <button class="btn btn-primary" id="saveBtn" onclick="save()">
@@ -439,18 +507,139 @@ async function save() {
   }
 }
 
+/* ── Branding ─────────────────────────────────────────── */
+var brandLogo = null;
+
+function handleLogoUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) { alert('Logo must be under 1 MB.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    brandLogo = { data: e.target.result, fit: getLogoFit() };
+    updateLogoPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function getLogoFit() {
+  var r = document.querySelector('input[name="logoFit"]:checked');
+  return r ? r.value : 'contain';
+}
+
+function updateLogoPreview() {
+  var img = document.getElementById('brandLogoImg');
+  var txt = document.getElementById('brandLogoText');
+  var removeBtn = document.getElementById('logoRemoveBtn');
+  var fitRow = document.getElementById('logoFitRow');
+  if (brandLogo && brandLogo.data) {
+    img.src = brandLogo.data;
+    img.style.objectFit = brandLogo.fit;
+    img.style.display = '';
+    txt.style.display = 'none';
+    removeBtn.style.display = '';
+    fitRow.style.display = 'flex';
+    document.querySelectorAll('input[name="logoFit"]').forEach(function(r) {
+      r.onchange = function() { if (brandLogo) { brandLogo.fit = r.value; img.style.objectFit = r.value; } };
+    });
+  } else {
+    img.style.display = 'none';
+    txt.style.display = '';
+    removeBtn.style.display = 'none';
+    fitRow.style.display = 'none';
+  }
+}
+
+function removeLogo() {
+  brandLogo = { data: null, fit: 'contain' };
+  document.getElementById('logoFileInput').value = '';
+  updateLogoPreview();
+}
+
+function resetColors() {
+  var defaults = {
+    c_g1:'#3dd68c', c_g2:'#38bdf8', c_g3:'#6ee7b7',
+    c_dark_bg:'#111111', c_dark_bg2:'#1a1a1a', c_dark_bg3:'#222222', c_dark_bg4:'#2c2c2c',
+    c_light_bg:'#f5f7fa', c_light_bg2:'#ffffff', c_light_bg3:'#eef1f7', c_light_bg4:'#e4e8f2',
+  };
+  Object.entries(defaults).forEach(function([id, val]) {
+    var el = document.getElementById(id);
+    if (el) el.value = val;
+  });
+}
+
+function initBranding(b) {
+  if (!b) return;
+  var c = b.colors || {};
+  var map = {
+    c_g1: c.g1, c_g2: c.g2, c_g3: c.g3,
+    c_dark_bg: c.dark_bg, c_dark_bg2: c.dark_bg2, c_dark_bg3: c.dark_bg3, c_dark_bg4: c.dark_bg4,
+    c_light_bg: c.light_bg, c_light_bg2: c.light_bg2, c_light_bg3: c.light_bg3, c_light_bg4: c.light_bg4,
+  };
+  Object.entries(map).forEach(function([id, val]) {
+    var el = document.getElementById(id);
+    if (el && val) el.value = val;
+  });
+  if (b.logo_data) {
+    brandLogo = { data: b.logo_data, fit: b.logo_fit || 'contain' };
+    var fitRadio = document.querySelector('input[name="logoFit"][value="' + (b.logo_fit || 'contain') + '"]');
+    if (fitRadio) fitRadio.checked = true;
+    updateLogoPreview();
+  }
+}
+
+async function saveBranding() {
+  var payload = {
+    logo_data: brandLogo ? brandLogo.data : null,
+    logo_fit: brandLogo ? (brandLogo.fit || 'contain') : 'contain',
+    colors: {
+      g1:  document.getElementById('c_g1').value,
+      g2:  document.getElementById('c_g2').value,
+      g3:  document.getElementById('c_g3').value,
+      dark_bg:   document.getElementById('c_dark_bg').value,
+      dark_bg2:  document.getElementById('c_dark_bg2').value,
+      dark_bg3:  document.getElementById('c_dark_bg3').value,
+      dark_bg4:  document.getElementById('c_dark_bg4').value,
+      light_bg:  document.getElementById('c_light_bg').value,
+      light_bg2: document.getElementById('c_light_bg2').value,
+      light_bg3: document.getElementById('c_light_bg3').value,
+      light_bg4: document.getElementById('c_light_bg4').value,
+    }
+  };
+  var ok = await fetch('/api/admin/branding', {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload),
+  }).then(function(r) { return r.ok; }).catch(function() { return false; });
+  var msg = document.getElementById('brandMsg');
+  if (ok) {
+    msg.classList.add('visible');
+    setTimeout(function() { msg.classList.remove('visible'); }, 2500);
+    if (window.applyBrandingData) window.applyBrandingData(payload);
+  } else {
+    alert('Failed to save branding.');
+  }
+}
+
+window.handleLogoUpload = handleLogoUpload;
+window.removeLogo       = removeLogo;
+window.resetColors      = resetColors;
+window.saveBranding     = saveBranding;
+
+/* ── Boot ─────────────────────────────────────────────── */
 async function boot() {
   const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
-  
-  
-  
 
-  const s = await fetch('/api/admin/settings').then(r => r.json()).catch(() => null);
+  const [s, branding] = await Promise.all([
+    fetch('/api/admin/settings').then(r => r.json()).catch(() => null),
+    fetch('/api/admin/branding').then(r => r.json()).catch(() => ({})),
+  ]);
   if (!s) {
     document.getElementById('mainContent').innerHTML = '<div style="padding:48px;text-align:center;color:var(--text3);">Failed to load settings.</div>';
     return;
   }
   renderAll(s);
+  initBranding(branding);
 }
 boot();
 

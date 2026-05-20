@@ -3,6 +3,15 @@ from api import blueprint
 from auth import login_required
 from models import db
 from models.user import User
+from models.school import School
+
+@blueprint.route("/branding", methods=["GET"])
+def get_branding():
+    school = School.query.first()
+    if not school:
+        return jsonify({})
+    return jsonify((school.settings or {}).get("branding", {}))
+
 
 @blueprint.route("/auth/login", methods=["POST"])
 def login():
