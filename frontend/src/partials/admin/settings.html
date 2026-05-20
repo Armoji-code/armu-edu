@@ -1,10 +1,12 @@
 
 <style>
 .color-row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:16px;}
-.color-swatch{display:flex;flex-direction:column;align-items:center;gap:5px;}
+.color-swatch{display:flex;flex-direction:column;align-items:center;gap:6px;}
 .color-swatch span{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;}
-.color-input{width:48px;height:48px;border:2px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;padding:2px;background:var(--bg3);}
-.color-input:hover{border-color:var(--border-accent);}
+.color-label{position:relative;display:inline-block;cursor:pointer;}
+.color-box{display:block;width:48px;height:48px;border-radius:var(--radius-sm);border:2px solid var(--border);transition:border-color 0.15s;}
+.color-label:hover .color-box{border-color:var(--border-accent);}
+.color-input-hidden{position:absolute;width:1px;height:1px;opacity:0;top:0;left:0;padding:0;border:none;}
 </style>
 <div class="topbar">
 <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-settings"></use></svg>
@@ -301,7 +303,7 @@ function renderAll(s) {
         <div style="display:flex;flex-direction:column;gap:8px;">
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn" onclick="document.getElementById('logoFileInput').click()"><svg class="icon icon-14"><use href="#ic-plus"/></svg> Upload Image</button>
-            <button class="btn" id="logoRemoveBtn" onclick="removeLogo()" style="display:none;">Remove</button>
+            <button class="btn" id="logoRemoveBtn" onclick="removeLogo()">Use Default</button>
             <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
           </div>
           <div id="logoFitRow" style="display:none;gap:14px;align-items:center;flex-wrap:wrap;">
@@ -316,25 +318,25 @@ function renderAll(s) {
 
       <div class="sub-label">Accent Colors</div>
       <div class="color-row">
-        <div class="color-swatch"><input type="color" class="color-input" id="c_g1" value="#3dd68c"><span>Primary</span></div>
-        <div class="color-swatch"><input type="color" class="color-input" id="c_g2" value="#38bdf8"><span>Secondary</span></div>
-        <div class="color-swatch"><input type="color" class="color-input" id="c_g3" value="#6ee7b7"><span>Tertiary</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_g1" style="background:#3dd68c"></span><input type="color" class="color-input-hidden" id="c_g1" value="#3dd68c" oninput="syncColorBox(this)"></label><span>Primary</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_g2" style="background:#38bdf8"></span><input type="color" class="color-input-hidden" id="c_g2" value="#38bdf8" oninput="syncColorBox(this)"></label><span>Secondary</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_g3" style="background:#6ee7b7"></span><input type="color" class="color-input-hidden" id="c_g3" value="#6ee7b7" oninput="syncColorBox(this)"></label><span>Tertiary</span></div>
       </div>
 
       <div class="sub-label">Dark Mode Backgrounds</div>
       <div class="color-row">
-        <div class="color-swatch"><input type="color" class="color-input" id="c_dark_bg" value="#111111"><span>Base</span></div>
-        <div class="color-swatch"><input type="color" class="color-input" id="c_dark_bg2" value="#1a1a1a"><span>Surface</span></div>
-        <div class="color-swatch"><input type="color" class="color-input" id="c_dark_bg3" value="#222222"><span>Raised</span></div>
-        <div class="color-swatch"><input type="color" class="color-input" id="c_dark_bg4" value="#2c2c2c"><span>Overlay</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_dark_bg" style="background:#111111"></span><input type="color" class="color-input-hidden" id="c_dark_bg" value="#111111" oninput="syncColorBox(this)"></label><span>Base</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_dark_bg2" style="background:#1a1a1a"></span><input type="color" class="color-input-hidden" id="c_dark_bg2" value="#1a1a1a" oninput="syncColorBox(this)"></label><span>Surface</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_dark_bg3" style="background:#222222"></span><input type="color" class="color-input-hidden" id="c_dark_bg3" value="#222222" oninput="syncColorBox(this)"></label><span>Raised</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_dark_bg4" style="background:#2c2c2c"></span><input type="color" class="color-input-hidden" id="c_dark_bg4" value="#2c2c2c" oninput="syncColorBox(this)"></label><span>Overlay</span></div>
       </div>
 
       <div class="sub-label">Light Mode Backgrounds</div>
       <div class="color-row">
-        <div class="color-swatch"><input type="color" class="color-input" id="c_light_bg" value="#f5f7fa"><span>Base</span></div>
-        <div class="color-swatch"><input type="color" class="color-input" id="c_light_bg2" value="#ffffff"><span>Surface</span></div>
-        <div class="color-swatch"><input type="color" class="color-input" id="c_light_bg3" value="#eef1f7"><span>Raised</span></div>
-        <div class="color-swatch"><input type="color" class="color-input" id="c_light_bg4" value="#e4e8f2"><span>Overlay</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_light_bg" style="background:#f5f7fa"></span><input type="color" class="color-input-hidden" id="c_light_bg" value="#f5f7fa" oninput="syncColorBox(this)"></label><span>Base</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_light_bg2" style="background:#ffffff"></span><input type="color" class="color-input-hidden" id="c_light_bg2" value="#ffffff" oninput="syncColorBox(this)"></label><span>Surface</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_light_bg3" style="background:#eef1f7"></span><input type="color" class="color-input-hidden" id="c_light_bg3" value="#eef1f7" oninput="syncColorBox(this)"></label><span>Raised</span></div>
+        <div class="color-swatch"><label class="color-label"><span class="color-box" id="box_c_light_bg4" style="background:#e4e8f2"></span><input type="color" class="color-input-hidden" id="c_light_bg4" value="#e4e8f2" oninput="syncColorBox(this)"></label><span>Overlay</span></div>
       </div>
 
       <div style="display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap;">
@@ -537,7 +539,8 @@ function updateLogoPreview() {
     img.style.objectFit = brandLogo.fit;
     img.style.display = '';
     txt.style.display = 'none';
-    removeBtn.style.display = '';
+    removeBtn.disabled = false;
+    removeBtn.style.opacity = '';
     fitRow.style.display = 'flex';
     document.querySelectorAll('input[name="logoFit"]').forEach(function(r) {
       r.onchange = function() { if (brandLogo) { brandLogo.fit = r.value; img.style.objectFit = r.value; } };
@@ -545,7 +548,8 @@ function updateLogoPreview() {
   } else {
     img.style.display = 'none';
     txt.style.display = '';
-    removeBtn.style.display = 'none';
+    removeBtn.disabled = true;
+    removeBtn.style.opacity = '0.4';
     fitRow.style.display = 'none';
   }
 }
@@ -556,6 +560,11 @@ function removeLogo() {
   updateLogoPreview();
 }
 
+function syncColorBox(input) {
+  var box = document.getElementById('box_' + input.id);
+  if (box) box.style.background = input.value;
+}
+
 function resetColors() {
   var defaults = {
     c_g1:'#3dd68c', c_g2:'#38bdf8', c_g3:'#6ee7b7',
@@ -564,7 +573,7 @@ function resetColors() {
   };
   Object.entries(defaults).forEach(function([id, val]) {
     var el = document.getElementById(id);
-    if (el) el.value = val;
+    if (el) { el.value = val; syncColorBox(el); }
   });
 }
 
@@ -578,14 +587,14 @@ function initBranding(b) {
   };
   Object.entries(map).forEach(function([id, val]) {
     var el = document.getElementById(id);
-    if (el && val) el.value = val;
+    if (el && val) { el.value = val; syncColorBox(el); }
   });
   if (b.logo_data) {
     brandLogo = { data: b.logo_data, fit: b.logo_fit || 'contain' };
     var fitRadio = document.querySelector('input[name="logoFit"][value="' + (b.logo_fit || 'contain') + '"]');
     if (fitRadio) fitRadio.checked = true;
-    updateLogoPreview();
   }
+  updateLogoPreview();
 }
 
 async function saveBranding() {
@@ -625,6 +634,7 @@ window.handleLogoUpload = handleLogoUpload;
 window.removeLogo       = removeLogo;
 window.resetColors      = resetColors;
 window.saveBranding     = saveBranding;
+window.syncColorBox     = syncColorBox;
 
 /* ── Boot ─────────────────────────────────────────────── */
 async function boot() {
