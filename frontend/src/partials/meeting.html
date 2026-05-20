@@ -128,10 +128,13 @@ function openBrowse() {
 }
 function closeBrowse() {
   document.getElementById('browseOverlay').style.display = 'none';
+  // Reset content so a re-open starts fresh
+  const c = document.getElementById('browseContent');
+  c.innerHTML = '';
+  c.style.cssText = 'flex:1;overflow:auto;';
 }
 
 async function browseLoad(page) {
-  // Highlight active tab
   ['Schedule','Whiteboard'].forEach(p => {
     const btn = document.getElementById('browseTab' + p);
     if (btn) btn.style.background = (p.toLowerCase() === page) ? 'var(--gradient)' : '';
@@ -139,7 +142,14 @@ async function browseLoad(page) {
 
   const content = document.getElementById('browseContent');
   content.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);">Loading…</div>';
+  content.style.cssText = 'flex:1;overflow:auto;';
 
+  if (page === 'whiteboard') {
+    loadEmbeddedWhiteboard();
+    return;
+  }
+
+  // ── Schedule (and any future tabs): load partial, wrap scripts in IIFE ──
   let key = page;
   if (page === 'schedule' && me?.role === 'teacher') key = 'teacher/schedule';
 
@@ -151,20 +161,119 @@ async function browseLoad(page) {
 
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
-  tmp.querySelector('.topbar')?.remove(); // no double header
+  tmp.querySelector('.topbar')?.remove();
   const scripts = [...tmp.querySelectorAll('script')].map(s => s.textContent);
   tmp.querySelectorAll('script').forEach(s => s.remove());
 
   content.innerHTML = tmp.innerHTML;
 
-  // Execute scripts so the page initialises (fetches data, renders, etc.)
+  const savedCleanup = window.__cleanup;
   scripts.forEach(text => {
     if (!text.trim()) return;
     const el = document.createElement('script');
-    el.textContent = text;
+    // IIFE wrapper prevents const/let redeclaration conflicts on repeat loads
+    el.textContent = `(function(){\n${text}\n})();`;
     document.body.appendChild(el);
     document.body.removeChild(el);
   });
+  // Restore meeting cleanup if partial overwrote it
+  if (window.__cleanup !== savedCleanup) window.__cleanup = savedCleanup;
+}
+
+function loadEmbeddedWhiteboard() {
+  const content = document.getElementById('browseContent');
+  content.style.cssText = 'flex:1;overflow:hidden;display:flex;flex-direction:column;';
+
+  const COLORS = ['#3dd68c','#38bdf8','#f87171','#fbbf24','#a78bfa','#f472b6','#f0f0f0','#111111'];
+  content.innerHTML = `
+    <canvas id="embedWb" style="flex:1;cursor:crosshair;touch-action:none;display:block;min-height:0;"></canvas>
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg2);border-top:1px solid var(--border);flex-shrink:0;">
+      <div id="embedColors" style="display:flex;gap:5px;"></div>
+      <div style="display:flex;gap:4px;margin-left:8px;">
+        <button class="width-btn active" id="ew1" onclick="embedSetWidth(2,'ew1')">S</button>
+        <button class="width-btn" id="ew2" onclick="embedSetWidth(4,'ew2')">M</button>
+        <button class="width-btn" id="ew3" onclick="embedSetWidth(8,'ew3')">L</button>
+      </div>
+      <button class="width-btn" style="margin-left:auto;" onclick="embedSetEraser()" id="ewEraser">Eraser</button>
+      <button class="wb-action-btn" onclick="embedClear()">Clear</button>
+    </div>`;
+
+  const colorDiv = document.getElementById('embedColors');
+  COLORS.forEach((c, i) => {
+    const el = document.createElement('div');
+    el.className = 'color-swatch' + (i === 0 ? ' active' : '');
+    el.style.background = c;
+    el.onclick = () => {
+      embedColor = c; isEraser = false;
+      document.querySelectorAll('#embedColors .color-swatch').forEach(s => s.classList.remove('active'));
+      el.classList.add('active');
+      document.getElementById('ewEraser').classList.remove('active');
+    };
+    colorDiv.appendChild(el);
+  });
+
+  const canvas = document.getElementById('embedWb');
+  const ctx = canvas.getContext('2d');
+  let embedColor = COLORS[0], embedWidth = 2, isEraser = false;
+  let drawing = false, lx = 0, ly = 0;
+
+  function embedResize() {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) { requestAnimationFrame(embedResize); return; }
+    const dpr = window.devicePixelRatio || 1;
+    // Preserve drawing by snapshotting to an offscreen canvas
+    const snap = document.createElement('canvas');
+    snap.width = canvas.width; snap.height = canvas.height;
+    snap.getContext('2d').drawImage(canvas, 0, 0);
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.drawImage(snap, 0, 0, snap.width, snap.height, 0, 0, rect.width, rect.height);
+  }
+  requestAnimationFrame(embedResize);
+  const __resizeHandler = () => requestAnimationFrame(embedResize);
+  window.addEventListener('resize', __resizeHandler);
+
+  function getPos(e) {
+    const r = canvas.getBoundingClientRect(), src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+  }
+  canvas.onmousedown = e => { drawing = true; const p = getPos(e); lx = p.x; ly = p.y; };
+  canvas.onmousemove = e => {
+    if (!drawing) return;
+    const p = getPos(e);
+    ctx.globalCompositeOperation = isEraser ? 'destination-out' : 'source-over';
+    ctx.strokeStyle = embedColor; ctx.lineWidth = isEraser ? embedWidth * 4 : embedWidth;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(p.x, p.y); ctx.stroke();
+    lx = p.x; ly = p.y;
+  };
+  canvas.onmouseup = canvas.onmouseleave = () => { drawing = false; };
+  canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; const p = getPos(e); lx = p.x; ly = p.y; }, {passive:false});
+  canvas.addEventListener('touchmove',  e => { e.preventDefault(); canvas.onmousemove(e); }, {passive:false});
+  canvas.addEventListener('touchend',   e => { e.preventDefault(); drawing = false; }, {passive:false});
+
+  window.embedSetWidth = (w, id) => {
+    embedWidth = w; isEraser = false;
+    ['ew1','ew2','ew3'].forEach(i => document.getElementById(i)?.classList.remove('active'));
+    document.getElementById(id)?.classList.add('active');
+    document.getElementById('ewEraser')?.classList.remove('active');
+  };
+  window.embedSetEraser = () => {
+    isEraser = true;
+    document.getElementById('ewEraser')?.classList.add('active');
+  };
+  window.embedClear = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  // Clean up resize listener when browse is closed or a different tab is loaded
+  const _origCloseBrowse = window.closeBrowse;
+  window.closeBrowse = function() {
+    window.removeEventListener('resize', __resizeHandler);
+    window.closeBrowse = _origCloseBrowse;
+    _origCloseBrowse();
+  };
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
