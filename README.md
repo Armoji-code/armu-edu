@@ -1,4 +1,4 @@
-# Armu · v0.3
+# Armu · v0.3.1
 
 A free, open source, self-hosted school platform. Replaces fragmented school software (diary systems, Google Classroom, messaging, grades, library) with a single unified platform that schools own and run themselves.
 
@@ -174,6 +174,20 @@ For additional protection, also:
 ---
 
 ## Changelog
+
+### v0.3.1
+- **LAN access** — server now binds to `0.0.0.0` by default; other devices on the same WiFi can reach it at the host machine's local IP
+- **`/admin` and `/teacher` routes** — visiting either root path now loads the correct dashboard instead of an error page
+- **Profile sign-out** — added a Sign out button to the profile page for all roles (was only available in Settings before)
+- **Admin users page** — fixed infinite loading caused by a missing modal; add/edit user modal now works correctly
+- **Assignment modal** — fixed "New Assignment" button doing nothing (modal HTML was missing)
+- **Page layout** — removed a rogue `max-width: 680px` on `.content` that was squishing every page to 680px wide
+- **Page revisit loading forever** — navigating away and back to any page no longer gets stuck; router now rewrites `const`/`let` → `var` so scripts are safely re-runnable
+- **onclick handlers** — fixed all buttons across the app broken by an earlier IIFE-wrapping approach; functions are now properly exposed to the global scope
+- **Teacher quick-links** — AI-generated action chips and nav links no longer use dead `/teacher/X` paths; cache busted so stale links are immediately replaced
+- **`/admin` and `/teacher` sidebar links** — all internal links updated to use short paths (`/classes`, `/assignments`, `/conduct`, etc.)
+- **Profile sidebar corruption** — navigating to the profile page as admin or librarian no longer overwrites the sidebar with stale hardcoded HTML
+- **Security section** — README now documents database encryption status and links to OS-level disk encryption guides
 
 ### v0.3
 - **In-call whiteboard** — whiteboard icon in the call topbar opens the full collaborative whiteboard in a left-side tab panel (replaces video grid while open); tab bar design makes it straightforward to add more in-call tools later
