@@ -219,7 +219,13 @@
   }
 
   // ── Tests list ───────────────────────────────────────────────────────────────
-  const testIcons = { default: '📝', math: '📐', chemistry: '⚗️', physics: '⚡', history: '📖', english: '📚', biology: '🔬' };
+  const testIconMap = { math: 'ic-grades', physics: 'ic-zap', chemistry: 'ic-cpu', history: 'ic-library', english: 'ic-text', biology: 'ic-medical', literature: 'ic-book', language: 'ic-text' };
+
+  function testIconFor(subjectName) {
+    const name = (subjectName || '').toLowerCase();
+    const id = Object.entries(testIconMap).find(([k]) => name.includes(k))?.[1] ?? 'ic-tests';
+    return `<svg class="icon icon-16"><use href="#${id}"/></svg>`;
+  }
 
   function renderTests(tests) {
     const el = document.getElementById('testList');
@@ -229,11 +235,9 @@
     el.innerHTML = upcoming.map(t => {
       const days = daysUntil(t.due_date);
       const soonClass = days <= 3 ? 'soon' : '';
-      const name = (t.subject_name || '').toLowerCase();
-      const icon = Object.entries(testIcons).find(([k]) => name.includes(k))?.[1] ?? testIcons.default;
       return `
         <div class="test-item">
-          <div class="test-icon">${icon}</div>
+          <div class="test-icon">${testIconFor(t.subject_name)}</div>
           <div>
             <div class="assignment-subject">${esc(t.subject_name || '')}</div>
             <div class="assignment-title">${esc(t.title)}</div>
