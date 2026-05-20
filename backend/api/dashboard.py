@@ -1,5 +1,5 @@
 from flask import jsonify
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from api import blueprint
 from auth import login_required
 from models.academic import Assignment, Grade
@@ -7,7 +7,7 @@ from models.academic import Assignment, Grade
 @blueprint.route("/dashboard", methods=["GET"])
 @login_required()
 def dashboard(user):
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     today_end = now.replace(hour=23, minute=59, second=59)
     week_end = now + timedelta(days=7)
 

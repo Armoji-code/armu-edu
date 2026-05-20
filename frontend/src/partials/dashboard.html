@@ -215,7 +215,7 @@
   function updateHwBadge(hw) {
     const pending = hw.filter(a => !a.completed).length;
     const badge = document.getElementById('hw-badge');
-    if (pending > 0) { badge.textContent = pending; badge.style.display = ''; }
+    if (badge && pending > 0) { badge.textContent = pending; badge.style.display = ''; }
   }
 
   // ── Tests list ───────────────────────────────────────────────────────────────
