@@ -40,30 +40,27 @@
     <span class="call-title" id="callTitle">Meeting</span>
     <span class="call-duration" id="callDuration"></span>
     <div class="call-spacer"></div>
-    <button class="pip-minimize-btn" onclick="openBrowse()" title="Browse pages" style="margin-right:4px;">
+    <button class="pip-minimize-btn" onclick="toggleBrowsePanel()" title="Open whiteboard">
       <svg class="icon icon-18"><use href="#ic-menu"/></svg>
     </button>
   </div>
-
-  <!-- Browse panel — slides over the video grid, call controls stay visible -->
-  <div id="browseOverlay" style="display:none;position:absolute;top:52px;bottom:72px;left:0;right:0;background:var(--bg);z-index:10;flex-direction:column;overflow:hidden;">
-    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;">
-      <button class="btn" onclick="closeBrowse()" style="display:flex;align-items:center;gap:4px;">
-        <svg class="icon icon-14"><use href="#ic-chevleft"/></svg> Back to call
-      </button>
-      <div style="display:flex;gap:6px;margin-left:auto;">
-        <button class="btn" id="browseTabSchedule" onclick="browseLoad('schedule')">Schedule</button>
-        <button class="btn" id="browseTabWhiteboard" onclick="browseLoad('whiteboard')">Whiteboard</button>
-      </div>
-    </div>
-    <div id="browseContent" style="flex:1;overflow:auto;"></div>
-  </div>
-
   <div class="call-body">
     <div class="video-grid" id="videoGrid"></div>
-    <div class="call-sidebar">
-      <div class="call-sidebar-title">Participants</div>
-      <div id="participantList"></div>
+    <!-- Right panel: participants OR whiteboard -->
+    <div class="call-sidebar" id="callRightPanel">
+      <div class="call-sidebar-title" style="display:flex;align-items:center;gap:6px;">
+        <span id="sidebarPanelTitle">Participants</span>
+        <button class="pip-minimize-btn" id="btnCloseBrowse" onclick="hideBrowsePanel()"
+                style="display:none;margin-left:auto;" title="Back to participants">
+          <svg class="icon icon-14"><use href="#ic-x"/></svg>
+        </button>
+      </div>
+      <!-- Participants list -->
+      <div id="participantView" style="flex:1;overflow-y:auto;">
+        <div id="participantList"></div>
+      </div>
+      <!-- Whiteboard pane (hidden until toggled) -->
+      <div id="browseView" style="display:none;flex:1;overflow:hidden;flex-direction:column;min-height:0;"></div>
     </div>
   </div>
   <div class="call-controls">
@@ -122,44 +119,45 @@ let callStartTime = null;
 let durationInterval = null;
 let micOn = true, camOn = true, screenOn = false;
 
-// ── Browse panel (in-call page access) ───────────────────────────────────────
-function openBrowse() {
-  document.getElementById('browseOverlay').style.display = 'flex';
+// ── Right-panel browse (whiteboard) ───────────────────────────────────────────
+function toggleBrowsePanel() {
+  const bv = document.getElementById('browseView');
+  if (bv.style.display === 'none') showBrowsePanel();
+  else hideBrowsePanel();
 }
-function closeBrowse() {
-  // Disconnect whiteboard socket if it was opened
+
+function showBrowsePanel() {
+  document.getElementById('participantView').style.display = 'none';
+  const bv = document.getElementById('browseView');
+  bv.style.display = 'flex';
+  bv.style.flexDirection = 'column';
+  document.getElementById('callRightPanel').style.width = '380px';
+  document.getElementById('sidebarPanelTitle').textContent = 'Whiteboard';
+  document.getElementById('btnCloseBrowse').style.display = '';
+  browseLoad('whiteboard');
+}
+
+function hideBrowsePanel() {
   if (window.__browseCleanup) {
     try { window.__browseCleanup(); } catch(e) {}
     window.__browseCleanup = null;
   }
-  document.getElementById('browseOverlay').style.display = 'none';
-  const c = document.getElementById('browseContent');
-  c.innerHTML = '';
-  c.style.cssText = 'flex:1;overflow:auto;';
+  const bv = document.getElementById('browseView');
+  bv.style.display = 'none';
+  bv.innerHTML = '';
+  document.getElementById('participantView').style.display = '';
+  document.getElementById('callRightPanel').style.width = '';
+  document.getElementById('sidebarPanelTitle').textContent = 'Participants';
+  document.getElementById('btnCloseBrowse').style.display = 'none';
 }
 
 async function browseLoad(page) {
-  ['Schedule','Whiteboard'].forEach(p => {
-    const btn = document.getElementById('browseTab' + p);
-    if (btn) btn.style.background = (p.toLowerCase() === page) ? 'var(--gradient)' : '';
-  });
+  const bv = document.getElementById('browseView');
+  bv.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);">Loading…</div>';
 
-  // Disconnect previous browse page socket (e.g. switching away from whiteboard)
-  if (window.__browseCleanup) {
-    try { window.__browseCleanup(); } catch(e) {}
-    window.__browseCleanup = null;
-  }
-
-  const content = document.getElementById('browseContent');
-  content.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);">Loading…</div>';
-  content.style.cssText = 'flex:1;overflow:auto;';
-
-  let key = page;
-  if (page === 'schedule' && me?.role === 'teacher') key = 'teacher/schedule';
-
-  const html = await fetch('/partials/' + key + '.html').then(r => r.ok ? r.text() : null).catch(() => null);
+  const html = await fetch('/partials/' + page + '.html').then(r => r.ok ? r.text() : null).catch(() => null);
   if (!html) {
-    content.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);">Could not load page.</div>';
+    bv.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);">Could not load.</div>';
     return;
   }
 
@@ -169,25 +167,17 @@ async function browseLoad(page) {
   const scripts = [...tmp.querySelectorAll('script')].map(s => s.textContent);
   tmp.querySelectorAll('script').forEach(s => s.remove());
 
-  content.innerHTML = tmp.innerHTML;
-
-  // Whiteboard: browseContent must be a flex column so .wb-area{flex:1} gets height
-  if (page === 'whiteboard') {
-    content.style.cssText = 'flex:1;overflow:hidden;display:flex;flex-direction:column;';
-  }
+  bv.innerHTML = tmp.innerHTML;
 
   const savedCleanup = window.__cleanup;
   scripts.forEach(text => {
     if (!text.trim()) return;
     const el = document.createElement('script');
-    // IIFE isolates const/let so re-loading the same page doesn't redeclare them
     el.textContent = `(function(){\n${text}\n})();`;
     document.body.appendChild(el);
     document.body.removeChild(el);
   });
 
-  // If scripts registered a __cleanup (whiteboard socket), stash it separately
-  // and restore the meeting's own cleanup
   if (window.__cleanup !== savedCleanup) {
     window.__browseCleanup = window.__cleanup;
     window.__cleanup = savedCleanup;
@@ -228,20 +218,14 @@ function initials(name) {
 function initSocket() {
   socket = io();
   socket.emit('user_join', {user_id: me.id});
-
   socket.on('meeting:peers', ({peers}) => {
     peers.forEach(p => { peerNames[p.id] = p.name; createOffer(p.id); });
     renderParticipants();
   });
   socket.on('meeting:peer-joined', ({id, name}) => {
-    peerNames[id] = name;
-    ensurePeerConnection(id, false);
-    renderParticipants();
+    peerNames[id] = name; ensurePeerConnection(id); renderParticipants();
   });
-  socket.on('meeting:peer-left', ({id}) => {
-    closePeer(id);
-    renderParticipants();
-  });
+  socket.on('meeting:peer-left', ({id}) => { closePeer(id); renderParticipants(); });
   socket.on('meeting:signal', async ({from, data}) => {
     if (data.type === 'offer') await handleOffer(from, data);
     else if (data.type === 'answer') {
@@ -269,14 +253,12 @@ function ensurePeerConnection(peerId) {
   addRemoteTile(peerId);
   return pc;
 }
-
 async function createOffer(peerId) {
   const pc = ensurePeerConnection(peerId);
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
   signal(peerId, {type: offer.type, sdp: offer.sdp});
 }
-
 async function handleOffer(peerId, offerData) {
   peerNames[peerId] = peerNames[peerId] || 'Peer';
   const pc = ensurePeerConnection(peerId);
@@ -285,15 +267,12 @@ async function handleOffer(peerId, offerData) {
   await pc.setLocalDescription(answer);
   signal(peerId, {type: answer.type, sdp: answer.sdp});
 }
-
 function signal(toId, data) {
   socket.emit('meeting:signal', {to: toId, room_code: currentMeeting.room_code, data});
 }
-
 function closePeer(peerId) {
   peerConnections[peerId]?.close();
-  delete peerConnections[peerId];
-  delete peerNames[peerId];
+  delete peerConnections[peerId]; delete peerNames[peerId];
   document.getElementById(`tile-${peerId}`)?.remove();
   updateGridLayout();
 }
@@ -314,7 +293,6 @@ function addLocalTile() {
   grid.appendChild(tile);
   updateGridLayout();
 }
-
 function addRemoteTile(peerId) {
   if (document.getElementById(`tile-${peerId}`)) return;
   const grid = document.getElementById('videoGrid');
@@ -331,7 +309,6 @@ function addRemoteTile(peerId) {
   grid.appendChild(tile);
   updateGridLayout();
 }
-
 function updateRemoteVideo(peerId, stream) {
   const tile = document.getElementById(`tile-${peerId}`);
   if (!tile) return;
@@ -344,17 +321,13 @@ function updateRemoteVideo(peerId, stream) {
   }
   video.srcObject = stream;
 }
-
 function updateGridLayout() {
   const grid = document.getElementById('videoGrid');
   if (!grid) return;
   const n = grid.children.length;
-  if (n <= 1)      { grid.style.gridTemplateColumns = '1fr'; }
-  else if (n <= 2) { grid.style.gridTemplateColumns = '1fr 1fr'; }
-  else if (n <= 4) { grid.style.gridTemplateColumns = '1fr 1fr'; grid.style.gridTemplateRows = '1fr 1fr'; }
-  else             { grid.style.gridTemplateColumns = 'repeat(3,1fr)'; grid.style.gridTemplateRows = 'auto'; }
+  grid.style.gridTemplateColumns = n <= 1 ? '1fr' : n <= 2 ? '1fr 1fr' : n <= 4 ? '1fr 1fr' : 'repeat(3,1fr)';
+  grid.style.gridTemplateRows    = n <= 2 ? '1fr' : n <= 4 ? '1fr 1fr' : 'auto';
 }
-
 function renderParticipants() {
   const list = document.getElementById('participantList');
   if (!list) return;
@@ -373,29 +346,22 @@ async function joinMeeting(meeting) {
   document.getElementById('callTitle').textContent = meeting.title;
   document.getElementById('videoGrid').innerHTML = '';
   peerConnections = {}; peerNames = {};
-
   try {
     localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-  } catch (e) {
-    alert('Could not access camera/microphone: ' + e.message);
-    return;
-  }
-
+  } catch (e) { alert('Could not access camera/microphone: ' + e.message); return; }
   document.getElementById('callOverlay').classList.add('active');
-  addLocalTile();
-  renderParticipants();
-
+  addLocalTile(); renderParticipants();
   callStartTime = Date.now();
   durationInterval = setInterval(() => {
     const s = Math.floor((Date.now()-callStartTime)/1000);
     const el = document.getElementById('callDuration');
     if (el) el.textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   }, 1000);
-
   socket.emit('meeting:join', {room_code: meeting.room_code});
 }
 
 async function leaveMeeting() {
+  hideBrowsePanel();
   if (currentMeeting && socket) socket.emit('meeting:leave', {room_code: currentMeeting.room_code});
   Object.values(peerConnections).forEach(pc => pc.close());
   peerConnections = {}; peerNames = {};
@@ -404,7 +370,6 @@ async function leaveMeeting() {
   clearInterval(durationInterval);
   document.getElementById('callOverlay').classList.remove('active');
   document.getElementById('videoGrid').innerHTML = '';
-  document.getElementById('browseOverlay').style.display = 'none';
   currentMeeting = null; micOn = true; camOn = true; screenOn = false;
   ['btnMic','btnCam','btnScreen'].forEach(id => { const b = document.getElementById(id); if(b) b.className='ctrl-btn on'; });
   refreshMeetings();
@@ -462,7 +427,6 @@ function renderLobby() {
       </button>
     </div>
     <div class="meeting-grid" id="meetingGrid"></div>`;
-
   const grid = document.getElementById('meetingGrid');
   if (!meetings.length) {
     grid.innerHTML = `<div style="grid-column:1/-1;padding:48px;text-align:center;color:var(--text3);">
@@ -486,7 +450,6 @@ function renderLobby() {
     grid.appendChild(card);
   });
 }
-
 async function refreshMeetings() {
   meetings = await fetch('/api/meetings').then(r=>r.json()).catch(()=>[]);
   if (!document.getElementById('callOverlay')?.classList.contains('active')) renderLobby();
@@ -498,9 +461,7 @@ async function openModal() {
   if (me.role==='teacher'||me.role==='admin') {
     const classes = await fetch('/api/teacher/classes').then(r=>r.ok?r.json():[]).catch(()=>[]);
     classes.forEach(c => { const o=document.createElement('option'); o.value=c.id; o.textContent=c.name; sel.appendChild(o); });
-  } else {
-    document.getElementById('classFieldRow').style.display='none';
-  }
+  } else { document.getElementById('classFieldRow').style.display='none'; }
   document.getElementById('newMeetingModal').style.display='flex';
   document.getElementById('newMeetingTitle').focus();
 }
