@@ -1,5 +1,5 @@
 from flask import jsonify
-from datetime import datetime, timezone
+from datetime import datetime
 from api import blueprint
 from auth import login_required
 from models.academic import Assignment
@@ -16,7 +16,7 @@ def list_tests(user):
         .filter(
             Assignment.subject_id.in_(subject_ids),
             Assignment.type == "test",
-            Assignment.due_date >= datetime.now(timezone.utc),
+            Assignment.due_date >= datetime.utcnow(),
         )
         .order_by(Assignment.due_date)
         .all()
