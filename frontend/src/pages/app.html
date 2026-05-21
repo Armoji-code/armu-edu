@@ -1601,6 +1601,7 @@ function applyBrandingData(b) {
   if (light.length) css += `[data-theme="light"]{${light.join(';')}}`;
   if (f.family)     css += `body,input,textarea,button,select{font-family:'${f.family}',sans-serif!important;}`;
   if (f.size)       css += `body{font-size:${f.size}px;}`;
+  if (f.weight)     css += `body{font-weight:${f.weight};}p,span,div,li,td,th,label{font-weight:inherit;}`;
   document.getElementById('brand-override').textContent = css;
 
   // Load Google Font if not default

@@ -238,10 +238,12 @@ def admin_save_branding(user):
                    "light_bg","light_bg2","light_bg3","light_bg4")
         branding["colors"] = {k: v for k, v in data["colors"].items() if k in allowed}
     if isinstance(data.get("font"), dict):
-        allowed_fonts = ("family", "size", "dark_text", "light_text")
+        allowed_fonts = ("family", "size", "weight", "dark_text", "light_text")
         f = {k: v for k, v in data["font"].items() if k in allowed_fonts}
         if "size" in f:
             f["size"] = max(11, min(20, int(f["size"])))
+        if "weight" in f:
+            f["weight"] = max(300, min(700, round(int(f["weight"]) / 100) * 100))
         branding["font"] = f
     settings["branding"] = branding
     school.settings = settings

@@ -360,6 +360,11 @@ function renderAll(s) {
           <span id="fontSizeLabel" style="font-size:12px;color:var(--text3);min-width:32px;">14px</span>
         </div>
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;min-width:60px;">Weight</span>
+          <input type="range" id="fontWeight" min="300" max="700" step="100" value="400" style="width:120px;accent-color:var(--g1);" oninput="updateFontWeight(this.value)">
+          <span id="fontWeightLabel" style="font-size:12px;color:var(--text3);min-width:60px;">Regular (400)</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
           <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;min-width:60px;">Text</span>
           ${colorSwatch('font_dark_text','#f0f0f0','Dark mode')}
           ${colorSwatch('font_light_text','#111827','Light mode')}
@@ -646,6 +651,15 @@ function syncColorBox(input) {
   if (box) box.style.background = input.value;
 }
 
+var _weightNames = {300:'Light',400:'Regular',500:'Medium',600:'Semibold',700:'Bold'};
+function updateFontWeight(v) {
+  var lbl = document.getElementById('fontWeightLabel');
+  if (lbl) lbl.textContent = (_weightNames[+v] || v) + ' (' + v + ')';
+  var preview = document.getElementById('fontPreviewText');
+  if (preview) preview.style.fontWeight = v;
+}
+window.updateFontWeight = updateFontWeight;
+
 function previewFont() {
   var family = document.getElementById('fontFamily').value;
   var preview = document.getElementById('fontPreviewText');
@@ -673,6 +687,7 @@ function resetColors() {
   });
   var ff = document.getElementById('fontFamily'); if (ff) { ff.value = 'DM Sans'; previewFont(); }
   var fs = document.getElementById('fontSize'); if (fs) { fs.value = 14; document.getElementById('fontSizeLabel').textContent = '14px'; }
+  var fw = document.getElementById('fontWeight'); if (fw) { fw.value = 400; updateFontWeight(400); }
 }
 
 function initBranding(b) {
@@ -690,6 +705,7 @@ function initBranding(b) {
   var f = b.font || {};
   if (f.family) { var ff = document.getElementById('fontFamily'); if (ff) ff.value = f.family; previewFont(); }
   if (f.size)   { var fs = document.getElementById('fontSize'); if (fs) { fs.value = f.size; document.getElementById('fontSizeLabel').textContent = f.size + 'px'; } }
+  if (f.weight) { var fw = document.getElementById('fontWeight'); if (fw) { fw.value = f.weight; updateFontWeight(f.weight); } }
   var fontMap = { font_dark_text: f.dark_text, font_light_text: f.light_text };
   Object.entries(fontMap).forEach(function([id, val]) {
     var el = document.getElementById(id);
@@ -724,6 +740,7 @@ async function saveBranding() {
     font: {
       family:     document.getElementById('fontFamily').value,
       size:       parseInt(document.getElementById('fontSize').value),
+      weight:     parseInt(document.getElementById('fontWeight').value),
       dark_text:  document.getElementById('font_dark_text').value,
       light_text: document.getElementById('font_light_text').value,
     },
