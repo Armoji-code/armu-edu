@@ -75,7 +75,7 @@ function termConnect() {
 
   const status = document.getElementById('termStatus');
 
-  termSocket = io('/terminal', { transports: ['websocket'] });
+  termSocket = io('/terminal');
 
   termSocket.on('connect', () => {
     status.textContent = '● connected';
