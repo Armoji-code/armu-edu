@@ -100,23 +100,46 @@ Licensed under **AGPL-3.0** — free to use, modify, and self-host. Distribution
 
 ## Getting started
 
-The quickest way to get running is the interactive setup script:
+### Local / development
 
 ```bash
 git clone https://github.com/Armoji-code/armu-edu
 cd armu-edu
 bash setup.sh
-```
-
-It installs dependencies, generates a secret key, walks you through AI provider selection (including pulling Ollama models), initialises the database, and optionally creates demo accounts.
-
-Then start the server:
-
-```bash
 cd backend && python app.py
 ```
 
 The app starts at **http://localhost:5000**.
+
+`setup.sh` installs dependencies, generates a secret key, walks you through AI provider selection, initialises the database, and optionally creates demo accounts.
+
+### Production server (with your own domain)
+
+Run this on a fresh Ubuntu/Debian VPS **as root**, after cloning the repo:
+
+```bash
+sudo bash deploy.sh
+```
+
+It will ask for your domain name and email, then automatically:
+
+1. Runs `setup.sh` if the app hasn't been configured yet
+2. Installs **nginx** and **certbot**
+3. Configures nginx as a reverse proxy (including WebSocket support)
+4. Obtains a free **Let's Encrypt HTTPS** certificate for your domain
+5. Creates a **systemd service** so Armu starts on boot and restarts on crash
+
+**Before running:** point your domain's DNS **A record** to your server's IP — certbot needs to reach the server on port 80 to issue the certificate.
+
+After deployment, Armu is live at `https://yourdomain.com`. Manage the service with:
+
+```bash
+journalctl -u armu -f     # live logs
+systemctl restart armu    # restart
+systemctl stop armu       # stop
+```
+
+Future updates can be applied from **Admin → Settings → Software Update** — no SSH needed.
 
 ### Manual setup
 
