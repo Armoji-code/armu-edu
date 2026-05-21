@@ -1193,8 +1193,9 @@
   .sidebar.collapsed .user-info,
   .sidebar.collapsed .nav-label,
   .sidebar.collapsed .nav-item > span:last-child { display:none; }
-  .sidebar.collapsed .logo { padding:0 0 24px; display:flex; justify-content:center; }
-  .sidebar.collapsed .logo-text { font-size:16px; }
+  .sidebar.collapsed .logo { padding:0 0 24px; display:flex; justify-content:center; overflow:hidden; width:60px; box-sizing:border-box; }
+  .sidebar.collapsed .logo-text { font-size:16px; max-width:44px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .sidebar.collapsed .logo-text img { max-width:36px !important; max-height:36px !important; width:auto; height:auto; object-fit:contain; }
   .sidebar.collapsed .nav-item { justify-content:center; padding:9px 0; position:relative; }
   .sidebar.collapsed .nav-icon { width:auto; }
   .sidebar.collapsed .user-card { justify-content:center; padding:10px 0; }
