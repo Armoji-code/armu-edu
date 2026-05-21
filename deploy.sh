@@ -116,6 +116,7 @@ else
     NGINX_CONF_LINK=""
     mkdir -p /etc/nginx/conf.d
 fi
+mkdir -p /var/www/html
 
 cat > "$NGINX_CONF" <<NGINX
 server {
