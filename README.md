@@ -1,4 +1,4 @@
-# Armu · v0.4
+# Armu · v0.5
 
 <p align="center">
   <img src="docs/login_laptop.png" alt="Armu login" width="680"/>
@@ -252,6 +252,15 @@ For additional protection, also:
 ---
 
 ## Changelog
+
+### v0.5
+- **Web terminal** — admins can open a full shell session directly in the browser (Admin → Terminal); PTY-based over WebSocket, xterm.js frontend with full color theme and resize support
+- **In-app updates** — Admin → Settings → Software Update checks GitHub for new versions and applies them with one click (git pull + pip install + db migrate + auto-restart)
+- **Logo size slider** — adjustable logo height (16–94 px) in Admin → Settings → Customize
+- **Production deployment** — `deploy.sh` sets up nginx, Let's Encrypt HTTPS, and a systemd service; supports Ubuntu/Debian and Arch/CachyOS automatically
+- **First-run admin account** — `setup.sh` always creates an admin account; demo accounts are now opt-in (default N)
+- **Bug fix:** `seed.py` was missing `admin@test.com` despite claiming to create it
+- **Bug fix:** settings save bar position (fixed layout, no gap, scrolling intact)
 
 ### v0.4
 - **School branding** — admins can upload a custom school logo (shown in the sidebar); a persistent "Use Default" button resets it to the Armu logo at any time
