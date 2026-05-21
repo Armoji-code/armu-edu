@@ -1,12 +1,6 @@
 
 <style>
-.color-row{margin-bottom:18px;}
-.color-swatch{display:inline-block;vertical-align:top;width:60px;margin-right:10px;margin-bottom:4px;text-align:center;}
-.color-swatch-box{display:block;width:44px;height:44px;border-radius:6px;border:2px solid var(--border);margin:0 auto;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;}
-.color-swatch-box:hover{border-color:var(--g1);}
-.color-swatch-lbl{position:relative;display:block;}
-.color-swatch-inp{position:absolute;width:1px;height:1px;opacity:0;top:0;left:0;padding:0;border:none;}
-.color-swatch-name{display:block;font-size:10px;color:var(--text3);font-weight:600;white-space:nowrap;margin-top:6px;overflow:hidden;text-overflow:ellipsis;}
+/* intentionally empty – color pickers use inline styles */
 </style>
 <div class="topbar">
 <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-settings"></use></svg>
@@ -105,6 +99,18 @@ function renderFeatCard(key) {
 function updateThumb(thumb, inp) {
   if (!thumb || !inp) return;
   thumb.style.transform = inp.checked ? 'translateX(16px)' : '';
+}
+
+function colorSwatch(id, defVal, label) {
+  var swStyle = 'display:inline-block;vertical-align:top;width:60px;margin:0 10px 4px 0;text-align:center;';
+  var boxStyle = 'display:block;width:44px;height:44px;border-radius:6px;border:2px solid var(--border);margin:0 auto;cursor:pointer;';
+  var nameStyle = 'display:block;font-size:10px;color:var(--text3);font-weight:600;margin-top:6px;';
+  var inputStyle = 'position:fixed;width:0;height:0;opacity:0;border:none;padding:0;';
+  return '<span style="'+swStyle+'">'
+    + '<span id="box_'+id+'" style="'+boxStyle+'background:'+defVal+';" onclick="document.getElementById(\''+id+'\').click()"></span>'
+    + '<input type="color" id="'+id+'" value="'+defVal+'" style="'+inputStyle+'" oninput="syncColorBox(this)">'
+    + '<span style="'+nameStyle+'">'+label+'</span>'
+    + '</span>';
 }
 
 function renderAll(s) {
@@ -317,26 +323,18 @@ function renderAll(s) {
       </div>
 
       <div class="sub-label">Accent Colors</div>
-      <div class="color-row">
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_g1" style="background:#3dd68c" onclick="document.getElementById('c_g1').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_g1" value="#3dd68c" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Primary</span></div>
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_g2" style="background:#38bdf8" onclick="document.getElementById('c_g2').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_g2" value="#38bdf8" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Secondary</span></div>
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_g3" style="background:#6ee7b7" onclick="document.getElementById('c_g3').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_g3" value="#6ee7b7" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Tertiary</span></div>
+      <div style="margin-bottom:18px;">
+        ${colorSwatch('c_g1','#3dd68c','Primary')}${colorSwatch('c_g2','#38bdf8','Secondary')}${colorSwatch('c_g3','#6ee7b7','Tertiary')}
       </div>
 
       <div class="sub-label">Dark Mode Backgrounds</div>
-      <div class="color-row">
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_dark_bg" style="background:#111111" onclick="document.getElementById('c_dark_bg').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_dark_bg" value="#111111" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Base</span></div>
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_dark_bg2" style="background:#1a1a1a" onclick="document.getElementById('c_dark_bg2').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_dark_bg2" value="#1a1a1a" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Surface</span></div>
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_dark_bg3" style="background:#222222" onclick="document.getElementById('c_dark_bg3').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_dark_bg3" value="#222222" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Raised</span></div>
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_dark_bg4" style="background:#2c2c2c" onclick="document.getElementById('c_dark_bg4').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_dark_bg4" value="#2c2c2c" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Overlay</span></div>
+      <div style="margin-bottom:18px;">
+        ${colorSwatch('c_dark_bg','#111111','Base')}${colorSwatch('c_dark_bg2','#1a1a1a','Surface')}${colorSwatch('c_dark_bg3','#222222','Raised')}${colorSwatch('c_dark_bg4','#2c2c2c','Overlay')}
       </div>
 
       <div class="sub-label">Light Mode Backgrounds</div>
-      <div class="color-row">
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_light_bg" style="background:#f5f7fa" onclick="document.getElementById('c_light_bg').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_light_bg" value="#f5f7fa" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Base</span></div>
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_light_bg2" style="background:#ffffff" onclick="document.getElementById('c_light_bg2').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_light_bg2" value="#ffffff" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Surface</span></div>
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_light_bg3" style="background:#eef1f7" onclick="document.getElementById('c_light_bg3').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_light_bg3" value="#eef1f7" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Raised</span></div>
-        <div class="color-swatch"><span class="color-swatch-box" id="box_c_light_bg4" style="background:#e4e8f2" onclick="document.getElementById('c_light_bg4').click()"></span><div class="color-swatch-lbl"><input type="color" class="color-swatch-inp" id="c_light_bg4" value="#e4e8f2" oninput="syncColorBox(this)"></div><span class="color-swatch-name">Overlay</span></div>
+      <div style="margin-bottom:18px;">
+        ${colorSwatch('c_light_bg','#f5f7fa','Base')}${colorSwatch('c_light_bg2','#ffffff','Surface')}${colorSwatch('c_light_bg3','#eef1f7','Raised')}${colorSwatch('c_light_bg4','#e4e8f2','Overlay')}
       </div>
 
       <div style="display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap;">
