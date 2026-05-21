@@ -366,17 +366,19 @@ function renderAll(s) {
         <div class="section-icon" style="background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15))">
           <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-settings"/></svg>
         </div>
-        <div><div class="section-title">Software Update</div><div class="section-desc">Update Armu to the latest version from GitHub</div></div>
+        <div><div class="section-title">Software Update</div><div class="section-desc">Pull the latest commits from GitHub</div></div>
       </div>
       <div id="updateCard" style="display:flex;flex-direction:column;gap:12px;">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span style="font-size:13px;color:var(--text3)">Current version: <strong style="color:var(--text)" id="localVer">—</strong></span>
+          <span style="font-size:13px;color:var(--text3)">Local commit: <code style="color:var(--text);font-family:'DM Mono',monospace" id="localVer">—</code></span>
           <button class="btn" id="checkUpdateBtn" onclick="checkUpdate()">Check for updates</button>
           <span id="updateStatus" style="font-size:13px;color:var(--text3)"></span>
         </div>
-        <div id="updateApplyRow" style="display:none;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span style="font-size:13px;">New version available: <strong id="remoteVer" style="color:var(--g1)"></strong></span>
-          <button class="btn btn-primary" id="applyUpdateBtn" onclick="applyUpdate()">Update now</button>
+        <div id="updateApplyRow" style="display:none;flex-direction:column;gap:10px;">
+          <div id="updateCommitList" style="display:flex;flex-direction:column;gap:4px;"></div>
+          <div>
+            <button class="btn btn-primary" id="applyUpdateBtn" onclick="applyUpdate()">Pull &amp; update</button>
+          </div>
         </div>
         <pre id="updateLog" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto;margin:0;"></pre>
       </div>
@@ -712,17 +714,27 @@ async function checkUpdate(silent) {
   if (status && !silent) status.textContent = 'Checking…';
   try {
     const data = await fetch('/api/admin/update/check').then(r => r.json());
-    if (document.getElementById('localVer')) document.getElementById('localVer').textContent = data.local || '—';
+    const lv = document.getElementById('localVer');
+    if (lv) lv.textContent = data.local || '—';
     if (data.error) {
       if (status) status.textContent = data.error;
-    } else if (data.update_available) {
-      if (status) status.textContent = '';
+    } else if (data.up_to_date) {
+      if (status) status.textContent = silent ? '' : 'Already up to date.';
       const row = document.getElementById('updateApplyRow');
-      const rv = document.getElementById('remoteVer');
-      if (rv) rv.textContent = data.remote;
-      if (row) row.style.display = 'flex';
+      if (row) row.style.display = 'none';
     } else {
-      if (status) status.textContent = silent ? `Up to date (${data.remote})` : `Already on latest version (${data.remote})`;
+      if (status) status.textContent = `${data.commits_behind} new commit${data.commits_behind !== 1 ? 's' : ''}`;
+      const list = document.getElementById('updateCommitList');
+      if (list) {
+        list.innerHTML = (data.commits || []).map(c =>
+          `<div style="font-size:12px;display:flex;gap:8px;align-items:baseline;">
+            <code style="color:var(--g1);font-family:'DM Mono',monospace;flex-shrink:0">${c.hash}</code>
+            <span style="color:var(--text2)">${c.message.replace(/</g,'&lt;')}</span>
+          </div>`
+        ).join('');
+      }
+      const row = document.getElementById('updateApplyRow');
+      if (row) row.style.display = 'flex';
     }
   } catch(e) {
     if (status) status.textContent = 'Check failed';
@@ -742,9 +754,8 @@ async function applyUpdate() {
     const data = await fetch('/api/admin/update/apply', { method: 'POST' }).then(r => r.json());
     if (log) log.textContent = data.log || '';
     if (data.ok) {
-      if (status) status.textContent = 'Server is restarting — please wait a few seconds then refresh.';
-      if (btn) btn.textContent = 'Done — refresh page';
-      if (btn) { btn.disabled = false; btn.onclick = () => location.reload(); }
+      if (status) status.textContent = 'Server is restarting — refresh in a few seconds.';
+      if (btn) { btn.disabled = false; btn.textContent = 'Refresh page'; btn.onclick = () => location.reload(); }
     } else {
       if (status) status.textContent = 'Update failed — see log above';
       if (btn) { btn.disabled = false; btn.textContent = 'Retry'; btn.onclick = applyUpdate; }

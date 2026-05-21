@@ -2,42 +2,46 @@ import os
 import sys
 import subprocess
 import threading
-import requests as _requests
 from flask import jsonify
 from api import blueprint
 from auth import login_required
 
-_REPO_ROOT  = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-_VERSION_FILE = os.path.join(_REPO_ROOT, 'VERSION')
-_REMOTE_VERSION_URL = 'https://raw.githubusercontent.com/Armoji-code/armu-edu/main/VERSION'
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 
 
-def _local_version():
-    try:
-        return open(_VERSION_FILE).read().strip()
-    except OSError:
-        return 'unknown'
+def _git(*args, **kwargs):
+    return subprocess.run(
+        ['git', '-C', _REPO_ROOT] + list(args),
+        capture_output=True, text=True, timeout=30, **kwargs
+    )
 
 
 @blueprint.route('/admin/update/check', methods=['GET'])
 @login_required(roles=['admin'])
 def update_check(user):
-    local = _local_version()
     try:
-        r = _requests.get(_REMOTE_VERSION_URL, timeout=5)
-        r.raise_for_status()
-        remote = r.text.strip()
+        _git('fetch', 'origin')
     except Exception as e:
-        return jsonify({'error': f'Could not reach GitHub: {e}', 'local': local}), 502
+        return jsonify({'error': f'git fetch failed: {e}'}), 502
 
-    def _ver(v):
-        try:
-            return tuple(int(x) for x in v.lstrip('v').split('.'))
-        except ValueError:
-            return (0,)
+    local  = _git('rev-parse', '--short', 'HEAD').stdout.strip()
+    remote = _git('rev-parse', '--short', 'origin/main').stdout.strip()
 
-    update_available = _ver(remote) > _ver(local)
-    return jsonify({'local': local, 'remote': remote, 'update_available': update_available})
+    log_result = _git('log', 'HEAD..origin/main', '--oneline', '--no-decorate')
+    lines = [l.strip() for l in log_result.stdout.strip().splitlines() if l.strip()]
+
+    commits = []
+    for line in lines:
+        parts = line.split(' ', 1)
+        commits.append({'hash': parts[0], 'message': parts[1] if len(parts) > 1 else ''})
+
+    return jsonify({
+        'local': local,
+        'remote': remote,
+        'up_to_date': local == remote or len(commits) == 0,
+        'commits_behind': len(commits),
+        'commits': commits,
+    })
 
 
 @blueprint.route('/admin/update/apply', methods=['POST'])
@@ -48,8 +52,8 @@ def update_apply(user):
     pip_cmd  = venv_pip if os.path.exists(venv_pip) else sys.executable.replace('python', 'pip')
 
     steps = [
-        (['git', '-C', _REPO_ROOT, 'pull', '--ff-only'], 'git pull'),
-        ([pip_cmd, 'install', '-q', '-r', req_file],       'pip install'),
+        (['git', '-C', _REPO_ROOT, 'pull', '--ff-only'],              'git pull'),
+        ([pip_cmd, 'install', '-q', '-r', req_file],                   'pip install'),
         ([sys.executable, '-m', 'flask', '--app', 'app', 'db', 'upgrade'], 'db migrate'),
     ]
 
@@ -57,10 +61,8 @@ def update_apply(user):
     for cmd, label in steps:
         try:
             result = subprocess.run(
-                cmd,
-                capture_output=True, text=True,
-                cwd=os.path.join(_REPO_ROOT, 'backend'),
-                timeout=120,
+                cmd, capture_output=True, text=True,
+                cwd=os.path.join(_REPO_ROOT, 'backend'), timeout=120,
             )
             out = (result.stdout + result.stderr).strip()
             if result.returncode != 0:
