@@ -13,6 +13,13 @@ import threading
 from datetime import date, datetime, timezone
 
 
+def _ai_error_msg(e):
+    s = str(e)
+    if "Connection refused" in s or "Max retries" in s or "Failed to establish" in s:
+        return "AI service is unreachable. Make sure Ollama is running, or switch providers in Admin → Settings → AI Configuration."
+    return "AI service returned an error. Please try again later."
+
+
 TUTOR_SYSTEM_PROMPT = """\
 You are a strict but friendly AI tutor for school students. \
 Your job is to make students genuinely understand — not just feel good.
@@ -210,7 +217,7 @@ def chat(user, session_id):
                 full_response.append(token)
                 yield token
         except Exception as e:
-            yield f"\n\n[Error: {e}]"
+            yield f"\n\n{_ai_error_msg(e)}"
         finally:
             if full_response:
                 with app.app_context():
@@ -407,7 +414,7 @@ def daily_digest(user):
                 full.append(token)
                 yield token
         except Exception as e:
-            yield f"[Error: {e}]"
+            yield _ai_error_msg(e)
         finally:
             content = "".join(full).strip()
             if content:
@@ -506,7 +513,7 @@ def teacher_digest(user):
                 full.append(token)
                 yield token
         except Exception as e:
-            yield f"[Error: {e}]"
+            yield _ai_error_msg(e)
         finally:
             content = "".join(full).strip()
             if content:
