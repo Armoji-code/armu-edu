@@ -111,7 +111,7 @@ cd backend && python app.py
 
 The app starts at **http://localhost:5000**.
 
-`setup.sh` installs dependencies, generates a secret key, walks you through AI provider selection, initialises the database, and optionally creates demo accounts.
+`setup.sh` installs dependencies, generates a secret key, walks you through AI provider selection, initialises the database, creates your admin account, and optionally creates demo accounts. For a production server with a domain, use `deploy.sh` instead (see below).
 
 ### Production server (with your own domain)
 
