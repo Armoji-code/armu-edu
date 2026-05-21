@@ -5,11 +5,8 @@ import struct
 import termios
 import threading
 import subprocess
-import logging
 from flask import session, request
 from app import socketio
-
-log = logging.getLogger(__name__)
 
 _sessions = {}  # sid -> {'proc': Popen, 'fd': int}
 
@@ -30,26 +27,29 @@ def _read_loop(sid, fd):
 @socketio.on('connect', namespace='/terminal')
 def term_connect():
     user_id = session.get('user_id')
-    log.info('terminal connect attempt: sid=%s user_id=%s session_keys=%s',
-             request.sid, user_id, list(session.keys()))
+    print(f'[TERMINAL] connect: sid={request.sid} user_id={user_id} keys={list(session.keys())}', flush=True)
     if not user_id:
-        log.warning('terminal connect rejected: no user_id in session')
+        print('[TERMINAL] rejected: no user_id in session', flush=True)
         return False
     from models.user import User
     user = User.query.get(user_id)
     if not user or user.role != 'admin':
-        log.warning('terminal connect rejected: user=%s role=%s', user_id, user.role if user else None)
+        print(f'[TERMINAL] rejected: user={user_id} role={user.role if user else None}', flush=True)
         return False
 
-    log.info('terminal connect accepted for user %s', user_id)
-    master_fd, slave_fd = pty.openpty()
-    proc = subprocess.Popen(
-        ['/bin/bash', '--login'],
-        stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
-        close_fds=True,
-        cwd=os.path.expanduser('~'),
-    )
-    os.close(slave_fd)
+    print(f'[TERMINAL] accepted for user {user_id}', flush=True)
+    try:
+        master_fd, slave_fd = pty.openpty()
+        proc = subprocess.Popen(
+            ['/bin/bash', '--login'],
+            stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
+            close_fds=True,
+            cwd=os.path.expanduser('~'),
+        )
+        os.close(slave_fd)
+    except Exception as e:
+        print(f'[TERMINAL] PTY error: {e}', flush=True)
+        return False
 
     sid = request.sid
     _sessions[sid] = {'proc': proc, 'fd': master_fd}
