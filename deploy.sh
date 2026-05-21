@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Armu production deployment script.
-# Run on a fresh Ubuntu/Debian server after cloning the repo.
+# Supports Ubuntu/Debian (apt) and Arch/CachyOS (pacman).
 # Installs nginx, certbot, sets up a systemd service, and configures HTTPS.
 set -euo pipefail
 
@@ -86,12 +86,35 @@ hr
 printf "  ${BOLD}3. nginx + certbot${W}\n"
 hr
 
+inf "Detecting package manager…"
+if command -v apt-get &>/dev/null; then
+    PKG_MANAGER="apt"
+    inf "Found apt (Debian/Ubuntu)"
+elif command -v pacman &>/dev/null; then
+    PKG_MANAGER="pacman"
+    inf "Found pacman (Arch/CachyOS)"
+else
+    die "No supported package manager found (apt or pacman required)."
+fi
+
 inf "Installing nginx and certbot…"
-apt-get update -qq
-apt-get install -y -qq nginx certbot python3-certbot-nginx
+if [[ "$PKG_MANAGER" == "apt" ]]; then
+    apt-get update -qq
+    apt-get install -y -qq nginx certbot python3-certbot-nginx
+else
+    pacman -Sy --noconfirm --needed nginx certbot certbot-nginx
+fi
 ok "nginx and certbot installed."
 
-NGINX_CONF="/etc/nginx/sites-available/armu"
+# Arch uses /etc/nginx/conf.d/ instead of sites-available/sites-enabled
+if [[ "$PKG_MANAGER" == "apt" ]]; then
+    NGINX_CONF="/etc/nginx/sites-available/armu"
+    NGINX_CONF_LINK="/etc/nginx/sites-enabled/armu"
+else
+    NGINX_CONF="/etc/nginx/conf.d/armu.conf"
+    NGINX_CONF_LINK=""
+fi
+
 cat > "$NGINX_CONF" <<NGINX
 server {
     listen 80;
@@ -116,8 +139,12 @@ server {
 }
 NGINX
 
-ln -sf "$NGINX_CONF" /etc/nginx/sites-enabled/armu
-rm -f /etc/nginx/sites-enabled/default
+if [[ "$PKG_MANAGER" == "apt" ]]; then
+    ln -sf "$NGINX_CONF" "$NGINX_CONF_LINK"
+    rm -f /etc/nginx/sites-enabled/default
+fi
+
+systemctl enable --now nginx
 nginx -t && systemctl reload nginx
 ok "nginx configured for $DOMAIN (HTTP)."
 
