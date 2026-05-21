@@ -115,6 +115,10 @@ else
     NGINX_CONF="/etc/nginx/conf.d/armu.conf"
     NGINX_CONF_LINK=""
     mkdir -p /etc/nginx/conf.d
+    # Arch nginx.conf doesn't include conf.d by default — add it if missing
+    if ! grep -q "conf\.d/\*\.conf" /etc/nginx/nginx.conf; then
+        sed -i 's|http {|http {\n    include /etc/nginx/conf.d/*.conf;|' /etc/nginx/nginx.conf
+    fi
 fi
 mkdir -p /var/www/html
 
