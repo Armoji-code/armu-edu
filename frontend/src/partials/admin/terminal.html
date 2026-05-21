@@ -29,7 +29,7 @@
     <span id="termStatus" style="font-size:12px;color:var(--text3);margin-left:auto;"></span>
     <button class="btn btn-sm" onclick="termReconnect()">Reconnect</button>
   </div>
-  <div id="termWrap"></div>
+  <div id="termWrap" style="height:calc(100vh - 140px);"></div>
 </div>
 
 <!-- xterm.js -->
@@ -82,6 +82,13 @@ function termConnect() {
     status.style.color = 'var(--g1)';
     fitAddon.fit();
     termSocket.emit('term_resize', { cols: term.cols, rows: term.rows });
+  });
+
+  termSocket.on('connect_error', (err) => {
+    status.textContent = '○ error: ' + err.message;
+    status.style.color = '#f87171';
+    term.write('\r\n\x1b[31mConnection error: ' + err.message + '\x1b[0m\r\n');
+    console.error('[terminal] connect_error', err);
   });
 
   termSocket.on('disconnect', () => {
