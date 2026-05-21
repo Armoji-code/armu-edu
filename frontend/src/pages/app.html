@@ -1600,7 +1600,7 @@ function applyBrandingData(b) {
     logoText.style.webkitBackgroundClip = 'unset';
     logoText.style.webkitTextFillColor = 'unset';
     logoText.style.backgroundClip = 'unset';
-    logoText.innerHTML = `<img src="${b.logo_data}" style="max-height:${b.logo_height||36}px;max-width:160px;object-fit:${b.logo_fit||'contain'};display:block;" alt="logo">`;
+    logoText.innerHTML = `<img src="${b.logo_data}" style="max-height:${b.logo_height||36}px;max-width:180px;object-fit:${b.logo_fit||'contain'};display:block;" alt="logo">`;
   } else if (logoText && !b.logo_data) {
     logoText.style.cssText = '';
     logoText.innerHTML = 'armu';
