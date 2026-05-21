@@ -131,7 +131,18 @@ It will ask for your domain name, email, and a few config questions, then automa
 4. Obtains a free **Let's Encrypt HTTPS** certificate for your domain
 5. Creates a **systemd service** so Armu starts on boot and restarts on crash
 
-**Before running:** point your domain's DNS **A record** to your server's IP — certbot needs to reach the server on port 80 to issue the certificate.
+**Before running — checklist:**
+
+- Point your domain's DNS **A record** to your server's public IP
+- If running on a **home PC behind a router**, forward ports **80** and **443** to your PC's local IP in your router's port forwarding / virtual servers settings
+- If you have **UFW** enabled, open the ports: `sudo ufw allow 80/tcp && sudo ufw allow 443/tcp`
+- Make sure your server's public IP matches what `nslookup yourdomain.com` returns before running
+
+> **SSL certificate tip:** if certbot HTTP validation fails (e.g. behind a strict ISP), the script falls back gracefully. You can also get the cert manually with DNS validation:
+> ```bash
+> sudo certbot certonly --manual --preferred-challenges dns -d yourdomain.com --agree-tos -m you@email.com
+> ```
+> Add the TXT record it shows in your DNS panel, wait 30 seconds, press Enter. Then re-run `deploy.sh`.
 
 After deployment, Armu is live at `https://yourdomain.com`. Manage the service with:
 
