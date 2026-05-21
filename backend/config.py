@@ -13,7 +13,7 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     DEBUG        = os.environ.get("FLASK_DEBUG", "0") == "1"
-    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:5000")
+    CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:5000").split(",")]
 
     TURN_URL        = os.environ.get("TURN_URL",        "")
     TURN_USERNAME   = os.environ.get("TURN_USERNAME",   "")
