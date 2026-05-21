@@ -79,6 +79,11 @@ with app.app_context():
             db.session.add(klass)
             db.session.flush()
 
+            admin = User(name="Admin", email="admin@test.com", role="admin",
+                         school_id=school.id)
+            admin.set_password("password")
+            db.session.add(admin)
+
             student = User(name="Armin Test", email="student@test.com", role="student",
                            school_id=school.id, class_id=klass.id)
             student.set_password("password")
@@ -98,6 +103,6 @@ with app.app_context():
             db.session.flush()
 
             seed_assignments([math, physics, lit, hist])
-            print("Seeded: school, class 10A, student@test.com, teacher@test.com (password: password)")
+            print("Seeded: school, class 10A, admin@test.com, teacher@test.com, student@test.com (password: password)")
         else:
             print("Already seeded. Use --reset-assignments to refresh assignment data.")

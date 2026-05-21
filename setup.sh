@@ -257,20 +257,67 @@ inf "Running database migrations…"
 (cd "$BACKEND" && FLASK_APP=app.py "$FLASK" db upgrade 2>&1 | grep -v UserWarning | grep -v "app = app_factory" || true)
 ok "Database ready."
 
+# ── Admin account ─────────────────────────────────────────────────────────────
+printf "\n"
+hr
+printf "  ${BOLD}6. Admin account${W}\n"
+hr
+printf "  Create the admin account you will use to log in and manage the school.\n\n"
+ask "Admin name [default: Admin]:"
+read -r ADMIN_NAME; ADMIN_NAME="${ADMIN_NAME:-Admin}"
+ask "Admin email:"
+read -r ADMIN_EMAIL
+while [[ -z "$ADMIN_EMAIL" ]]; do
+    err "Email is required."
+    ask "Admin email:"
+    read -r ADMIN_EMAIL
+done
+ask "Admin password (min 8 characters):"
+read -r -s ADMIN_PASSWORD; echo
+while [[ ${#ADMIN_PASSWORD} -lt 8 ]]; do
+    err "Password must be at least 8 characters."
+    ask "Admin password:"
+    read -r -s ADMIN_PASSWORD; echo
+done
+ask "School name [default: My School]:"
+read -r SCHOOL_NAME; SCHOOL_NAME="${SCHOOL_NAME:-My School}"
+
+"$PYTHON_VENV" - <<PYEOF
+import sys, os
+sys.path.insert(0, '$BACKEND')
+os.chdir('$BACKEND')
+from app import create_app
+from models import db
+from models.user import User
+from models.school import School
+
+app = create_app()
+with app.app_context():
+    if School.query.first():
+        print("School already exists — skipping admin creation.")
+        sys.exit(0)
+    school = School(name=${SCHOOL_NAME@Q})
+    db.session.add(school)
+    db.session.flush()
+    admin = User(name=${ADMIN_NAME@Q}, email=${ADMIN_EMAIL@Q}, role="admin", school_id=school.id)
+    admin.set_password(${ADMIN_PASSWORD@Q})
+    db.session.add(admin)
+    db.session.commit()
+    print("Admin account created.")
+PYEOF
+ok "Admin account ready — log in with: $ADMIN_EMAIL"
+
 # ── Demo accounts ─────────────────────────────────────────────────────────────
 printf "\n"
 hr
-printf "  ${BOLD}6. Demo accounts${W}\n"
+printf "  ${BOLD}7. Demo accounts (optional)${W}\n"
 hr
-printf "  Seeding creates:\n"
-printf "    · admin@test.com  / password  (admin)\n"
-printf "    · teacher@test.com / password (teacher)\n"
-printf "    · student@test.com / password (student)\n\n"
-ask "Create demo accounts? [Y/n]:"
+printf "  Adds sample students, teachers, classes, and assignments for testing.\n\n"
+ask "Create demo accounts? [y/N]:"
 read -r SEED_CHOICE
-if [[ "${SEED_CHOICE:-Y}" =~ ^[Yy]$ ]]; then
+if [[ "${SEED_CHOICE:-N}" =~ ^[Yy]$ ]]; then
     (cd "$BACKEND" && "$PYTHON_VENV" seed.py 2>&1 | grep -v UserWarning | grep -v "app = app_factory" || true)
-    ok "Demo accounts created."
+    ok "Demo accounts created (admin@test.com, teacher@test.com, student@test.com / password)."
 else
     inf "Skipped. You can seed later with: cd backend && python seed.py"
 fi
