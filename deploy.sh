@@ -202,7 +202,7 @@ server {
 }
 NGINX
 
-nginx -t && systemctl reload nginx
+nginx -t && systemctl restart nginx
 ok "nginx updated for HTTPS."
 
 # ── systemd service ───────────────────────────────────────────────────────────
