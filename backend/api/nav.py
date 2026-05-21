@@ -126,5 +126,6 @@ def list_icons(user):
         "ic-whiteboard", "ic-meeting", "ic-messages", "ic-settings",
         "ic-chart", "ic-menu", "ic-pen", "ic-logout", "ic-moon",
         "ic-sun", "ic-plus", "ic-trash", "ic-copy", "ic-download",
+        "ic-terminal",
     ]
     return jsonify(icons)
