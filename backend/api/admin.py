@@ -231,6 +231,8 @@ def admin_save_branding(user):
         branding["logo_data"] = data["logo_data"]
     if "logo_fit" in data and data["logo_fit"] in ("contain", "cover", "fill"):
         branding["logo_fit"] = data["logo_fit"]
+    if "logo_height" in data:
+        branding["logo_height"] = max(16, min(94, int(data["logo_height"])))
     if isinstance(data.get("colors"), dict):
         allowed = ("g1","g2","g3","dark_bg","dark_bg2","dark_bg3","dark_bg4",
                    "light_bg","light_bg2","light_bg3","light_bg4")
