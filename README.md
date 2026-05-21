@@ -115,15 +115,17 @@ The app starts at **http://localhost:5000**.
 
 ### Production server (with your own domain)
 
-Run this on a fresh Ubuntu/Debian VPS **as root**, after cloning the repo:
+Supports **Ubuntu/Debian** (apt) and **Arch/CachyOS** (pacman) — the script detects which one automatically.
 
 ```bash
+git clone https://github.com/Armoji-code/armu-edu
+cd armu-edu
 sudo bash deploy.sh
 ```
 
-It will ask for your domain name and email, then automatically:
+It will ask for your domain name, email, and a few config questions, then automatically:
 
-1. Runs `setup.sh` if the app hasn't been configured yet
+1. Runs `setup.sh` (app config, admin account) if not done yet
 2. Installs **nginx** and **certbot**
 3. Configures nginx as a reverse proxy (including WebSocket support)
 4. Obtains a free **Let's Encrypt HTTPS** certificate for your domain
