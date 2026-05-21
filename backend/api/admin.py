@@ -229,6 +229,8 @@ def admin_save_branding(user):
     branding = {}
     if "logo_data" in data:
         branding["logo_data"] = data["logo_data"]
+    if "logo_icon_data" in data:
+        branding["logo_icon_data"] = data["logo_icon_data"]
     if "logo_fit" in data and data["logo_fit"] in ("contain", "cover", "fill"):
         branding["logo_fit"] = data["logo_fit"]
     if "logo_height" in data:

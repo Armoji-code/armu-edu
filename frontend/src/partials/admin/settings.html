@@ -338,6 +338,21 @@ function renderAll(s) {
         </div>
       </div>
 
+      <div style="display:flex;align-items:flex-start;gap:16px;margin-bottom:18px;flex-wrap:wrap;">
+        <div id="iconLogoPreviewBox" style="width:52px;height:52px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+          <svg class="icon icon-18" style="color:var(--text3)"><use href="#ic-menu"/></svg>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="font-size:13px;font-weight:500;color:var(--text);">Collapsed sidebar icon <span style="font-size:11px;font-weight:400;color:var(--text3);">(optional)</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn" onclick="document.getElementById('iconLogoFileInput').click()"><svg class="icon icon-14"><use href="#ic-plus"/></svg> Upload Icon</button>
+            <button class="btn" id="iconLogoRemoveBtn" onclick="removeIconLogo()" style="display:none">Remove</button>
+            <input type="file" id="iconLogoFileInput" accept="image/*" style="display:none" onchange="handleIconLogoUpload(this)">
+          </div>
+          <div style="font-size:11px;color:var(--text3);">Shown instead of the main logo when the sidebar is collapsed · square image recommended</div>
+        </div>
+      </div>
+
       <div class="sub-label">Typography</div>
       <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
@@ -584,6 +599,38 @@ async function save() {
 
 /* ── Branding ─────────────────────────────────────────── */
 var brandLogo = null;
+var brandIconLogo = null;
+
+function handleIconLogoUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  if (file.size > 1024 * 1024) { alert('Icon must be under 1 MB.'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    brandIconLogo = e.target.result;
+    updateIconLogoPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeIconLogo() {
+  brandIconLogo = null;
+  document.getElementById('iconLogoFileInput').value = '';
+  updateIconLogoPreview();
+}
+
+function updateIconLogoPreview() {
+  var box = document.getElementById('iconLogoPreviewBox');
+  var removeBtn = document.getElementById('iconLogoRemoveBtn');
+  if (!box) return;
+  if (brandIconLogo) {
+    box.innerHTML = '<img src="' + brandIconLogo + '" style="max-width:36px;max-height:36px;object-fit:contain;" alt="icon">';
+    if (removeBtn) removeBtn.style.display = '';
+  } else {
+    box.innerHTML = '<svg class="icon icon-18" style="color:var(--text3)"><use href="#ic-menu"/></svg>';
+    if (removeBtn) removeBtn.style.display = 'none';
+  }
+}
 
 function handleLogoUpload(input) {
   var file = input.files[0];
@@ -718,12 +765,15 @@ function initBranding(b) {
     var fitRadio = document.querySelector('input[name="logoFit"][value="' + (b.logo_fit || 'contain') + '"]');
     if (fitRadio) fitRadio.checked = true;
   }
+  if (b.logo_icon_data) { brandIconLogo = b.logo_icon_data; }
   updateLogoPreview();
+  updateIconLogoPreview();
 }
 
 async function saveBranding() {
   var payload = {
     logo_data: brandLogo ? brandLogo.data : null,
+    logo_icon_data: brandIconLogo || null,
     logo_fit: brandLogo ? (brandLogo.fit || 'contain') : 'contain',
     logo_height: brandLogo ? (brandLogo.height || 36) : 36,
     colors: {
@@ -762,8 +812,10 @@ async function saveBranding() {
   }
 }
 
-window.handleLogoUpload = handleLogoUpload;
-window.removeLogo       = removeLogo;
+window.handleLogoUpload     = handleLogoUpload;
+window.removeLogo           = removeLogo;
+window.handleIconLogoUpload = handleIconLogoUpload;
+window.removeIconLogo       = removeIconLogo;
 window.resetColors      = resetColors;
 window.saveBranding     = saveBranding;
 window.syncColorBox     = syncColorBox;

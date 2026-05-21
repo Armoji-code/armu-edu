@@ -1196,6 +1196,9 @@
   .sidebar.collapsed .logo { padding:0 0 24px; display:flex; justify-content:center; overflow:hidden; width:60px; box-sizing:border-box; }
   .sidebar.collapsed .logo-text { font-size:16px; max-width:44px; overflow:hidden; display:flex; align-items:center; justify-content:center; }
   .sidebar.collapsed .logo-text img { max-width:36px !important; max-height:36px !important; width:auto; height:auto; object-fit:contain; }
+  .has-icon-logo.collapsed #logoText { display:none; }
+  .has-icon-logo.collapsed #logoIcon { display:flex !important; }
+  #logoIcon img { max-width:36px; max-height:36px; object-fit:contain; }
   .sidebar.collapsed .nav-item { justify-content:center; padding:9px 0; position:relative; }
   .sidebar.collapsed .nav-icon { width:auto; }
   .sidebar.collapsed .user-card { justify-content:center; padding:10px 0; }
@@ -1321,6 +1324,7 @@
   <div class="logo">
     <div class="logo-text" id="logoText">armu</div>
     <div class="logo-sub" id="logoSub">loading…</div>
+    <div id="logoIcon" style="display:none;align-items:center;justify-content:center;"></div>
   </div>
   <div id="sidebarNav" class="sidebar-nav"></div>
   <div class="sidebar-bottom">
@@ -1623,6 +1627,17 @@ function applyBrandingData(b) {
   } else if (logoText && !b.logo_data) {
     logoText.style.cssText = '';
     logoText.innerHTML = 'armu';
+  }
+  const logoIcon = document.getElementById('logoIcon');
+  const sidebar = document.getElementById('sidebar');
+  if (logoIcon && sidebar) {
+    if (b.logo_icon_data) {
+      logoIcon.innerHTML = `<img src="${b.logo_icon_data}" alt="icon">`;
+      sidebar.classList.add('has-icon-logo');
+    } else {
+      logoIcon.innerHTML = '';
+      sidebar.classList.remove('has-icon-logo');
+    }
   }
 }
 window.applyBrandingData = applyBrandingData;
