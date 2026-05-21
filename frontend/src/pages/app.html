@@ -1544,10 +1544,14 @@ function updateActiveNav(path) {
   );
 }
 
+function setSidebarWidth(collapsed) {
+  document.documentElement.style.setProperty('--sidebar-w', collapsed ? '60px' : '220px');
+}
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const collapsed = sidebar.classList.toggle('collapsed');
   localStorage.setItem('sidebar-collapsed', collapsed);
+  setSidebarWidth(collapsed);
   document.getElementById('toggleIcon').setAttribute('href', '#ic-chevright');
 }
 window.toggleSidebar = toggleSidebar;
@@ -1672,8 +1676,10 @@ async function boot() {
   const sections = await fetch('/api/nav/config').then(r => r.json()).catch(() => null);
   if (sections) renderSidebar(sections);
 
-  if (localStorage.getItem('sidebar-collapsed') === 'true')
+  if (localStorage.getItem('sidebar-collapsed') === 'true') {
     document.getElementById('sidebar').classList.add('collapsed');
+    setSidebarWidth(true);
+  }
 
   const path = location.pathname;
   await navigate(path, false);
