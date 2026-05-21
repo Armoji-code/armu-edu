@@ -164,8 +164,45 @@ hr
 inf "Requesting Let's Encrypt certificate for $DOMAIN…"
 inf "(Make sure your domain's DNS A record points to this server's IP first!)"
 printf "\n"
-certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos -m "$EMAIL" --redirect
-ok "SSL certificate obtained. nginx updated for HTTPS."
+certbot certonly --webroot -w /var/www/html -d "$DOMAIN" \
+    --non-interactive --agree-tos -m "$EMAIL"
+ok "SSL certificate obtained."
+
+# Rewrite nginx config with SSL
+cat > "$NGINX_CONF" <<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+    location / { return 301 https://\$host\$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    location / {
+        proxy_pass         http://127.0.0.1:5000;
+        proxy_http_version 1.1;
+        proxy_set_header   Upgrade \$http_upgrade;
+        proxy_set_header   Connection "upgrade";
+        proxy_set_header   Host \$host;
+        proxy_set_header   X-Real-IP \$remote_addr;
+        proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 86400;
+        client_max_body_size 20M;
+    }
+}
+NGINX
+
+nginx -t && systemctl reload nginx
+ok "nginx updated for HTTPS."
 
 # ── systemd service ───────────────────────────────────────────────────────────
 printf "\n"
