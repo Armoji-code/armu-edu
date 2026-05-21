@@ -321,11 +321,18 @@ function renderAll(s) {
             <button class="btn" id="logoRemoveBtn" onclick="removeLogo()">Use Default</button>
             <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
           </div>
-          <div id="logoFitRow" style="display:none;gap:14px;align-items:center;flex-wrap:wrap;">
-            <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;">Display</span>
-            <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="logoFit" value="contain" checked> Fit</label>
-            <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="logoFit" value="cover"> Crop</label>
-            <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="logoFit" value="fill"> Stretch</label>
+          <div id="logoFitRow" style="display:none;flex-direction:column;gap:10px;">
+            <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;">Display</span>
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="logoFit" value="contain" checked> Fit</label>
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="logoFit" value="cover"> Crop</label>
+              <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;"><input type="radio" name="logoFit" value="fill"> Stretch</label>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;white-space:nowrap;">Size</span>
+              <input type="range" id="logoSizeSlider" min="16" max="60" value="36" style="width:120px;accent-color:var(--g1);" oninput="applyLogoSize(this.value)">
+              <span id="logoSizeLabel" style="font-size:12px;color:var(--text3);min-width:32px;">36px</span>
+            </div>
           </div>
           <div style="font-size:11px;color:var(--text3);">PNG, JPEG or SVG · max 1 MB · replaces the "armu" text in the sidebar</div>
         </div>
@@ -558,19 +565,34 @@ function getLogoFit() {
   return r ? r.value : 'contain';
 }
 
+function applyLogoSize(px) {
+  px = parseInt(px) || 36;
+  var img = document.getElementById('brandLogoImg');
+  if (img) { img.style.maxHeight = px + 'px'; }
+  var lbl = document.getElementById('logoSizeLabel');
+  if (lbl) lbl.textContent = px + 'px';
+  if (brandLogo) brandLogo.height = px;
+}
+
 function updateLogoPreview() {
   var img = document.getElementById('brandLogoImg');
   var txt = document.getElementById('brandLogoText');
   var removeBtn = document.getElementById('logoRemoveBtn');
   var fitRow = document.getElementById('logoFitRow');
   if (brandLogo && brandLogo.data) {
+    var h = brandLogo.height || 36;
     img.src = brandLogo.data;
     img.style.objectFit = brandLogo.fit;
+    img.style.maxHeight = h + 'px';
     img.style.display = '';
     txt.style.display = 'none';
     removeBtn.disabled = false;
     removeBtn.style.opacity = '';
     fitRow.style.display = 'flex';
+    var slider = document.getElementById('logoSizeSlider');
+    if (slider) slider.value = h;
+    var lbl = document.getElementById('logoSizeLabel');
+    if (lbl) lbl.textContent = h + 'px';
     document.querySelectorAll('input[name="logoFit"]').forEach(function(r) {
       r.onchange = function() { if (brandLogo) { brandLogo.fit = r.value; img.style.objectFit = r.value; } };
     });
@@ -584,7 +606,7 @@ function updateLogoPreview() {
 }
 
 function removeLogo() {
-  brandLogo = { data: null, fit: 'contain' };
+  brandLogo = { data: null, fit: 'contain', height: 36 };
   document.getElementById('logoFileInput').value = '';
   updateLogoPreview();
 }
@@ -619,7 +641,7 @@ function initBranding(b) {
     if (el && val) { el.value = val; syncColorBox(el); }
   });
   if (b.logo_data) {
-    brandLogo = { data: b.logo_data, fit: b.logo_fit || 'contain' };
+    brandLogo = { data: b.logo_data, fit: b.logo_fit || 'contain', height: b.logo_height || 36 };
     var fitRadio = document.querySelector('input[name="logoFit"][value="' + (b.logo_fit || 'contain') + '"]');
     if (fitRadio) fitRadio.checked = true;
   }
@@ -630,6 +652,7 @@ async function saveBranding() {
   var payload = {
     logo_data: brandLogo ? brandLogo.data : null,
     logo_fit: brandLogo ? (brandLogo.fit || 'contain') : 'contain',
+    logo_height: brandLogo ? (brandLogo.height || 36) : 36,
     colors: {
       g1:  document.getElementById('c_g1').value,
       g2:  document.getElementById('c_g2').value,
