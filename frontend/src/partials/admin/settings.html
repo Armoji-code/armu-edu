@@ -353,6 +353,28 @@ function renderAll(s) {
       </div>
     </div>
 
+    <!-- ── Software Update ───────────────────────────── -->
+    <div class="section" id="section-update">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15))">
+          <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-settings"/></svg>
+        </div>
+        <div><div class="section-title">Software Update</div><div class="section-desc">Update Armu to the latest version from GitHub</div></div>
+      </div>
+      <div id="updateCard" style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:13px;color:var(--text3)">Current version: <strong style="color:var(--text)" id="localVer">—</strong></span>
+          <button class="btn" id="checkUpdateBtn" onclick="checkUpdate()">Check for updates</button>
+          <span id="updateStatus" style="font-size:13px;color:var(--text3)"></span>
+        </div>
+        <div id="updateApplyRow" style="display:none;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:13px;">New version available: <strong id="remoteVer" style="color:var(--g1)"></strong></span>
+          <button class="btn btn-primary" id="applyUpdateBtn" onclick="applyUpdate()">Update now</button>
+        </div>
+        <pre id="updateLog" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto;margin:0;"></pre>
+      </div>
+    </div>
+
     <!-- Save bar -->
     <div class="save-bar">
       <button class="btn btn-primary" id="saveBtn" onclick="save()">
@@ -657,7 +679,60 @@ async function boot() {
   }
   renderAll(s);
   initBranding(branding);
+  checkUpdate(true);
 }
+
+async function checkUpdate(silent) {
+  const btn = document.getElementById('checkUpdateBtn');
+  const status = document.getElementById('updateStatus');
+  if (btn) btn.disabled = true;
+  if (status && !silent) status.textContent = 'Checking…';
+  try {
+    const data = await fetch('/api/admin/update/check').then(r => r.json());
+    if (document.getElementById('localVer')) document.getElementById('localVer').textContent = data.local || '—';
+    if (data.error) {
+      if (status) status.textContent = data.error;
+    } else if (data.update_available) {
+      if (status) status.textContent = '';
+      const row = document.getElementById('updateApplyRow');
+      const rv = document.getElementById('remoteVer');
+      if (rv) rv.textContent = data.remote;
+      if (row) row.style.display = 'flex';
+    } else {
+      if (status) status.textContent = silent ? `Up to date (${data.remote})` : `Already on latest version (${data.remote})`;
+    }
+  } catch(e) {
+    if (status) status.textContent = 'Check failed';
+  }
+  if (btn) btn.disabled = false;
+}
+window.checkUpdate = checkUpdate;
+
+async function applyUpdate() {
+  const btn = document.getElementById('applyUpdateBtn');
+  const log = document.getElementById('updateLog');
+  const status = document.getElementById('updateStatus');
+  if (btn) { btn.disabled = true; btn.textContent = 'Updating…'; }
+  if (log) { log.style.display = 'block'; log.textContent = 'Running update…\n'; }
+  if (status) status.textContent = '';
+  try {
+    const data = await fetch('/api/admin/update/apply', { method: 'POST' }).then(r => r.json());
+    if (log) log.textContent = data.log || '';
+    if (data.ok) {
+      if (status) status.textContent = 'Server is restarting — please wait a few seconds then refresh.';
+      if (btn) btn.textContent = 'Done — refresh page';
+      if (btn) { btn.disabled = false; btn.onclick = () => location.reload(); }
+    } else {
+      if (status) status.textContent = 'Update failed — see log above';
+      if (btn) { btn.disabled = false; btn.textContent = 'Retry'; btn.onclick = applyUpdate; }
+    }
+  } catch(e) {
+    if (status) status.textContent = 'Request failed';
+    if (btn) { btn.disabled = false; btn.textContent = 'Retry'; btn.onclick = applyUpdate; }
+  }
+}
+window.applyUpdate = applyUpdate;
+
 boot();
 
 
