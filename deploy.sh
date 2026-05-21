@@ -164,7 +164,8 @@ hr
 inf "Requesting Let's Encrypt certificate for $DOMAIN…"
 inf "(Make sure your domain's DNS A record points to this server's IP first!)"
 printf "\n"
-certbot certonly --webroot -w /var/www/html -d "$DOMAIN" \
+systemctl stop nginx
+certbot certonly --standalone -d "$DOMAIN" \
     --non-interactive --agree-tos -m "$EMAIL"
 ok "SSL certificate obtained."
 
