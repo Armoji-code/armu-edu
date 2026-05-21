@@ -221,6 +221,7 @@ After=network.target
 Type=simple
 User=${RUN_USER}
 WorkingDirectory=${BACKEND}
+EnvironmentFile=${ENV_FILE}
 ExecStart=${VENV}/bin/python app.py
 Restart=on-failure
 RestartSec=5
