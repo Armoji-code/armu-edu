@@ -33,6 +33,7 @@ def create_app(config=Config):
 
     import websocket
     import websocket.meeting
+    import websocket.terminal
 
     @app.route("/login")
     def login_page():

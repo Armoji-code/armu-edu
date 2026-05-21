@@ -1,0 +1,124 @@
+<style>
+#termWrap {
+  background: #0d0d0d;
+  border-radius: var(--radius);
+  padding: 12px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.xterm { height: 100%; }
+.xterm-viewport { border-radius: var(--radius-sm); }
+</style>
+
+<div class="topbar">
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-computer"/></svg>
+  <span class="topbar-title">Terminal</span>
+  <div class="topbar-right">
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()">
+      <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+    </div>
+  </div>
+</div>
+
+<div class="content" style="display:flex;flex-direction:column;gap:0;padding-bottom:0;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-shrink:0;">
+    <span style="font-size:12px;color:var(--text3);">Shell session on the server — admin only</span>
+    <span id="termStatus" style="font-size:12px;color:var(--text3);margin-left:auto;"></span>
+    <button class="btn btn-sm" onclick="termReconnect()">Reconnect</button>
+  </div>
+  <div id="termWrap"></div>
+</div>
+
+<!-- xterm.js -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+let term, fitAddon, termSocket;
+
+function termConnect() {
+  const wrap = document.getElementById('termWrap');
+  wrap.innerHTML = '';
+
+  term = new Terminal({
+    cursorBlink: true,
+    fontSize: 14,
+    fontFamily: '"Fira Code", "Cascadia Code", monospace',
+    theme: {
+      background: '#0d0d0d',
+      foreground: '#e2e8f0',
+      cursor: '#3dd68c',
+      selectionBackground: 'rgba(61,214,140,0.25)',
+      black: '#1a1a1a', red: '#f87171', green: '#3dd68c', yellow: '#fbbf24',
+      blue: '#60a5fa', magenta: '#a78bfa', cyan: '#38bdf8', white: '#e2e8f0',
+      brightBlack: '#4a4a4a', brightRed: '#fca5a5', brightGreen: '#6ee7b7',
+      brightYellow: '#fde68a', brightBlue: '#93c5fd', brightMagenta: '#c4b5fd',
+      brightCyan: '#7dd3fc', brightWhite: '#f8fafc',
+    },
+    scrollback: 1000,
+  });
+
+  fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+  term.open(wrap);
+  fitAddon.fit();
+
+  const status = document.getElementById('termStatus');
+
+  termSocket = io('/terminal', { transports: ['websocket'] });
+
+  termSocket.on('connect', () => {
+    status.textContent = '● connected';
+    status.style.color = 'var(--g1)';
+    fitAddon.fit();
+    termSocket.emit('term_resize', { cols: term.cols, rows: term.rows });
+  });
+
+  termSocket.on('disconnect', () => {
+    status.textContent = '○ disconnected';
+    status.style.color = 'var(--text3)';
+    term.write('\r\n\x1b[31mConnection closed.\x1b[0m\r\n');
+  });
+
+  termSocket.on('term_output', data => {
+    term.write(data.data);
+  });
+
+  term.onData(data => {
+    termSocket.emit('term_input', { data });
+  });
+
+  term.onResize(({ cols, rows }) => {
+    termSocket.emit('term_resize', { cols, rows });
+  });
+
+  // Resize observer
+  const ro = new ResizeObserver(() => {
+    try { fitAddon.fit(); } catch(e) {}
+  });
+  ro.observe(wrap);
+}
+
+function termReconnect() {
+  if (termSocket) { termSocket.disconnect(); termSocket = null; }
+  termConnect();
+}
+window.termReconnect = termReconnect;
+
+// Clean up on navigation away
+window.__cleanup = function() {
+  if (termSocket) { termSocket.disconnect(); termSocket = null; }
+};
+
+termConnect();
+</script>

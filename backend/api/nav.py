@@ -66,6 +66,7 @@ _DEFAULTS = {
             {"label": "Performance", "icon": "ic-chart",      "path": "/admin/performance"},
             {"label": "Settings",    "icon": "ic-settings",   "path": "/admin/settings"},
             {"label": "Navigation",  "icon": "ic-menu",       "path": "/admin/nav"},
+            {"label": "Terminal",    "icon": "ic-computer",   "path": "/admin/terminal"},
         ]},
     ],
 }
