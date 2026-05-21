@@ -1,4 +1,4 @@
-# Armu · v0.3.1
+# Armu · v0.4
 
 <p align="center">
   <img src="docs/login_laptop.png" alt="Armu login" width="680"/>
@@ -36,7 +36,7 @@ Licensed under **AGPL-3.0** — free to use, modify, and self-host. Distribution
 ### Admins
 - **Users** — create, edit, delete users; role and class assignment
 - **School** — class and subject management; teacher assignments
-- **Settings** — AI provider (Ollama / OpenAI / Anthropic / compatible); model config; temperature and top-p sliders; custom system prompt; Ollama model install with live progress
+- **Settings** — AI provider (Ollama / OpenAI / Anthropic / compatible); model config; temperature and top-p sliders; custom system prompt; Ollama model install with live progress; custom school logo with one-click reset; full accent colour theme (primary, secondary, tertiary) with live preview
 - **Performance** — CPU/RAM/disk gauges + 60-second history graphs + running Ollama models
 
 ### Meetings (all roles)
@@ -216,6 +216,12 @@ For additional protection, also:
 ---
 
 ## Changelog
+
+### v0.4
+- **School branding** — admins can upload a custom school logo (shown in the sidebar); a persistent "Use Default" button resets it to the Armu logo at any time
+- **Accent colour theming** — primary, secondary, and tertiary accent colours are fully configurable in Admin → Settings; colour pickers with live inline preview; all UI elements (tabs, highlights, AI overview panels, filter pills, calendar dots, borders, shadows) respond to changes via CSS variables
+- **Full theme propagation** — replaced every hardcoded `rgba(61,214,140,…)` / `rgba(56,189,248,…)` value across all pages and partials with `rgba(var(--g1-rgb),…)` / `rgba(var(--g2-rgb),…)` so custom colours apply everywhere instantly
+- **Settings save bar fix** — "Save Changes" bar is now `position:fixed` at the viewport bottom with no gap and no layout shift; page scrolling unaffected
 
 ### v0.3.1
 - **LAN access** — server now binds to `0.0.0.0` by default; other devices on the same WiFi can reach it at the host machine's local IP
