@@ -338,6 +338,34 @@ function renderAll(s) {
         </div>
       </div>
 
+      <div class="sub-label">Typography</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;min-width:60px;">Font</span>
+          <select id="fontFamily" style="padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;outline:none;cursor:pointer;" onchange="previewFont()">
+            <option value="DM Sans">DM Sans (default)</option>
+            <option value="Inter">Inter</option>
+            <option value="Roboto">Roboto</option>
+            <option value="Nunito">Nunito</option>
+            <option value="Poppins">Poppins</option>
+            <option value="Space Grotesk">Space Grotesk</option>
+            <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+            <option value="Lato">Lato</option>
+          </select>
+          <span id="fontPreviewText" style="font-size:14px;color:var(--text2);transition:font-family 0.2s;">The quick brown fox jumps over the lazy dog</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;min-width:60px;">Size</span>
+          <input type="range" id="fontSize" min="11" max="20" value="14" style="width:120px;accent-color:var(--g1);" oninput="document.getElementById('fontSizeLabel').textContent=this.value+'px'">
+          <span id="fontSizeLabel" style="font-size:12px;color:var(--text3);min-width:32px;">14px</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;min-width:60px;">Text</span>
+          ${colorSwatch('font_dark_text','#f0f0f0','Dark mode')}
+          ${colorSwatch('font_light_text','#111827','Light mode')}
+        </div>
+      </div>
+
       <div class="sub-label">Accent Colors</div>
       <div style="margin-bottom:18px;">
         ${colorSwatch('c_g1','#3dd68c','Primary')}${colorSwatch('c_g2','#38bdf8','Secondary')}${colorSwatch('c_g3','#6ee7b7','Tertiary')}
@@ -618,16 +646,33 @@ function syncColorBox(input) {
   if (box) box.style.background = input.value;
 }
 
+function previewFont() {
+  var family = document.getElementById('fontFamily').value;
+  var preview = document.getElementById('fontPreviewText');
+  if (!preview) return;
+  if (family !== 'DM Sans') {
+    var encoded = family.replace(/ /g, '+');
+    var existing = document.getElementById('gfont-settings-preview');
+    if (!existing) { existing = document.createElement('link'); existing.id = 'gfont-settings-preview'; existing.rel = 'stylesheet'; document.head.appendChild(existing); }
+    existing.href = 'https://fonts.googleapis.com/css2?family=' + encoded + ':wght@400;500&display=swap';
+  }
+  preview.style.fontFamily = "'" + family + "', sans-serif";
+}
+window.previewFont = previewFont;
+
 function resetColors() {
   var defaults = {
     c_g1:'#3dd68c', c_g2:'#38bdf8', c_g3:'#6ee7b7',
     c_dark_bg:'#111111', c_dark_bg2:'#1a1a1a', c_dark_bg3:'#222222', c_dark_bg4:'#2c2c2c',
     c_light_bg:'#f5f7fa', c_light_bg2:'#ffffff', c_light_bg3:'#eef1f7', c_light_bg4:'#e4e8f2',
+    font_dark_text:'#f0f0f0', font_light_text:'#111827',
   };
   Object.entries(defaults).forEach(function([id, val]) {
     var el = document.getElementById(id);
     if (el) { el.value = val; syncColorBox(el); }
   });
+  var ff = document.getElementById('fontFamily'); if (ff) { ff.value = 'DM Sans'; previewFont(); }
+  var fs = document.getElementById('fontSize'); if (fs) { fs.value = 14; document.getElementById('fontSizeLabel').textContent = '14px'; }
 }
 
 function initBranding(b) {
@@ -639,6 +684,14 @@ function initBranding(b) {
     c_light_bg: c.light_bg, c_light_bg2: c.light_bg2, c_light_bg3: c.light_bg3, c_light_bg4: c.light_bg4,
   };
   Object.entries(map).forEach(function([id, val]) {
+    var el = document.getElementById(id);
+    if (el && val) { el.value = val; syncColorBox(el); }
+  });
+  var f = b.font || {};
+  if (f.family) { var ff = document.getElementById('fontFamily'); if (ff) ff.value = f.family; previewFont(); }
+  if (f.size)   { var fs = document.getElementById('fontSize'); if (fs) { fs.value = f.size; document.getElementById('fontSizeLabel').textContent = f.size + 'px'; } }
+  var fontMap = { font_dark_text: f.dark_text, font_light_text: f.light_text };
+  Object.entries(fontMap).forEach(function([id, val]) {
     var el = document.getElementById(id);
     if (el && val) { el.value = val; syncColorBox(el); }
   });
@@ -667,7 +720,13 @@ async function saveBranding() {
       light_bg2: document.getElementById('c_light_bg2').value,
       light_bg3: document.getElementById('c_light_bg3').value,
       light_bg4: document.getElementById('c_light_bg4').value,
-    }
+    },
+    font: {
+      family:     document.getElementById('fontFamily').value,
+      size:       parseInt(document.getElementById('fontSize').value),
+      dark_text:  document.getElementById('font_dark_text').value,
+      light_text: document.getElementById('font_light_text').value,
+    },
   };
   var ok = await fetch('/api/admin/branding', {
     method: 'PATCH',

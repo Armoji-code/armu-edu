@@ -1590,11 +1590,26 @@ function applyBrandingData(b) {
   if (c.light_bg2) light.push(`--bg2:${c.light_bg2}`);
   if (c.light_bg3) light.push(`--bg3:${c.light_bg3}`);
   if (c.light_bg4) light.push(`--bg4:${c.light_bg4}`);
+
+  const f = b.font || {};
+  if (f.dark_text)  dark.push(`--text:${f.dark_text}`);
+  if (f.light_text) light.push(`--text:${f.light_text}`);
+
   let css = '';
   if (root.length)  css += `:root{${root.join(';')}}`;
   if (dark.length)  css += `[data-theme="dark"]{${dark.join(';')}}`;
   if (light.length) css += `[data-theme="light"]{${light.join(';')}}`;
+  if (f.family)     css += `body,input,textarea,button,select{font-family:'${f.family}',sans-serif!important;}`;
+  if (f.size)       css += `body{font-size:${f.size}px;}`;
   document.getElementById('brand-override').textContent = css;
+
+  // Load Google Font if not default
+  const defaultFonts = ['DM Sans', ''];
+  if (f.family && !defaultFonts.includes(f.family)) {
+    let gfLink = document.getElementById('gfont-override');
+    if (!gfLink) { gfLink = document.createElement('link'); gfLink.id = 'gfont-override'; gfLink.rel = 'stylesheet'; document.head.appendChild(gfLink); }
+    gfLink.href = `https://fonts.googleapis.com/css2?family=${f.family.replace(/ /g,'+')}:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap`;
+  }
 
   const logoText = document.getElementById('logoText');
   if (logoText && b.logo_data) {
