@@ -110,9 +110,11 @@ ok "nginx and certbot installed."
 if [[ "$PKG_MANAGER" == "apt" ]]; then
     NGINX_CONF="/etc/nginx/sites-available/armu"
     NGINX_CONF_LINK="/etc/nginx/sites-enabled/armu"
+    mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 else
     NGINX_CONF="/etc/nginx/conf.d/armu.conf"
     NGINX_CONF_LINK=""
+    mkdir -p /etc/nginx/conf.d
 fi
 
 cat > "$NGINX_CONF" <<NGINX
