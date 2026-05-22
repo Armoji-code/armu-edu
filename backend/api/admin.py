@@ -453,6 +453,18 @@ def admin_delete_subject(user, subject_id):
 
 # ── Admin: flagged messages ────────────────────────────────────────────────────
 
+@blueprint.route("/admin/flagged-messages/count", methods=["GET"])
+@login_required(roles=["admin"])
+def admin_flagged_count(user):
+    school = _school(user)
+    count = (FlaggedMessage.query
+             .join(Message, Message.id == FlaggedMessage.message_id)
+             .join(_User, _User.id == Message.sender_id)
+             .filter(_User.school_id == school.id, FlaggedMessage.status == "pending")
+             .count())
+    return jsonify({"pending": count})
+
+
 @blueprint.route("/admin/flagged-messages", methods=["GET"])
 @login_required(roles=["admin"])
 def admin_flagged_messages(user):

@@ -1,4 +1,4 @@
-# Armu · v0.5
+# Armu · v0.6
 
 <p align="center">
   <img src="docs/login_laptop.png" alt="Armu login" width="680"/>
@@ -22,7 +22,7 @@ Licensed under **AGPL-3.0** — free to use, modify, and self-host. Distribution
 - **Leaderboard** — class ranking by grade average
 - **Groups** — study groups with shared AI chat sessions
 - **Whiteboard** — real-time collaborative canvas (draw, shapes, text, eraser)
-- **Messages** — direct messaging between users
+- **Messages** — direct messaging between users; AI-powered silent moderation flags harmful content for admin review
 - **Activities** — extracurricular activity log
 - **Library** — browse and check out books
 - **Notifications** — real-time bell widget with deadline reminders and weekly AI digest
@@ -36,7 +36,8 @@ Licensed under **AGPL-3.0** — free to use, modify, and self-host. Distribution
 ### Admins
 - **Users** — create, edit, delete users; role and class assignment
 - **School** — class and subject management; teacher assignments
-- **Settings** — AI provider (Ollama / OpenAI / Anthropic / compatible); model config; temperature and top-p sliders; custom system prompt; Ollama model install with live progress; custom school logo with one-click reset; full accent colour theme (primary, secondary, tertiary) with live preview
+- **Settings** — AI provider (Ollama / OpenAI / Anthropic / compatible); model config; temperature and top-p sliders; custom system prompt; Ollama model install with live progress; custom school logo with one-click reset; full accent colour theme (primary, secondary, tertiary) with live preview; message scanning toggle
+- **Flagged Messages** — dedicated review panel for AI-flagged messages; severity bar; dismiss or action each flag; live count badge on the sidebar nav item; banner when scanning is disabled
 - **Performance** — CPU/RAM/disk gauges + 60-second history graphs + running Ollama models
 
 ### Meetings (all roles)
@@ -252,6 +253,16 @@ For additional protection, also:
 ---
 
 ## Changelog
+
+### v0.6
+- **AI message moderation** — admins can enable a silent background scan on all messages (personal and group); a local `llama3.2:3b` model classifies each message and flags anything with severity ≥ 0.5 without alerting the sender
+- **Flagged Messages panel** — new dedicated admin tab (Admin → Flagged) with a full review UI: severity bar, AI reason, sender → recipient, Dismiss / Action buttons, and Pending / Dismissed / Actioned filter tabs
+- **Sidebar count badge** — the Flagged nav item shows a live badge with the number of pending flags; refreshes on every navigation
+- **Infinite whiteboard** — canvas replaced with a pan/zoom infinite canvas (scroll to zoom, hand tool to pan, `H`/`Space` shortcuts); zoom capped at 4×; `0` key resets the view
+- **Whiteboard selection tool** — rubber-band select any mix of strokes and images; move, resize, or delete the selection; images are individually resizable by drag
+- **Whiteboard export area** — click-and-drag to define an export rectangle; exports only that region as PNG
+- **Whiteboard palette** — added black and white swatches alongside the accent colours
+- **Custom navigation** — admins can fully rearrange, rename, and reorder the sidebar nav for each role (student / teacher / librarian) from Admin → Navigation
 
 ### v0.5
 - **Web terminal** — admins can open a full shell session directly in the browser (Admin → Terminal); PTY-based over WebSocket, xterm.js frontend with full color theme and resize support

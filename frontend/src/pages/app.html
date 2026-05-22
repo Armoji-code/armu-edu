@@ -1608,6 +1608,7 @@ async function navigate(path, push = true) {
 
     if (push) history.pushState({ path }, '', path);
     updateActiveNav(path);
+    refreshFlagCount();
     const title = document.querySelector('.topbar-title');
     document.title = 'Armu' + (title ? ' — ' + title.textContent : '');
 
@@ -1678,6 +1679,22 @@ function updateActiveNav(path) {
   document.querySelectorAll('#sidebarNav .nav-item').forEach(a =>
     a.classList.toggle('active', a.getAttribute('href') === path)
   );
+}
+
+async function refreshFlagCount() {
+  if (window.__me?.role !== 'admin') return;
+  try {
+    const { pending } = await fetch('/api/admin/flagged-messages/count').then(r => r.json());
+    const link = document.querySelector('#sidebarNav a[href="/admin/flagged"]');
+    if (!link) return;
+    link.querySelector('.nav-badge')?.remove();
+    if (pending > 0) {
+      const badge = document.createElement('span');
+      badge.className = 'nav-badge';
+      badge.textContent = pending > 99 ? '99+' : pending;
+      link.appendChild(badge);
+    }
+  } catch {}
 }
 
 function setSidebarWidth(collapsed) {
@@ -1850,6 +1867,7 @@ async function boot() {
 
   const sections = await fetch('/api/nav/config').then(r => r.json()).catch(() => null);
   if (sections) renderSidebar(sections);
+  refreshFlagCount();
 
   if (localStorage.getItem('sidebar-collapsed') === 'true') {
     document.getElementById('sidebar').classList.add('collapsed');
