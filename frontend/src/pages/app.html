@@ -58,6 +58,23 @@
   .streak-num { font-weight:700; background:var(--gradient-text); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
   .icon-btn { width:36px; height:36px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg3); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all var(--transition); color:var(--text2); }
   .icon-btn:hover { background:var(--bg4); color:var(--text); border-color:var(--border-accent); }
+  /* === PiP Meeting === */
+  #pip-meeting { position:fixed; bottom:24px; right:24px; z-index:9000; width:280px; display:none; flex-direction:column; background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; user-select:none; }
+  .pip-header { display:flex; align-items:center; gap:8px; padding:9px 12px; border-bottom:1px solid var(--border); cursor:grab; }
+  .pip-header:active { cursor:grabbing; }
+  .pip-title { font-size:13px; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pip-video-wrap { position:relative; aspect-ratio:16/9; background:#111; }
+  #pip-video { width:100%; height:100%; object-fit:cover; display:block; }
+  .pip-no-cam { position:absolute; inset:0; display:none; align-items:center; justify-content:center; font-size:28px; font-weight:700; color:#fff; background:linear-gradient(135deg,var(--g1),var(--g2)); }
+  .pip-controls { display:flex; align-items:center; gap:6px; padding:8px 12px; }
+  .pip-ctrl { width:30px; height:30px; border-radius:var(--radius-sm); border:1px solid transparent; background:transparent; color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all var(--transition); }
+  .pip-ctrl:hover { background:var(--bg3); color:var(--text); }
+  .pip-ctrl.off { background:rgba(239,68,68,0.15); color:#ef4444; }
+  .pip-ctrl.leave { color:#ef4444; }
+  .pip-ctrl.leave:hover { background:rgba(239,68,68,0.12); }
+  .pip-info { font-size:12px; color:var(--text3); flex:1; }
+  .pip-return { width:26px; height:26px; border-radius:var(--radius-sm); border:none; background:transparent; color:var(--text2); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all var(--transition); padding:0; }
+  .pip-return:hover { background:var(--bg3); color:var(--text); }
   /* CONTENT */
   .content { flex:1; overflow-y:auto; padding:28px; }
   .content::-webkit-scrollbar { width:4px; }
@@ -1390,6 +1407,33 @@
   </button>
 </div>
 
+<!-- PiP Meeting — persists across navigation while in a call -->
+<div id="pip-meeting">
+  <div class="pip-header" id="pip-header">
+    <svg class="icon icon-14" style="color:var(--g1);flex-shrink:0"><use href="#ic-meeting"/></svg>
+    <span class="pip-title" id="pip-title">Meeting</span>
+    <button class="pip-return" onclick="navigate('/meeting')" title="Return to meeting">
+      <svg class="icon icon-14"><use href="#ic-chevright"/></svg>
+    </button>
+  </div>
+  <div class="pip-video-wrap">
+    <video id="pip-video" autoplay muted playsinline></video>
+    <div class="pip-no-cam" id="pip-no-cam">?</div>
+  </div>
+  <div class="pip-controls">
+    <button class="pip-ctrl" id="pip-mic" onclick="typeof toggleMic==='function'&&toggleMic()" title="Toggle mic">
+      <svg class="icon icon-16"><use href="#ic-mic"/></svg>
+    </button>
+    <button class="pip-ctrl" id="pip-cam" onclick="typeof toggleCam==='function'&&toggleCam()" title="Toggle camera">
+      <svg class="icon icon-16"><use href="#ic-cam"/></svg>
+    </button>
+    <span class="pip-info" id="pip-info"></span>
+    <button class="pip-ctrl leave" onclick="typeof leaveMeeting==='function'&&leaveMeeting()" title="Leave meeting">
+      <svg class="icon icon-16"><use href="#ic-logout"/></svg>
+    </button>
+  </div>
+</div>
+
 <div class="main" id="main">
   <div class="partial-loading"><div class="loading-spinner"></div></div>
 </div>
@@ -1460,6 +1504,25 @@ async function navigate(path, push = true) {
   if (__navAbort) { __navAbort.abort(); }
   __navAbort = new AbortController();
   const signal = __navAbort.signal;
+
+  // Save meeting state and show PiP when navigating away from an active call
+  if (window.currentMeeting && path !== '/meeting') {
+    window.__meetingState = {
+      me: window.me, meetings: window.meetings, iceServers: window.iceServers,
+      socket: window.socket, localStream: window.localStream, screenStream: window.screenStream,
+      peerConnections: window.peerConnections, peerNames: window.peerNames,
+      currentMeeting: window.currentMeeting, callStartTime: window.callStartTime,
+      durationInterval: window.durationInterval, micOn: window.micOn, camOn: window.camOn,
+      screenOn: window.screenOn, _panelDragCleanup: window._panelDragCleanup,
+    };
+    if (window._panelDragCleanup) { window._panelDragCleanup(); window._panelDragCleanup = null; }
+    window.__cleanup = null;
+    showMeetingPip();
+  }
+  // Hide PiP when returning to meeting
+  if (path === '/meeting' && document.getElementById('pip-meeting')?.style.display !== 'none') {
+    hideMeetingPip();
+  }
 
   if (typeof window.__cleanup === 'function') {
     try { window.__cleanup(); } catch(e) {}
@@ -1787,6 +1850,82 @@ async function boot() {
 
 function initials(name) {
   return (name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+}
+
+/* ── PiP Meeting ──────────────────────────────────────── */
+var _pipDragCleanup = null;
+
+function showMeetingPip() {
+  var pip = document.getElementById('pip-meeting');
+  if (!pip) return;
+  pip.style.display = 'flex';
+  var pv = document.getElementById('pip-video');
+  if (pv && window.localStream) { pv.srcObject = window.localStream; pv.play().catch(function(){}); }
+  var pt = document.getElementById('pip-title');
+  if (pt && window.currentMeeting) pt.textContent = window.currentMeeting.title;
+  syncPipState();
+  initPipDrag();
+}
+
+function hideMeetingPip() {
+  var pip = document.getElementById('pip-meeting');
+  if (pip) pip.style.display = 'none';
+  if (_pipDragCleanup) { _pipDragCleanup(); _pipDragCleanup = null; }
+  var pv = document.getElementById('pip-video');
+  if (pv) pv.srcObject = null;
+}
+
+function syncPipState() {
+  var micBtn = document.getElementById('pip-mic');
+  var camBtn = document.getElementById('pip-cam');
+  if (micBtn) micBtn.className = 'pip-ctrl' + (window.micOn === false ? ' off' : '');
+  if (camBtn) camBtn.className = 'pip-ctrl' + (window.camOn === false ? ' off' : '');
+  var nc = document.getElementById('pip-no-cam');
+  var pv = document.getElementById('pip-video');
+  if (nc && pv) {
+    nc.style.display = window.camOn === false ? 'flex' : 'none';
+    pv.style.display = window.camOn === false ? 'none' : 'block';
+    nc.textContent = window.__me ? initials(window.__me.name || window.__me.email) : '?';
+  }
+  var info = document.getElementById('pip-info');
+  if (info) info.textContent = (Object.keys(window.peerConnections || {}).length + 1) + ' in call';
+}
+window.showMeetingPip = showMeetingPip;
+window.hideMeetingPip = hideMeetingPip;
+window.syncPipState   = syncPipState;
+
+function initPipDrag() {
+  if (_pipDragCleanup) { _pipDragCleanup(); _pipDragCleanup = null; }
+  var pip    = document.getElementById('pip-meeting');
+  var handle = document.getElementById('pip-header');
+  if (!pip || !handle) return;
+  var dragging = false, ox = 0, oy = 0;
+  function startDrag(cx, cy) {
+    dragging = true;
+    var r = pip.getBoundingClientRect();
+    ox = cx - r.left; oy = cy - r.top;
+    pip.style.right = 'auto'; pip.style.bottom = 'auto';
+  }
+  function moveDrag(cx, cy) {
+    if (!dragging) return;
+    pip.style.left = Math.max(0, Math.min(window.innerWidth  - pip.offsetWidth,  cx - ox)) + 'px';
+    pip.style.top  = Math.max(0, Math.min(window.innerHeight - pip.offsetHeight, cy - oy)) + 'px';
+  }
+  function stopDrag() { dragging = false; }
+  var onMM = function(e) { moveDrag(e.clientX, e.clientY); };
+  var onTM = function(e) { if (e.touches[0]) moveDrag(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); };
+  handle.addEventListener('mousedown',  function(e) { startDrag(e.clientX, e.clientY); e.preventDefault(); });
+  handle.addEventListener('touchstart', function(e) { if (e.touches[0]) startDrag(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive:false});
+  document.addEventListener('mousemove',  onMM);
+  document.addEventListener('touchmove',  onTM, {passive:false});
+  document.addEventListener('mouseup',  stopDrag);
+  document.addEventListener('touchend', stopDrag);
+  _pipDragCleanup = function() {
+    document.removeEventListener('mousemove',  onMM);
+    document.removeEventListener('touchmove',  onTM);
+    document.removeEventListener('mouseup',  stopDrag);
+    document.removeEventListener('touchend', stopDrag);
+  };
 }
 
 boot();

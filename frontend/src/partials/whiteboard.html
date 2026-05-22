@@ -5,6 +5,7 @@
 <div class="room-picker">
 <button class="room-btn active" id="rb-personal" onclick="switchRoomMode('personal')">My Board</button>
 <button class="room-btn" id="rb-group" onclick="switchRoomMode('group')">Group</button>
+<button class="room-btn" id="rb-meeting" onclick="switchRoomMode('meeting')" style="display:none">Meeting</button>
 </div>
 <div class="room-code-bar" id="room-code-bar" style="display:none">
 <span style="color:var(--text3)">Room:</span>
@@ -378,10 +379,15 @@ function switchRoomMode(mode){
   roomMode = mode;
   document.getElementById('rb-personal').classList.toggle('active', mode==='personal');
   document.getElementById('rb-group').classList.toggle('active', mode==='group');
+  document.getElementById('rb-meeting')?.classList.toggle('active', mode==='meeting');
   document.getElementById('room-code-bar').style.display = mode==='group' ? 'flex' : 'none';
 
   if(mode === 'personal'){
     joinRoom('personal_' + myUserId);
+  } else if(mode === 'meeting'){
+    var mc = window.currentMeeting;
+    if(!mc){ alert('No active meeting.'); switchRoomMode('personal'); return; }
+    joinRoom('meeting_' + mc.room_code);
   } else {
     // Use URL hash if present, else generate a new code
     const hash = window.location.hash.slice(1);
@@ -459,9 +465,12 @@ async function boot(){
     room = 'personal_' + myUserId;
     socket.emit('wb_join', {room});
   }
-  
-  
-  if(me.class_name) 
+
+  // Show meeting tab if user is currently in a meeting (PiP active)
+  if(window.currentMeeting){
+    var mtgBtn = document.getElementById('rb-meeting');
+    if(mtgBtn) mtgBtn.style.display = '';
+  }
 
   // Reflect group mode in UI only if this was a genuine shared invite link
   if(_isInvite){
