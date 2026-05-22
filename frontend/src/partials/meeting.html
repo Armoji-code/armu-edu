@@ -10,29 +10,48 @@
 .meeting-card-meta{display:flex;gap:12px;font-size:12px;color:var(--text3);}
 .meeting-card-actions{display:flex;gap:8px;margin-top:4px;}
 
-/* ── In-call topbar controls ───────────────────── */
-.call-ctrl-group{display:none;align-items:center;gap:6px;}
+/* ── In-call topbar info ───────────────────────── */
+.call-ctrl-group{display:none;align-items:center;gap:8px;}
 .call-ctrl-group.visible{display:flex;}
-.call-info{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:8px;margin-right:4px;}
+.call-info{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:8px;}
 .call-info strong{color:var(--text);font-weight:600;}
-.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition);}
-.ctrl-btn.on{background:var(--bg3);color:var(--text);}
-.ctrl-btn.on:hover{background:var(--bg4);}
-.ctrl-btn.off{background:rgba(239,68,68,0.15);color:#ef4444;}
-.ctrl-btn.leave{background:#ef4444;color:#fff;}
-.ctrl-btn.leave:hover{background:#dc2626;}
-.ctrl-btn.dimmed{opacity:0.4;}
 
-/* ── In-call content ───────────────────────────── */
-#callWrap{display:flex;height:100%;overflow:hidden;gap:0;}
-.video-grid{flex:1;display:grid;gap:8px;padding:16px;background:var(--bg);align-content:start;overflow-y:auto;}
-.video-grid.solo{grid-template-columns:1fr;}
+/* ── In-call layout ───────────────────────────── */
+#callWrap{display:flex;height:100%;overflow:hidden;}
+#videoArea{position:relative;flex:1;overflow:hidden;display:flex;flex-direction:column;}
+
+/* ── Video grid ───────────────────────────────── */
+.video-grid{flex:1;display:grid;gap:8px;padding:16px;padding-right:70px;background:var(--bg);align-content:start;overflow-y:auto;}
+.video-grid.solo{display:flex;align-items:center;justify-content:center;}
 .video-grid.duo{grid-template-columns:1fr 1fr;}
 .video-grid.multi{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
 .video-tile{background:var(--bg2);border-radius:var(--radius);overflow:hidden;position:relative;aspect-ratio:16/9;}
+.video-grid.solo .video-tile{width:100%;max-height:100%;}
 .video-tile video{width:100%;height:100%;object-fit:cover;display:block;}
 .tile-name{position:absolute;bottom:8px;left:10px;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:20px;}
 .tile-avatar{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--g1),var(--g2));}
+
+/* ── Floating call controls — wb-toolbar style ── */
+.call-ctrl-panel{
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  z-index:10;display:flex;flex-direction:column;gap:3px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:7px;
+  box-shadow:var(--shadow);
+}
+.call-panel-btn{
+  width:36px;height:36px;border-radius:var(--radius-sm);
+  border:1px solid transparent;background:transparent;
+  color:var(--text2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all var(--transition);
+}
+.call-panel-btn:hover{background:var(--bg3);color:var(--text);}
+.call-panel-btn.off{background:rgba(239,68,68,0.15);color:#ef4444;}
+.call-panel-btn.panel-active{background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15));border-color:var(--border-accent);color:var(--g1);}
+.call-panel-btn.leave{background:#ef4444;color:#fff;border-color:transparent;}
+.call-panel-btn.leave:hover{background:#dc2626;}
+.call-sep{height:1px;background:var(--border);margin:3px 0;}
 
 /* ── Participants panel ─────────────────────────── */
 .call-sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;transition:width var(--transition);}
@@ -47,27 +66,12 @@
   <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-meeting"></use></svg>
   <span class="topbar-title" id="topbarTitle">Meeting</span>
 
-  <!-- In-call controls (hidden until in a call) -->
+  <!-- In-call info (hidden until in a call) -->
   <div class="call-ctrl-group" id="callCtrlGroup">
     <div class="call-info">
       <strong id="callTitleLabel"></strong>
       <span id="callDuration"></span>
     </div>
-    <button class="ctrl-btn on" id="btnMic" onclick="toggleMic()" title="Mic (M)">
-      <svg class="icon icon-16"><use href="#ic-mic"/></svg>
-    </button>
-    <button class="ctrl-btn on" id="btnCam" onclick="toggleCam()" title="Camera (C)">
-      <svg class="icon icon-16"><use href="#ic-cam"/></svg>
-    </button>
-    <button class="ctrl-btn on" id="btnScreen" onclick="toggleScreen()" title="Screen share">
-      <svg class="icon icon-16"><use href="#ic-screen"/></svg>
-    </button>
-    <button class="ctrl-btn on" id="btnParticipants" onclick="toggleParticipants()" title="Participants">
-      <svg class="icon icon-16"><use href="#ic-users"/></svg>
-    </button>
-    <button class="ctrl-btn leave" onclick="leaveMeeting()" title="Leave (Esc)">
-      <svg class="icon icon-16"><use href="#ic-phone-off"/></svg>
-    </button>
   </div>
 
   <div class="topbar-right" id="topbarRight">
@@ -224,7 +228,8 @@ function toggleParticipants() {
   participantsVisible = !participantsVisible;
   const panel = document.getElementById('callSidebar');
   if (panel) panel.classList.toggle('hidden', !participantsVisible);
-  document.getElementById('btnParticipants').classList.toggle('dimmed', !participantsVisible);
+  const btn = document.getElementById('btnParticipants');
+  if (btn) btn.classList.toggle('panel-active', participantsVisible);
 }
 
 // ── Join / Leave ───────────────────────────────────────────────────────────────
@@ -235,18 +240,40 @@ async function joinMeeting(meeting) {
     localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
   } catch(e) { alert('Could not access camera/microphone: '+e.message); return; }
 
-  // Switch topbar to call mode
+  // Switch topbar to call mode (info only)
   document.getElementById('topbarTitle').textContent = '';
   document.getElementById('callTitleLabel').textContent = meeting.title;
   document.getElementById('callCtrlGroup').classList.add('visible');
 
-  // Render call layout in content area (no padding)
+  // Render call layout
   const content = document.getElementById('mainContent');
   content.style.padding = '0';
   content.style.overflow = 'hidden';
+  micOn=true; camOn=true; screenOn=false; participantsVisible=true;
   content.innerHTML = `
     <div id="callWrap">
-      <div class="video-grid solo" id="videoGrid"></div>
+      <div id="videoArea">
+        <div class="video-grid solo" id="videoGrid"></div>
+        <div class="call-ctrl-panel" id="callCtrlPanel">
+          <button class="call-panel-btn" id="btnMic" onclick="toggleMic()" title="Mic (M)">
+            <svg class="icon icon-18"><use href="#ic-mic"/></svg>
+          </button>
+          <button class="call-panel-btn" id="btnCam" onclick="toggleCam()" title="Camera (C)">
+            <svg class="icon icon-18"><use href="#ic-cam"/></svg>
+          </button>
+          <button class="call-panel-btn" id="btnScreen" onclick="toggleScreen()" title="Screen share">
+            <svg class="icon icon-18"><use href="#ic-screen"/></svg>
+          </button>
+          <div class="call-sep"></div>
+          <button class="call-panel-btn panel-active" id="btnParticipants" onclick="toggleParticipants()" title="Participants">
+            <svg class="icon icon-18"><use href="#ic-users"/></svg>
+          </button>
+          <div class="call-sep"></div>
+          <button class="call-panel-btn leave" onclick="leaveMeeting()" title="Leave (Esc)">
+            <svg class="icon icon-18"><use href="#ic-phone-off"/></svg>
+          </button>
+        </div>
+      </div>
       <div class="call-sidebar" id="callSidebar">
         <div class="call-sidebar-title">Participants</div>
         <div id="participantList"></div>
@@ -260,8 +287,6 @@ async function joinMeeting(meeting) {
     const el = document.getElementById('callDuration');
     if (el) el.textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   }, 1000);
-  micOn=true; camOn=true; screenOn=false; participantsVisible=true;
-  ['btnMic','btnCam','btnScreen'].forEach(id => { const b=document.getElementById(id); if(b) b.className='ctrl-btn on'; });
   socket.emit('meeting:join', {room_code: meeting.room_code});
 }
 
@@ -291,14 +316,16 @@ async function leaveMeeting() {
 function toggleMic() {
   micOn = !micOn;
   localStream?.getAudioTracks().forEach(t => t.enabled=micOn);
-  document.getElementById('btnMic').className = `ctrl-btn ${micOn?'on':'off'}`;
+  const b = document.getElementById('btnMic');
+  if (b) b.className = `call-panel-btn${micOn?'':' off'}`;
 }
 function toggleCam() {
   camOn = !camOn;
   localStream?.getVideoTracks().forEach(t => t.enabled=camOn);
   const v = document.querySelector('#tile-local video');
   if (v) v.style.display = camOn ? '' : 'none';
-  document.getElementById('btnCam').className = `ctrl-btn ${camOn?'on':'off'}`;
+  const b = document.getElementById('btnCam');
+  if (b) b.className = `call-panel-btn${camOn?'':' off'}`;
 }
 async function toggleScreen() {
   if (!screenOn) {
@@ -312,7 +339,8 @@ async function toggleScreen() {
       if (lv) lv.srcObject = screenStream;
       track.onended = () => { screenOn=true; toggleScreen(); };
       screenOn=true;
-      document.getElementById('btnScreen').className = 'ctrl-btn off';
+      const b = document.getElementById('btnScreen');
+      if (b) b.className = 'call-panel-btn off';
     } catch(e) {}
   } else {
     screenStream?.getTracks().forEach(t => t.stop()); screenStream=null;
@@ -323,7 +351,8 @@ async function toggleScreen() {
     const lv = document.querySelector('#tile-local video');
     if (lv && localStream) lv.srcObject = localStream;
     screenOn=false;
-    document.getElementById('btnScreen').className = 'ctrl-btn on';
+    const b = document.getElementById('btnScreen');
+    if (b) b.className = 'call-panel-btn';
   }
 }
 
