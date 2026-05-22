@@ -358,8 +358,15 @@ function renderAll(s) {
         <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
           <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;min-width:60px;">Font</span>
           <select id="fontFamily" style="padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;outline:none;cursor:pointer;" onchange="previewFont()">
-            <option value="DM Sans">DM Sans (default)</option>
+            <option value="Trebuchet MS">Trebuchet MS (default)</option>
+            <optgroup label="System fonts">
+              <option value="Arial">Arial</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Verdana">Verdana</option>
+            </optgroup>
             <optgroup label="Web fonts">
+              <option value="DM Sans">DM Sans</option>
               <option value="Inter">Inter</option>
               <option value="Roboto">Roboto</option>
               <option value="Roboto Condensed">Roboto Condensed</option>
@@ -369,13 +376,6 @@ function renderAll(s) {
               <option value="Space Grotesk">Space Grotesk</option>
               <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
               <option value="Lato">Lato</option>
-            </optgroup>
-            <optgroup label="System fonts">
-              <option value="Arial">Arial</option>
-              <option value="Georgia">Georgia</option>
-              <option value="Times New Roman">Times New Roman</option>
-              <option value="Trebuchet MS">Trebuchet MS</option>
-              <option value="Verdana">Verdana</option>
             </optgroup>
           </select>
           <span id="fontPreviewText" style="font-size:14px;color:var(--text2);transition:font-family 0.2s;">The quick brown fox jumps over the lazy dog</span>
@@ -758,7 +758,7 @@ function resetColors() {
     var el = document.getElementById(id);
     if (el) { el.value = val; syncColorBox(el); }
   });
-  var ff = document.getElementById('fontFamily'); if (ff) { ff.value = 'DM Sans'; previewFont(); }
+  var ff = document.getElementById('fontFamily'); if (ff) { ff.value = 'Trebuchet MS'; previewFont(); }
   var fs = document.getElementById('fontSize'); if (fs) { fs.value = 14; document.getElementById('fontSizeLabel').textContent = '14px'; }
   var fw = document.getElementById('fontWeight'); if (fw) { fw.value = 400; updateFontWeight(400); }
 }
