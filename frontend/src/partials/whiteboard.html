@@ -81,15 +81,27 @@ function toggleTheme(){
   html.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
   document.getElementById('themeBtn').querySelector('use').setAttribute('href', next==='dark'?'#ic-sun':'#ic-moon');
+  // Refresh primary swatch colour to match new theme
+  const ps = document.querySelector('.color-swatch[data-primary]');
+  if (ps) ps.style.background = getPrimaryColor();
   renderAll();
 }
 
+/* ── Theme-adaptive primary colour ── */
+function getPrimaryColor(){
+  return document.documentElement.getAttribute('data-theme')==='dark' ? '#f0f0f0' : '#111111';
+}
+function resolveColor(c){
+  return c === '__primary__' ? getPrimaryColor() : c;
+}
+
 /* ── Inline colour palette (no OS dialog) ── */
-const MAIN_PALETTE = ['#3dd68c','#38bdf8','#f87171','#fbbf24','#a78bfa','#f472b6','#f0f0f0','#111111'];
+// '__primary__' = black in light mode, white in dark mode; sent as token so each viewer adapts
+const MAIN_PALETTE = ['__primary__','#3dd68c','#38bdf8','#f87171','#fbbf24','#a78bfa','#f472b6'];
 const EXT_PALETTE  = [
   '#3dd68c','#38bdf8','#6ee7b7','#f87171','#fbbf24','#a78bfa','#f472b6','#fb923c','#34d399',
   '#1d4ed8','#0891b2','#15803d','#b91c1c','#92400e','#7c3aed','#be185d','#b45309','#0f766e',
-  '#ffffff','#e5e7eb','#9ca3af','#6b7280','#4b5563','#374151','#1f2937','#111111','#000000',
+  '#e5e7eb','#9ca3af','#6b7280','#4b5563','#374151','#1f2937',
 ];
 function buildPalette(){
   const wrap = document.getElementById('color-swatches');
@@ -97,9 +109,16 @@ function buildPalette(){
   MAIN_PALETTE.forEach((c,i) => {
     const el = document.createElement('div');
     el.className = 'color-swatch'+(i===0?' active':'');
-    el.style.background = c;
-    el.title = c;
-    el.onclick = () => setColor(c, el);
+    if (c === '__primary__') {
+      el.style.background = getPrimaryColor();
+      el.title = 'Theme primary (black/white)';
+      el.dataset.primary = 'true';
+      el.onclick = () => setColor('__primary__', el);
+    } else {
+      el.style.background = c;
+      el.title = c;
+      el.onclick = () => setColor(c, el);
+    }
     wrap.appendChild(el);
   });
   const popup = document.getElementById('color-popup');
@@ -131,7 +150,7 @@ let strokes       = [];
 let currentStroke = null;
 let drawing       = false;
 let activeTool    = 'pen';
-let activeColor   = '#3dd68c';
+let activeColor   = '__primary__';
 let activeWidth   = 2;
 let myUserId      = localStorage.getItem('wb_uid') || null;
 let roomMode      = 'personal';
@@ -187,12 +206,13 @@ function drawStroke(s){
   ctx.lineJoin  = 'round';
   ctx.lineWidth = s.width;  // CSS pixels
 
+  const resolvedColor = resolveColor(s.color);
   if(s.tool === 'eraser'){
     ctx.globalCompositeOperation = 'destination-out';
     ctx.strokeStyle = 'rgba(0,0,0,1)';
   } else {
     ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = s.color;
+    ctx.strokeStyle = resolvedColor;
   }
 
   if(s.tool === 'pen' || s.tool === 'eraser'){
@@ -201,7 +221,7 @@ function drawStroke(s){
     if(pts.length === 1){
       ctx.beginPath();
       ctx.arc(pts[0].x*W, pts[0].y*H, s.width/2, 0, Math.PI*2);
-      ctx.fillStyle = s.tool==='eraser' ? 'rgba(0,0,0,1)' : s.color;
+      ctx.fillStyle = s.tool==='eraser' ? 'rgba(0,0,0,1)' : resolvedColor;
       ctx.fill();
     } else {
       ctx.beginPath();
@@ -225,7 +245,7 @@ function drawStroke(s){
   } else if(s.tool === 'text'){
     ctx.globalCompositeOperation = 'source-over';
     ctx.font = `${s.fontSize}px 'DM Sans', sans-serif`;  // CSS px, transform handles dpr
-    ctx.fillStyle = s.color;
+    ctx.fillStyle = resolvedColor;
     ctx.fillText(s.text, s.x*W, s.y*H);
   }
   ctx.restore();
