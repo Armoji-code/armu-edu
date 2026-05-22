@@ -38,7 +38,11 @@
   background:var(--bg2);border:1px solid var(--border);
   border-radius:var(--radius);padding:7px;
   box-shadow:var(--shadow);
+  user-select:none;
 }
+.call-ctrl-panel.horizontal{flex-direction:row;align-items:center;}
+.call-ctrl-panel.horizontal .call-sep{width:1px;height:24px;margin:0 3px;}
+
 .call-panel-btn{
   width:36px;height:36px;border-radius:var(--radius-sm);
   border:1px solid transparent;background:transparent;
@@ -51,10 +55,40 @@
 .call-panel-btn.panel-active{background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15));border-color:var(--border-accent);color:var(--g1);}
 .call-panel-btn.leave{background:#ef4444;color:#fff;border-color:transparent;}
 .call-panel-btn.leave:hover{background:#dc2626;}
+
 .call-sep{height:1px;background:var(--border);margin:3px 0;}
 
+/* ── Panel grip & meta buttons ───────────────── */
+.panel-grip{
+  display:flex;align-items:center;justify-content:center;
+  padding:4px;border-radius:var(--radius-sm);
+  color:var(--text3);cursor:grab;
+}
+.panel-grip:hover{background:var(--bg3);color:var(--text2);}
+.panel-grip:active{cursor:grabbing;}
+.panel-meta-btn{
+  width:24px;height:24px;padding:0;
+  border-radius:var(--radius-sm);border:none;
+  background:transparent;color:var(--text3);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all var(--transition);
+}
+.panel-meta-btn:hover{background:var(--bg3);color:var(--text2);}
+
+/* ── Reveal button (shown when panel hidden) ── */
+.call-ctrl-reveal{
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  z-index:11;display:none;
+  width:34px;height:34px;border-radius:50%;
+  background:var(--bg2);border:1px solid var(--border);
+  box-shadow:var(--shadow);color:var(--text3);
+  cursor:pointer;align-items:center;justify-content:center;
+  transition:all var(--transition);
+}
+.call-ctrl-reveal:hover{background:var(--bg3);color:var(--text);}
+
 /* ── Participants panel ─────────────────────────── */
-.call-sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;transition:width var(--transition);}
+.call-sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
 .call-sidebar.hidden{display:none;}
 .call-sidebar-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;padding:14px 16px 10px;border-bottom:1px solid var(--border);}
 .participant-row{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;}
@@ -66,7 +100,6 @@
   <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-meeting"></use></svg>
   <span class="topbar-title" id="topbarTitle">Meeting</span>
 
-  <!-- In-call info (hidden until in a call) -->
   <div class="call-ctrl-group" id="callCtrlGroup">
     <div class="call-info">
       <strong id="callTitleLabel"></strong>
@@ -126,6 +159,7 @@ var me, meetings=[], iceServers=[], socket=null, localStream=null, screenStream=
 var peerConnections={}, peerNames={}, currentMeeting=null;
 var callStartTime=null, durationInterval=null;
 var micOn=true, camOn=true, screenOn=false, participantsVisible=true;
+var _panelDragCleanup = null;
 
 // ── Socket ─────────────────────────────────────────────────────────────────────
 function initSocket() {
@@ -232,6 +266,107 @@ function toggleParticipants() {
   if (btn) btn.classList.toggle('panel-active', participantsVisible);
 }
 
+// ── Floating panel ─────────────────────────────────────────────────────────────
+function initDraggablePanel() {
+  const panel = document.getElementById('callCtrlPanel');
+  const area  = document.getElementById('videoArea');
+  if (!panel || !area) return;
+
+  // Restore orientation
+  if (localStorage.getItem('call-panel-orient') === 'h') panel.classList.add('horizontal');
+  updateOrientIcon();
+
+  // Restore dragged position
+  const saved = JSON.parse(localStorage.getItem('call-panel-pos') || 'null');
+  if (saved) {
+    panel.style.right = 'auto';
+    panel.style.transform = 'none';
+    panel.style.left = saved.x + 'px';
+    panel.style.top  = saved.y + 'px';
+  }
+
+  // Drag via grip
+  const grip = document.getElementById('panelGrip');
+  let dragging = false, ox = 0, oy = 0;
+
+  function startDrag(cx, cy) {
+    dragging = true;
+    const r = panel.getBoundingClientRect();
+    ox = cx - r.left; oy = cy - r.top;
+  }
+  function moveDrag(cx, cy) {
+    if (!dragging) return;
+    const ar = area.getBoundingClientRect();
+    let x = cx - ar.left - ox;
+    let y = cy - ar.top  - oy;
+    x = Math.max(0, Math.min(ar.width  - panel.offsetWidth,  x));
+    y = Math.max(0, Math.min(ar.height - panel.offsetHeight, y));
+    panel.style.left = x + 'px'; panel.style.top = y + 'px';
+    panel.style.right = 'auto'; panel.style.transform = 'none';
+    localStorage.setItem('call-panel-pos', JSON.stringify({x, y}));
+  }
+  function stopDrag() { dragging = false; }
+
+  const onMM = e => moveDrag(e.clientX, e.clientY);
+  const onTM = e => { if (e.touches[0]) moveDrag(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); };
+
+  grip.addEventListener('mousedown',  e => { startDrag(e.clientX, e.clientY); e.preventDefault(); });
+  grip.addEventListener('touchstart', e => { if (e.touches[0]) startDrag(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, {passive:false});
+  document.addEventListener('mousemove',  onMM);
+  document.addEventListener('touchmove',  onTM, {passive:false});
+  document.addEventListener('mouseup',  stopDrag);
+  document.addEventListener('touchend', stopDrag);
+
+  _panelDragCleanup = () => {
+    document.removeEventListener('mousemove',  onMM);
+    document.removeEventListener('touchmove',  onTM);
+    document.removeEventListener('mouseup',  stopDrag);
+    document.removeEventListener('touchend', stopDrag);
+  };
+}
+
+function togglePanelOrientation() {
+  const panel = document.getElementById('callCtrlPanel');
+  if (!panel) return;
+  panel.classList.toggle('horizontal');
+  localStorage.setItem('call-panel-orient', panel.classList.contains('horizontal') ? 'h' : 'v');
+  updateOrientIcon();
+}
+
+function updateOrientIcon() {
+  const btn = document.getElementById('btnOrient');
+  if (!btn) return;
+  const horiz = document.getElementById('callCtrlPanel')?.classList.contains('horizontal');
+  btn.title = horiz ? 'Switch to vertical' : 'Switch to horizontal';
+  // Icon shows the OTHER layout (what clicking will switch to)
+  btn.innerHTML = horiz
+    ? '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="3" y="2" width="3" height="10" rx="1"/><rect x="8" y="2" width="3" height="10" rx="1"/></svg>'
+    : '<svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect x="2" y="3" width="10" height="3" rx="1"/><rect x="2" y="8" width="10" height="3" rx="1"/></svg>';
+}
+
+function hidePanelControls() {
+  const panel  = document.getElementById('callCtrlPanel');
+  const reveal = document.getElementById('callCtrlReveal');
+  const area   = document.getElementById('videoArea');
+  if (!panel || !reveal || !area) return;
+  // Sync reveal position to where the panel currently is
+  const pr = panel.getBoundingClientRect();
+  const ar = area.getBoundingClientRect();
+  reveal.style.left      = (pr.left - ar.left) + 'px';
+  reveal.style.top       = (pr.top  - ar.top)  + 'px';
+  reveal.style.right     = 'auto';
+  reveal.style.transform = 'none';
+  panel.style.display  = 'none';
+  reveal.style.display = 'flex';
+}
+
+function showPanelControls() {
+  const panel  = document.getElementById('callCtrlPanel');
+  const reveal = document.getElementById('callCtrlReveal');
+  if (panel)  panel.style.display  = '';
+  if (reveal) reveal.style.display = 'none';
+}
+
 // ── Join / Leave ───────────────────────────────────────────────────────────────
 async function joinMeeting(meeting) {
   currentMeeting = meeting;
@@ -240,21 +375,32 @@ async function joinMeeting(meeting) {
     localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
   } catch(e) { alert('Could not access camera/microphone: '+e.message); return; }
 
-  // Switch topbar to call mode (info only)
   document.getElementById('topbarTitle').textContent = '';
   document.getElementById('callTitleLabel').textContent = meeting.title;
   document.getElementById('callCtrlGroup').classList.add('visible');
 
-  // Render call layout
   const content = document.getElementById('mainContent');
   content.style.padding = '0';
   content.style.overflow = 'hidden';
   micOn=true; camOn=true; screenOn=false; participantsVisible=true;
+
   content.innerHTML = `
     <div id="callWrap">
       <div id="videoArea">
         <div class="video-grid solo" id="videoGrid"></div>
+
+        <!-- Floating controls panel -->
         <div class="call-ctrl-panel" id="callCtrlPanel">
+          <!-- Grip + meta -->
+          <div id="panelGrip" class="panel-grip" title="Drag to move">
+            <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+              <circle cx="3" cy="3" r="1.5"/><circle cx="7" cy="3" r="1.5"/>
+              <circle cx="3" cy="7" r="1.5"/><circle cx="7" cy="7" r="1.5"/>
+              <circle cx="3" cy="11" r="1.5"/><circle cx="7" cy="11" r="1.5"/>
+            </svg>
+          </div>
+          <div class="call-sep"></div>
+          <!-- Call buttons -->
           <button class="call-panel-btn" id="btnMic" onclick="toggleMic()" title="Mic (M)">
             <svg class="icon icon-18"><use href="#ic-mic"/></svg>
           </button>
@@ -272,8 +418,24 @@ async function joinMeeting(meeting) {
           <button class="call-panel-btn leave" onclick="leaveMeeting()" title="Leave (Esc)">
             <svg class="icon icon-18"><use href="#ic-logout"/></svg>
           </button>
+          <div class="call-sep"></div>
+          <!-- Orient & hide -->
+          <button class="panel-meta-btn" id="btnOrient" onclick="togglePanelOrientation()"></button>
+          <button class="panel-meta-btn" onclick="hidePanelControls()" title="Hide controls (H)">
+            <svg class="icon icon-12"><use href="#ic-x"/></svg>
+          </button>
         </div>
+
+        <!-- Reveal button (shown when panel is hidden) -->
+        <button class="call-ctrl-reveal" id="callCtrlReveal" onclick="showPanelControls()" title="Show controls (H)">
+          <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
+            <circle cx="3" cy="3" r="1.5"/><circle cx="7" cy="3" r="1.5"/>
+            <circle cx="3" cy="7" r="1.5"/><circle cx="7" cy="7" r="1.5"/>
+            <circle cx="3" cy="11" r="1.5"/><circle cx="7" cy="11" r="1.5"/>
+          </svg>
+        </button>
       </div>
+
       <div class="call-sidebar" id="callSidebar">
         <div class="call-sidebar-title">Participants</div>
         <div id="participantList"></div>
@@ -281,6 +443,8 @@ async function joinMeeting(meeting) {
     </div>`;
 
   addLocalTile(); renderParticipants();
+  initDraggablePanel();
+
   callStartTime = Date.now();
   durationInterval = setInterval(() => {
     const s = Math.floor((Date.now()-callStartTime)/1000);
@@ -292,6 +456,7 @@ async function joinMeeting(meeting) {
 
 async function leaveMeeting() {
   if (!currentMeeting) return;
+  if (_panelDragCleanup) { _panelDragCleanup(); _panelDragCleanup = null; }
   if (socket) socket.emit('meeting:leave', {room_code: currentMeeting.room_code});
   Object.values(peerConnections).forEach(pc => pc.close());
   peerConnections={}; peerNames={};
@@ -300,12 +465,10 @@ async function leaveMeeting() {
   clearInterval(durationInterval);
   currentMeeting=null;
 
-  // Restore topbar
   document.getElementById('topbarTitle').textContent = 'Meeting';
   document.getElementById('callCtrlGroup').classList.remove('visible');
   document.getElementById('callDuration').textContent = '';
 
-  // Restore content
   const content = document.getElementById('mainContent');
   content.style.padding = '';
   content.style.overflow = '';
@@ -435,6 +598,7 @@ async function boot() {
   initSocket();
   setInterval(refreshMeetings, 8000);
   window.__cleanup = function() {
+    if (_panelDragCleanup) { _panelDragCleanup(); _panelDragCleanup = null; }
     if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
     if (screenStream) { screenStream.getTracks().forEach(t=>t.stop()); screenStream=null; }
     Object.values(peerConnections).forEach(pc=>pc.close());
@@ -448,6 +612,10 @@ document.addEventListener('keydown', e => {
   if (!currentMeeting) return;
   if (e.key==='m') toggleMic();
   if (e.key==='c') toggleCam();
+  if (e.key==='h') {
+    const panel = document.getElementById('callCtrlPanel');
+    if (panel) { if (panel.style.display==='none') showPanelControls(); else hidePanelControls(); }
+  }
   if (e.key==='Escape') leaveMeeting();
 });
 
