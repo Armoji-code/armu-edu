@@ -34,14 +34,14 @@
 /* ── Floating call controls — wb-toolbar style ── */
 .call-ctrl-panel{
   position:absolute;right:16px;top:50%;transform:translateY(-50%);
-  z-index:10;display:flex;flex-direction:column;gap:3px;
+  z-index:10;display:flex;flex-direction:column;align-items:center;gap:3px;
   background:var(--bg2);border:1px solid var(--border);
   border-radius:var(--radius);padding:7px;
   box-shadow:var(--shadow);
   user-select:none;
 }
 .call-ctrl-panel.horizontal{flex-direction:row;align-items:center;}
-.call-ctrl-panel.horizontal .call-sep{width:1px;height:24px;margin:0 3px;}
+.call-ctrl-panel.horizontal .call-sep{width:1px;height:24px;margin:0 3px;align-self:center;}
 
 .call-panel-btn{
   width:36px;height:36px;border-radius:var(--radius-sm);
@@ -56,7 +56,7 @@
 .call-panel-btn.leave{background:#ef4444;color:#fff;border-color:transparent;}
 .call-panel-btn.leave:hover{background:#dc2626;}
 
-.call-sep{height:1px;background:var(--border);margin:3px 0;}
+.call-sep{height:1px;background:var(--border);margin:3px 0;align-self:stretch;}
 
 /* ── Panel grip & meta buttons ───────────────── */
 .panel-grip{
