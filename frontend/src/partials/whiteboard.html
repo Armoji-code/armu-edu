@@ -1,3 +1,13 @@
+<style>
+#img-overlay{position:absolute;cursor:move;box-sizing:border-box;border:2px dashed var(--g1);z-index:10;user-select:none;display:none;}
+#img-overlay-img{width:100%;height:100%;display:block;pointer-events:none;object-fit:fill;}
+.img-rh{position:absolute;width:10px;height:10px;background:var(--bg);border:2px solid var(--g1);border-radius:2px;z-index:2;}
+.img-rh[data-corner="tl"]{top:-5px;left:-5px;cursor:nw-resize;}
+.img-rh[data-corner="tr"]{top:-5px;right:-5px;cursor:ne-resize;}
+.img-rh[data-corner="bl"]{bottom:-5px;left:-5px;cursor:sw-resize;}
+.img-rh[data-corner="br"]{bottom:-5px;right:-5px;cursor:se-resize;}
+#img-overlay-bar{position:absolute;bottom:0;left:0;right:0;display:flex;gap:6px;padding:4px 6px;background:rgba(0,0,0,0.55);z-index:2;}
+</style>
 
 <div class="topbar">
 <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-whiteboard"></use></svg>
@@ -62,6 +72,17 @@
 <button class="wb-action-btn danger" onclick="clearBoard()">
 <svg class="icon icon-14"><use href="#ic-trash"></use></svg> Clear
       </button>
+</div>
+<div id="img-overlay">
+  <img id="img-overlay-img" alt="">
+  <div class="img-rh" data-corner="tl"></div>
+  <div class="img-rh" data-corner="tr"></div>
+  <div class="img-rh" data-corner="bl"></div>
+  <div class="img-rh" data-corner="br"></div>
+  <div id="img-overlay-bar">
+    <button class="wb-action-btn" onclick="commitImage()" style="font-size:11px;padding:2px 8px;">Paste in</button>
+    <button class="wb-action-btn" onclick="cancelImage()" style="font-size:11px;padding:2px 8px;">Cancel</button>
+  </div>
 </div>
 </div><!-- .wb-area -->
 
@@ -162,6 +183,9 @@ const _hash      = window.location.hash.slice(1);
 const _ownHash   = localStorage.getItem('wb_own_hash');
 const _isInvite  = _hash && _hash !== _ownHash;   // hash we didn't generate ourselves
 let room = (_isInvite) ? 'group_' + _hash : (myUserId ? 'personal_' + myUserId : 'personal_anon');
+var _imgCache = {};
+var imgOverlayData = null;
+var _imgDragCleanup = null;
 
 function setColor(c, el){
   activeColor = c;
@@ -247,6 +271,16 @@ function drawStroke(s){
     ctx.font = `${s.fontSize}px 'DM Sans', sans-serif`;  // CSS px, transform handles dpr
     ctx.fillStyle = resolvedColor;
     ctx.fillText(s.text, s.x*W, s.y*H);
+  } else if(s.tool === 'image'){
+    if(!s.src){ ctx.restore(); return; }
+    if(!_imgCache[s.src]){
+      const _i = new Image();
+      _i.onload = ()=>{ _imgCache[s.src]=_i; renderAll(); };
+      _i.src = s.src;
+      ctx.restore(); return;
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(_imgCache[s.src], s.x*W, s.y*H, s.w*W, s.h*H);
   }
   ctx.restore();
 }
@@ -355,6 +389,10 @@ function undoStroke(){
 }
 
 document.addEventListener('keydown', e=>{
+  if(imgOverlayData){
+    if(e.key==='Enter'){ e.preventDefault(); commitImage(); return; }
+    if(e.key==='Escape'){ cancelImage(); return; }
+  }
   if((e.ctrlKey||e.metaKey) && e.key==='z'){ e.preventDefault(); undoStroke(); return; }
   if(e.target.tagName==='INPUT') return;
   const map = {p:'pen',e:'eraser',l:'line',r:'rect',c:'circle',t:'text'};
@@ -471,6 +509,109 @@ socket.on('wb_cleared', ()=>{
   renderAll();
 });
 
+/* ── Image paste ── */
+function showImageOverlay(dataUrl){
+  const img = new Image();
+  img.onload = function(){
+    const maxW = cssW * 0.5;
+    const scale = Math.min(1, maxW / img.naturalWidth);
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
+    const x = Math.round((cssW - w) / 2);
+    const y = Math.round((cssH - h) / 2);
+    imgOverlayData = {src: dataUrl, x, y, w, h};
+    const ov = document.getElementById('img-overlay');
+    document.getElementById('img-overlay-img').src = dataUrl;
+    ov.style.left = x+'px'; ov.style.top = y+'px';
+    ov.style.width = w+'px'; ov.style.height = h+'px';
+    ov.style.display = 'block';
+    initImageDrag();
+  };
+  img.src = dataUrl;
+}
+
+function initImageDrag(){
+  const ov = document.getElementById('img-overlay');
+  if(_imgDragCleanup) _imgDragCleanup();
+  var dragging=false, resizing=false, corner='';
+  var sx=0, sy=0, sl=0, st=0, sw=0, sh=0;
+  function onDown(e){
+    if(e.target.classList.contains('img-rh')){
+      resizing=true; corner=e.target.dataset.corner;
+      sl=imgOverlayData.x; st=imgOverlayData.y; sw=imgOverlayData.w; sh=imgOverlayData.h;
+    } else if(!e.target.closest('#img-overlay-bar')){
+      dragging=true; sl=imgOverlayData.x; st=imgOverlayData.y;
+    }
+    sx=e.clientX; sy=e.clientY; e.preventDefault();
+  }
+  function onMove(e){
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if(dragging){
+      imgOverlayData.x=sl+dx; imgOverlayData.y=st+dy;
+      ov.style.left=imgOverlayData.x+'px'; ov.style.top=imgOverlayData.y+'px';
+    } else if(resizing){
+      let nx=sl,ny=st,nw=sw,nh=sh;
+      if(corner==='br'){nw=Math.max(40,sw+dx);nh=Math.max(40,sh+dy);}
+      else if(corner==='bl'){nw=Math.max(40,sw-dx);nh=Math.max(40,sh+dy);nx=sl+sw-nw;}
+      else if(corner==='tr'){nw=Math.max(40,sw+dx);nh=Math.max(40,sh-dy);ny=st+sh-nh;}
+      else if(corner==='tl'){nw=Math.max(40,sw-dx);nh=Math.max(40,sh-dy);nx=sl+sw-nw;ny=st+sh-nh;}
+      imgOverlayData.x=nx;imgOverlayData.y=ny;imgOverlayData.w=nw;imgOverlayData.h=nh;
+      ov.style.left=nx+'px';ov.style.top=ny+'px';ov.style.width=nw+'px';ov.style.height=nh+'px';
+    }
+  }
+  function onUp(){ dragging=false; resizing=false; }
+  ov.addEventListener('mousedown', onDown);
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  _imgDragCleanup = function(){
+    ov.removeEventListener('mousedown', onDown);
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    _imgDragCleanup = null;
+  };
+}
+
+function commitImage(){
+  if(!imgOverlayData) return;
+  const {src,x,y,w,h} = imgOverlayData;
+  const stroke = {tool:'image', src, x:x/cssW, y:y/cssH, w:w/cssW, h:h/cssH};
+  strokes.push(stroke);
+  socket.emit('wb_stroke', {room, stroke});
+  renderAll();
+  cancelImage();
+}
+
+function cancelImage(){
+  if(_imgDragCleanup) _imgDragCleanup();
+  imgOverlayData = null;
+  document.getElementById('img-overlay').style.display = 'none';
+}
+
+document.addEventListener('paste', function(e){
+  const items = e.clipboardData && e.clipboardData.items;
+  if(!items) return;
+  for(let i=0;i<items.length;i++){
+    if(items[i].type.startsWith('image/')){
+      const blob = items[i].getAsFile();
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        const img = new Image();
+        img.onload = function(){
+          const MAX=1200, tw=img.naturalWidth, th=img.naturalHeight;
+          const sc=(tw>MAX||th>MAX)?MAX/Math.max(tw,th):1;
+          const tmp=document.createElement('canvas');
+          tmp.width=Math.round(tw*sc); tmp.height=Math.round(th*sc);
+          tmp.getContext('2d').drawImage(img,0,0,tmp.width,tmp.height);
+          showImageOverlay(tmp.toDataURL('image/jpeg',0.82));
+        };
+        img.src=ev.target.result;
+      };
+      reader.readAsDataURL(blob);
+      e.preventDefault(); break;
+    }
+  }
+});
+
 /* ── Boot ── */
 async function boot(){
   buildPalette();
@@ -518,6 +659,7 @@ window.exportPNG       = exportPNG;
 window.undoStroke      = undoStroke;
 
 window.__cleanup = function() {
+  cancelImage();
   if (socket) { socket.disconnect(); }
 };
 
