@@ -21,7 +21,7 @@
 #videoArea{position:relative;flex:1;overflow:hidden;display:flex;flex-direction:column;}
 
 /* ── Video grid ───────────────────────────────── */
-.video-grid{flex:1;display:grid;gap:8px;padding:16px;padding-right:70px;background:var(--bg);align-content:start;overflow-y:auto;}
+.video-grid{flex:1;display:grid;gap:8px;padding:16px;background:var(--bg);align-content:start;overflow-y:auto;}
 .video-grid.solo{display:flex;align-items:center;justify-content:center;}
 .video-grid.duo{grid-template-columns:1fr 1fr;}
 .video-grid.multi{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
@@ -270,7 +270,7 @@ async function joinMeeting(meeting) {
           </button>
           <div class="call-sep"></div>
           <button class="call-panel-btn leave" onclick="leaveMeeting()" title="Leave (Esc)">
-            <svg class="icon icon-18"><use href="#ic-phone-off"/></svg>
+            <svg class="icon icon-18"><use href="#ic-logout"/></svg>
           </button>
         </div>
       </div>
