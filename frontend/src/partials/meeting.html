@@ -276,13 +276,18 @@ function initDraggablePanel() {
   if (localStorage.getItem('call-panel-orient') === 'h') panel.classList.add('horizontal');
   updateOrientIcon();
 
-  // Restore dragged position
+  // Restore dragged position, clamped to current area bounds
   const saved = JSON.parse(localStorage.getItem('call-panel-pos') || 'null');
   if (saved) {
-    panel.style.right = 'auto';
-    panel.style.transform = 'none';
-    panel.style.left = saved.x + 'px';
-    panel.style.top  = saved.y + 'px';
+    requestAnimationFrame(() => {
+      const ar = area.getBoundingClientRect();
+      const x = Math.max(0, Math.min(ar.width  - panel.offsetWidth,  saved.x));
+      const y = Math.max(0, Math.min(ar.height - panel.offsetHeight, saved.y));
+      panel.style.right = 'auto';
+      panel.style.transform = 'none';
+      panel.style.left = x + 'px';
+      panel.style.top  = y + 'px';
+    });
   }
 
   // Drag via grip
