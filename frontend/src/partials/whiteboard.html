@@ -331,14 +331,9 @@ function renderAll(){
   // physical = world * zoom * dpr + pan * dpr
   ctx.setTransform(dpr*zoom, 0, 0, dpr*zoom, panX*dpr, panY*dpr);
 
-  // Pass 1: non-image strokes (eraser operates here)
-  for(const s of strokes) if(s.tool !== 'image') _drawStrokeOn(ctx, s);
-  if(currentStroke && currentStroke.tool !== 'image') _drawStrokeOn(ctx, currentStroke);
-
-  // Pass 2: images on top — not erasable
-  ctx.globalCompositeOperation = 'source-over';
-  for(const s of strokes) if(s.tool === 'image') _drawStrokeOn(ctx, s);
-  if(currentStroke && currentStroke.tool === 'image') _drawStrokeOn(ctx, currentStroke);
+  // Render in natural order so pen strokes drawn after an image appear on top of it
+  for(const s of strokes) _drawStrokeOn(ctx, s);
+  if(currentStroke) _drawStrokeOn(ctx, currentStroke);
 
   // Overlays in CSS-pixel space
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
