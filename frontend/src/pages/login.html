@@ -177,6 +177,34 @@
 
   .theme-toggle:hover { color: var(--text); border-color: var(--border-accent); }
 </style>
+<style id="brand-override"></style>
+<script>
+/* Apply cached branding before first paint */
+(function(){
+  try {
+    var b=JSON.parse(localStorage.getItem('brand-cache')||'null');
+    if(!b)return;
+    var c=b.colors||{},f=b.font||{},root=[],dark=[],light=[];
+    function toRgb(h){if(!h)return null;h=h.replace('#','');if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];var n=parseInt(h,16);return ((n>>16)&255)+','+((n>>8)&255)+','+(n&255);}
+    if(c.g1){root.push('--g1:'+c.g1);var r=toRgb(c.g1);if(r)root.push('--g1-rgb:'+r);}
+    if(c.g2){root.push('--g2:'+c.g2);var r=toRgb(c.g2);if(r)root.push('--g2-rgb:'+r);}
+    if(c.g3)root.push('--g3:'+c.g3);
+    if(root.length){root.push('--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3))');root.push('--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%)');}
+    if(c.dark_bg)dark.push('--bg:'+c.dark_bg);if(c.dark_bg2)dark.push('--bg2:'+c.dark_bg2);if(c.dark_bg3)dark.push('--bg3:'+c.dark_bg3);if(c.dark_bg4)dark.push('--bg4:'+c.dark_bg4);
+    if(c.light_bg)light.push('--bg:'+c.light_bg);if(c.light_bg2)light.push('--bg2:'+c.light_bg2);if(c.light_bg3)light.push('--bg3:'+c.light_bg3);if(c.light_bg4)light.push('--bg4:'+c.light_bg4);
+    if(f.dark_text)dark.push('--text:'+f.dark_text);if(f.light_text)light.push('--text:'+f.light_text);
+    var css='';
+    if(root.length)css+=':root{'+root.join(';')+'}';
+    if(dark.length)css+='[data-theme="dark"]{'+dark.join(';')+'}';
+    if(light.length)css+='[data-theme="light"]{'+light.join(';')+'}';
+    if(f.family)css+='body,input,textarea,button,select{font-family:\''+f.family+'\',sans-serif!important;}';
+    if(f.size)css+='body{font-size:'+f.size+'px;}';
+    if(f.weight)css+='body{font-weight:'+f.weight+';}p,span,div,li,td,th,label{font-weight:inherit;}';
+    document.getElementById('brand-override').textContent=css;
+    if(f.family&&f.family!=='DM Sans'){var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+f.family.replace(/ /g,'+')+'&display=swap';document.head.appendChild(l);}
+  }catch(e){}
+})();
+</script>
 </head>
 <body>
 
@@ -184,8 +212,8 @@
 
 <div class="login-card">
   <div class="logo">
-    <div class="logo-text">Armu</div>
-    <div class="logo-sub">School Platform</div>
+    <div class="logo-text" id="loginLogo">Armu</div>
+    <div class="logo-sub" id="loginSub">School Platform</div>
   </div>
 
   <form id="loginForm" onsubmit="handleLogin(event)">
@@ -203,10 +231,63 @@
 </div>
 
 <script>
+  // Apply theme from localStorage
+  (function(){
+    const t = localStorage.getItem('theme') || 'dark';
+    document.documentElement.dataset.theme = t;
+    const btn = document.getElementById('themeBtn');
+    if (btn) btn.textContent = t === 'dark' ? 'Light' : 'Dark';
+  })();
+
+  function applyLoginBranding(b) {
+    if (!b) return;
+    try { localStorage.setItem('brand-cache', JSON.stringify(b)); } catch(e) {}
+    // Re-apply CSS (covers first-visit with no cache)
+    const c = b.colors||{}, f = b.font||{}, root=[], dark=[], light=[];
+    function toRgb(h){if(!h)return null;h=h.replace('#','');if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];const n=parseInt(h,16);return ((n>>16)&255)+','+((n>>8)&255)+','+(n&255);}
+    if(c.g1){root.push('--g1:'+c.g1);const r=toRgb(c.g1);if(r)root.push('--g1-rgb:'+r);}
+    if(c.g2){root.push('--g2:'+c.g2);const r=toRgb(c.g2);if(r)root.push('--g2-rgb:'+r);}
+    if(c.g3)root.push('--g3:'+c.g3);
+    if(root.length){root.push('--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3))');root.push('--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%)');}
+    if(c.dark_bg)dark.push('--bg:'+c.dark_bg);if(c.dark_bg2)dark.push('--bg2:'+c.dark_bg2);if(c.dark_bg3)dark.push('--bg3:'+c.dark_bg3);if(c.dark_bg4)dark.push('--bg4:'+c.dark_bg4);
+    if(c.light_bg)light.push('--bg:'+c.light_bg);if(c.light_bg2)light.push('--bg2:'+c.light_bg2);if(c.light_bg3)light.push('--bg3:'+c.light_bg3);if(c.light_bg4)light.push('--bg4:'+c.light_bg4);
+    if(f.dark_text)dark.push('--text:'+f.dark_text);if(f.light_text)light.push('--text:'+f.light_text);
+    let css='';
+    if(root.length)css+=`:root{${root.join(';')}}`;
+    if(dark.length)css+=`[data-theme="dark"]{${dark.join(';')}}`;
+    if(light.length)css+=`[data-theme="light"]{${light.join(';')}}`;
+    if(f.family)css+=`body,input,textarea,button,select{font-family:'${f.family}',sans-serif!important;}`;
+    if(f.size)css+=`body{font-size:${f.size}px;}`;
+    if(f.weight)css+=`body{font-weight:${f.weight};}p,span,div,li,td,th,label{font-weight:inherit;}`;
+    document.getElementById('brand-override').textContent = css;
+    if(f.family && f.family!=='DM Sans'){
+      let l=document.getElementById('gfont-login');
+      if(!l){l=document.createElement('link');l.id='gfont-login';l.rel='stylesheet';document.head.appendChild(l);}
+      l.href=`https://fonts.googleapis.com/css2?family=${f.family.replace(/ /g,'+')}:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap`;
+    }
+    // Logo
+    const logoEl = document.getElementById('loginLogo');
+    const subEl  = document.getElementById('loginSub');
+    if (logoEl) {
+      if (b.logo_data) {
+        logoEl.style.cssText = 'background:none;-webkit-text-fill-color:unset;';
+        logoEl.innerHTML = `<img src="${b.logo_data}" style="max-height:${b.logo_height||48}px;max-width:240px;object-fit:${b.logo_fit||'contain'};" alt="logo">`;
+      } else {
+        logoEl.style.cssText = '';
+        logoEl.textContent = 'Armu';
+      }
+    }
+    if (subEl && b.school_name) subEl.textContent = b.school_name;
+  }
+
+  // Fetch fresh branding (public endpoint, no auth needed)
+  fetch('/api/branding').then(r=>r.ok?r.json():null).then(b=>{ if(b) applyLoginBranding(b); }).catch(()=>{});
+
   function toggleTheme() {
     const html = document.documentElement;
     const isDark = html.dataset.theme === 'dark';
     html.dataset.theme = isDark ? 'light' : 'dark';
+    localStorage.setItem('theme', isDark ? 'light' : 'dark');
     document.getElementById('themeBtn').textContent = isDark ? 'Dark' : 'Light';
   }
 

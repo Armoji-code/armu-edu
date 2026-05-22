@@ -1238,6 +1238,33 @@
 
 </style>
 <style id="brand-override"></style>
+<script>
+/* Apply cached branding before first paint to prevent flash */
+(function(){
+  try {
+    var b=JSON.parse(localStorage.getItem('brand-cache')||'null');
+    if(!b)return;
+    var c=b.colors||{},f=b.font||{},root=[],dark=[],light=[];
+    function toRgb(h){if(!h)return null;h=h.replace('#','');if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];var n=parseInt(h,16);return ((n>>16)&255)+','+((n>>8)&255)+','+(n&255);}
+    if(c.g1){root.push('--g1:'+c.g1);var r=toRgb(c.g1);if(r)root.push('--g1-rgb:'+r);}
+    if(c.g2){root.push('--g2:'+c.g2);var r=toRgb(c.g2);if(r)root.push('--g2-rgb:'+r);}
+    if(c.g3)root.push('--g3:'+c.g3);
+    if(root.length){root.push('--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3))');root.push('--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%)');}
+    if(c.dark_bg)dark.push('--bg:'+c.dark_bg);if(c.dark_bg2)dark.push('--bg2:'+c.dark_bg2);if(c.dark_bg3)dark.push('--bg3:'+c.dark_bg3);if(c.dark_bg4)dark.push('--bg4:'+c.dark_bg4);
+    if(c.light_bg)light.push('--bg:'+c.light_bg);if(c.light_bg2)light.push('--bg2:'+c.light_bg2);if(c.light_bg3)light.push('--bg3:'+c.light_bg3);if(c.light_bg4)light.push('--bg4:'+c.light_bg4);
+    if(f.dark_text)dark.push('--text:'+f.dark_text);if(f.light_text)light.push('--text:'+f.light_text);
+    var css='';
+    if(root.length)css+=':root{'+root.join(';')+'}';
+    if(dark.length)css+='[data-theme="dark"]{'+dark.join(';')+'}';
+    if(light.length)css+='[data-theme="light"]{'+light.join(';')+'}';
+    if(f.family)css+='body,input,textarea,button,select{font-family:\''+f.family+'\',sans-serif!important;}';
+    if(f.size)css+='body{font-size:'+f.size+'px;}';
+    if(f.weight)css+='body{font-weight:'+f.weight+';}p,span,div,li,td,th,label{font-weight:inherit;}';
+    document.getElementById('brand-override').textContent=css;
+    if(f.family&&f.family!=='DM Sans'){var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+f.family.replace(/ /g,'+')+'&display=swap';document.head.appendChild(l);}
+  }catch(e){}
+})();
+</script>
 </head>
 <body>
 
@@ -1612,6 +1639,7 @@ function applyBrandingData(b) {
   if (f.size)       css += `body{font-size:${f.size}px;}`;
   if (f.weight)     css += `body{font-weight:${f.weight};}p,span,div,li,td,th,label{font-weight:inherit;}`;
   document.getElementById('brand-override').textContent = css;
+  try { localStorage.setItem('brand-cache', JSON.stringify(b)); } catch(e) {}
 
   // Load Google Font if not default
   const defaultFonts = ['DM Sans', ''];
