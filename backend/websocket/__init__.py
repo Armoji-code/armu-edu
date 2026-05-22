@@ -35,3 +35,23 @@ def on_wb_clear(data):
     room = data.get("room", "global")
     _board_states[room] = []
     emit("wb_cleared", {}, to=room)
+
+@socketio.on("wb_update_stroke")
+def on_wb_update_stroke(data):
+    room = data.get("room", "global")
+    stroke = data.get("stroke")
+    if stroke and stroke.get("id"):
+        board = _board_states.get(room, [])
+        for i, s in enumerate(board):
+            if s.get("id") == stroke["id"]:
+                board[i] = stroke
+                break
+        emit("wb_update_stroke", {"stroke": stroke}, to=room, include_self=False)
+
+@socketio.on("wb_delete_stroke")
+def on_wb_delete_stroke(data):
+    room = data.get("room", "global")
+    sid = data.get("id")
+    if sid:
+        _board_states[room] = [s for s in _board_states.get(room, []) if s.get("id") != sid]
+        emit("wb_delete_stroke", {"id": sid}, to=room, include_self=False)

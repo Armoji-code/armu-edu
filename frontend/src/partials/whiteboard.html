@@ -7,6 +7,7 @@
 .img-rh[data-corner="bl"]{bottom:-5px;left:-5px;cursor:sw-resize;}
 .img-rh[data-corner="br"]{bottom:-5px;right:-5px;cursor:se-resize;}
 #img-overlay-bar{position:absolute;bottom:0;left:0;right:0;display:flex;gap:6px;padding:4px 6px;background:rgba(0,0,0,0.55);z-index:2;}
+#export-confirm{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;display:none;gap:8px;align-items:center;z-index:20;box-shadow:var(--shadow);white-space:nowrap;}
 </style>
 
 <div class="topbar">
@@ -37,16 +38,20 @@
 <canvas id="wb"></canvas>
 <!-- Left toolbar -->
 <div class="wb-toolbar">
-<button class="wb-tool active" id="tool-pen" onclick="setTool('pen')" title="Pen (P)"> <svg class="icon icon-18"><use href="#ic-pen"></use></svg></button>
-<button class="wb-tool" id="tool-eraser" onclick="setTool('eraser')" title="Eraser (E)"> <svg class="icon icon-18"><use href="#ic-eraser"></use></svg></button>
+<button class="wb-tool active" id="tool-pen"    onclick="setTool('pen')"    title="Pen (P)">    <svg class="icon icon-18"><use href="#ic-pen"></use></svg></button>
+<button class="wb-tool"        id="tool-eraser" onclick="setTool('eraser')" title="Eraser (E)"> <svg class="icon icon-18"><use href="#ic-eraser"></use></svg></button>
 <div class="wb-sep"></div>
-<button class="wb-tool" id="tool-line" onclick="setTool('line')" title="Line (L)"> <svg class="icon icon-18"><use href="#ic-line"></use></svg></button>
-<button class="wb-tool" id="tool-rect" onclick="setTool('rect')" title="Rectangle (R)"><svg class="icon icon-18"><use href="#ic-rect"></use></svg></button>
+<button class="wb-tool" id="tool-line"   onclick="setTool('line')"   title="Line (L)">   <svg class="icon icon-18"><use href="#ic-line"></use></svg></button>
+<button class="wb-tool" id="tool-rect"   onclick="setTool('rect')"   title="Rectangle (R)"><svg class="icon icon-18"><use href="#ic-rect"></use></svg></button>
 <button class="wb-tool" id="tool-circle" onclick="setTool('circle')" title="Circle (C)"> <svg class="icon icon-18"><use href="#ic-circle"></use></svg></button>
 <div class="wb-sep"></div>
-<button class="wb-tool" id="tool-text" onclick="setTool('text')" title="Text (T)"> <svg class="icon icon-18"><use href="#ic-text"></use></svg></button>
+<button class="wb-tool" id="tool-text"   onclick="setTool('text')"   title="Text (T)">   <svg class="icon icon-18"><use href="#ic-text"></use></svg></button>
 <div class="wb-sep"></div>
-<button class="wb-tool" id="tool-undo" onclick="undoStroke()" title="Undo (Ctrl+Z)"><svg class="icon icon-18"><use href="#ic-undo"></use></svg></button>
+<button class="wb-tool" id="tool-hand"   onclick="setTool('hand')"   title="Pan (H / Space)"><svg class="icon icon-18"><use href="#ic-hand"></use></svg></button>
+<button class="wb-tool" id="tool-select" onclick="setTool('select')" title="Select (S)"> <svg class="icon icon-18"><use href="#ic-select"></use></svg></button>
+<div class="wb-sep"></div>
+<button class="wb-tool" id="tool-undo"       onclick="undoStroke()"  title="Undo (Ctrl+Z)"><svg class="icon icon-18"><use href="#ic-undo"></use></svg></button>
+<button class="wb-tool" id="tool-resetview"  onclick="resetView()"   title="Reset view (0)"><svg class="icon icon-18"><use href="#ic-refresh"></use></svg></button>
 </div>
 <input id="wb-text-input" placeholder="Type…" type="text"/>
 <!-- Bottom options bar -->
@@ -66,13 +71,17 @@
 <div class="online-dot"></div>
 <span id="online-count">1 online</span>
 </div>
+<button class="wb-action-btn" onclick="startExportArea()">
+<svg class="icon icon-14"><use href="#ic-crop"></use></svg> Export area
+      </button>
 <button class="wb-action-btn" onclick="exportPNG()">
-<svg class="icon icon-14"><use href="#ic-download"></use></svg> Export
+<svg class="icon icon-14"><use href="#ic-download"></use></svg> Full export
       </button>
 <button class="wb-action-btn danger" onclick="clearBoard()">
 <svg class="icon icon-14"><use href="#ic-trash"></use></svg> Clear
       </button>
 </div>
+<!-- Image paste overlay -->
 <div id="img-overlay">
   <img id="img-overlay-img" alt="">
   <div class="img-rh" data-corner="tl"></div>
@@ -84,10 +93,15 @@
     <button class="wb-action-btn" onclick="cancelImage()" style="font-size:11px;padding:2px 8px;">Cancel</button>
   </div>
 </div>
+<!-- Export area confirm banner -->
+<div id="export-confirm">
+  <span style="font-size:12px;color:var(--text2)">Drag to select region, then:</span>
+  <button class="wb-action-btn" onclick="doExport()" style="font-size:11px;padding:2px 8px;">Save PNG</button>
+  <button class="wb-action-btn" onclick="cancelExport()" style="font-size:11px;padding:2px 8px;">Cancel</button>
+</div>
 </div><!-- .wb-area -->
 
 <script>
-
 
 /* ── Theme ── */
 (function(){
@@ -102,9 +116,8 @@ function toggleTheme(){
   html.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
   document.getElementById('themeBtn').querySelector('use').setAttribute('href', next==='dark'?'#ic-sun':'#ic-moon');
-  // Refresh primary swatch colour to match new theme
   const ps = document.querySelector('.color-swatch[data-primary]');
-  if (ps) ps.style.background = getPrimaryColor();
+  if(ps) ps.style.background = getPrimaryColor();
   renderAll();
 }
 
@@ -116,10 +129,9 @@ function resolveColor(c){
   return c === '__primary__' ? getPrimaryColor() : c;
 }
 
-/* ── Inline colour palette (no OS dialog) ── */
-// '__primary__' = black in light mode, white in dark mode; sent as token so each viewer adapts
-const MAIN_PALETTE = ['__primary__','#3dd68c','#38bdf8','#f87171','#fbbf24','#a78bfa','#f472b6'];
-const EXT_PALETTE  = [
+/* ── Palette ── */
+const MAIN_PALETTE = ['__primary__','#000000','#ffffff','#3dd68c','#38bdf8','#f87171','#fbbf24','#a78bfa','#f472b6'];
+const EXT_PALETTE = [
   '#3dd68c','#38bdf8','#6ee7b7','#f87171','#fbbf24','#a78bfa','#f472b6','#fb923c','#34d399',
   '#1d4ed8','#0891b2','#15803d','#b91c1c','#92400e','#7c3aed','#be185d','#b45309','#0f766e',
   '#e5e7eb','#9ca3af','#6b7280','#4b5563','#374151','#1f2937',
@@ -130,7 +142,7 @@ function buildPalette(){
   MAIN_PALETTE.forEach((c,i) => {
     const el = document.createElement('div');
     el.className = 'color-swatch'+(i===0?' active':'');
-    if (c === '__primary__') {
+    if(c === '__primary__'){
       el.style.background = getPrimaryColor();
       el.title = 'Theme primary (black/white)';
       el.dataset.primary = 'true';
@@ -138,6 +150,7 @@ function buildPalette(){
     } else {
       el.style.background = c;
       el.title = c;
+      if(c === '#ffffff') el.style.boxShadow = 'inset 0 0 0 1px var(--border)';
       el.onclick = () => setColor(c, el);
     }
     wrap.appendChild(el);
@@ -153,39 +166,54 @@ function buildPalette(){
     popup.appendChild(el);
   });
 }
-function toggleColorPopup(e){
-  e.stopPropagation();
-  document.getElementById('color-popup').classList.toggle('open');
-}
-function closeColorPopup(){
-  document.getElementById('color-popup').classList.remove('open');
-}
+function toggleColorPopup(e){ e.stopPropagation(); document.getElementById('color-popup').classList.toggle('open'); }
+function closeColorPopup(){ document.getElementById('color-popup').classList.remove('open'); }
 document.addEventListener('click', closeColorPopup);
 
-/* ── Canvas ── */
+/* ── Canvas & viewport ── */
 const canvas = document.getElementById('wb');
-const ctx    = canvas.getContext('2d');
+const ctx = canvas.getContext('2d');
 let cssW = 1, cssH = 1, dpr = 1;
 
-let strokes       = [];
+// Virtual canvas — all strokes stored as fractions of these dimensions
+const REF_W = 2400, REF_H = 1600;
+let panX = 0, panY = 0, zoom = 1;
+let _panInited = false;
+
+/* ── State ── */
+let strokes = [];
 let currentStroke = null;
-let drawing       = false;
-let activeTool    = 'pen';
-let activeColor   = '__primary__';
-let activeWidth   = 2;
-let myUserId      = localStorage.getItem('wb_uid') || null;
-let roomMode      = 'personal';
-let groupCode     = '';
-// Always start on personal. Only join a group if the hash looks like a shared invite
-// (i.e., it's alphanumeric and was set by someone else, not lingering from last session).
-// We track whether THIS session set the hash via localStorage.
-const _hash      = window.location.hash.slice(1);
-const _ownHash   = localStorage.getItem('wb_own_hash');
-const _isInvite  = _hash && _hash !== _ownHash;   // hash we didn't generate ourselves
+let drawing = false;
+let activeTool = 'pen';
+let activeColor = '__primary__';
+let activeWidth = 2;
+let myUserId = localStorage.getItem('wb_uid') || null;
+let roomMode = 'personal';
+let groupCode = '';
+const _hash = window.location.hash.slice(1);
+const _ownHash = localStorage.getItem('wb_own_hash');
+const _isInvite = _hash && _hash !== _ownHash;
 let room = (_isInvite) ? 'group_' + _hash : (myUserId ? 'personal_' + myUserId : 'personal_anon');
+
+/* ── Image paste state ── */
 var _imgCache = {};
 var imgOverlayData = null;
 var _imgDragCleanup = null;
+
+/* ── Selection state (IDs for stability) ── */
+var selectedIds = new Set();
+var selectionBox = null;  // {x1,y1,x2,y2} fractions, while drag-selecting
+var selDrag = null;       // {mode,corner?,startFX,startFY,origMap,origStroke?}
+
+/* ── Pan state ── */
+var isPanning = false, _panStart = null;
+
+/* ── Export area state ── */
+var exportRect = null;   // {x1,y1,x2,y2} fractions
+var _exportDragging = false;
+
+/* ── Helpers ── */
+function genId(){ return Math.random().toString(36).slice(2,10); }
 
 function setColor(c, el){
   activeColor = c;
@@ -195,360 +223,607 @@ function setColor(c, el){
 function setWidth(w, btnId){
   activeWidth = w;
   document.querySelectorAll('.width-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(btnId).classList.add('active');
+  document.getElementById(btnId)?.classList.add('active');
 }
 function setTool(t){
   activeTool = t;
   document.querySelectorAll('.wb-tool').forEach(b => b.classList.remove('active'));
   const btn = document.getElementById('tool-'+t);
   if(btn) btn.classList.add('active');
-  const cursors = {pen:'crosshair',eraser:'cell',line:'crosshair',rect:'crosshair',circle:'crosshair',text:'text'};
+  const cursors = {pen:'crosshair',eraser:'cell',line:'crosshair',rect:'crosshair',circle:'crosshair',text:'text',hand:'grab',select:'default',exportarea:'crosshair'};
   canvas.style.cursor = cursors[t] || 'crosshair';
+  if(t !== 'exportarea') cancelExport();
+  if(t !== 'select') clearSelection();
+}
+function resetView(){
+  zoom = 1;
+  panX = (cssW - REF_W) / 2;
+  panY = (cssH - REF_H) / 2;
+  renderAll();
 }
 
-/* ── Resize: setTransform(dpr) so all drawing is in CSS pixels ── */
+/* ── Resize ── */
 function resize(){
   const rect = canvas.getBoundingClientRect();
   if(!rect.width || !rect.height){ requestAnimationFrame(resize); return; }
-  dpr   = window.devicePixelRatio || 1;
-  cssW  = rect.width;
-  cssH  = rect.height;
+  dpr = window.devicePixelRatio || 1;
+  cssW = rect.width;
+  cssH = rect.height;
   canvas.width  = Math.round(cssW * dpr);
   canvas.height = Math.round(cssH * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);  // all drawing coords now in CSS pixels
+  if(!_panInited){
+    panX = (cssW - REF_W) / 2;
+    panY = (cssH - REF_H) / 2;
+    _panInited = true;
+  }
   renderAll();
 }
 window.addEventListener('resize', resize);
 
-/* ── Draw — coords are 0-1 fractions; multiply by cssW/cssH (CSS pixels) ── */
-function drawStroke(s){
+/* ── Coord helpers ── */
+function screenToFrac(sx, sy){
+  return { x: (sx - panX) / (zoom * REF_W), y: (sy - panY) / (zoom * REF_H) };
+}
+function fracToScreen(fx, fy){
+  return { x: fx * zoom * REF_W + panX, y: fy * zoom * REF_H + panY };
+}
+function getPos(e){
+  const rect = canvas.getBoundingClientRect();
+  const src  = e.touches ? e.touches[0] : e;
+  return screenToFrac(src.clientX - rect.left, src.clientY - rect.top);
+}
+
+/* ── Draw stroke (shared by canvas & export contexts) ── */
+function _drawStrokeOn(c, s){
   if(!s) return;
-  const W = cssW;   // CSS pixels — ctx.setTransform handles the DPR scaling
-  const H = cssH;
-  ctx.save();
-  ctx.lineCap   = 'round';
-  ctx.lineJoin  = 'round';
-  ctx.lineWidth = s.width;  // CSS pixels
-
-  const resolvedColor = resolveColor(s.color);
+  const W = REF_W, H = REF_H;
+  c.save();
+  c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = s.width;
+  const rc = resolveColor(s.color);
   if(s.tool === 'eraser'){
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.strokeStyle = 'rgba(0,0,0,1)';
+    c.globalCompositeOperation = 'destination-out';
+    c.strokeStyle = 'rgba(0,0,0,1)';
   } else {
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.strokeStyle = resolvedColor;
+    c.globalCompositeOperation = 'source-over';
+    c.strokeStyle = rc;
   }
-
   if(s.tool === 'pen' || s.tool === 'eraser'){
     const pts = s.points;
-    if(!pts || !pts.length){ ctx.restore(); return; }
+    if(!pts || !pts.length){ c.restore(); return; }
     if(pts.length === 1){
-      ctx.beginPath();
-      ctx.arc(pts[0].x*W, pts[0].y*H, s.width/2, 0, Math.PI*2);
-      ctx.fillStyle = s.tool==='eraser' ? 'rgba(0,0,0,1)' : resolvedColor;
-      ctx.fill();
+      c.beginPath(); c.arc(pts[0].x*W, pts[0].y*H, s.width/2, 0, Math.PI*2);
+      c.fillStyle = s.tool==='eraser' ? 'rgba(0,0,0,1)' : rc; c.fill();
     } else {
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x*W, pts[0].y*H);
-      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x*W, pts[i].y*H);
-      ctx.stroke();
+      c.beginPath(); c.moveTo(pts[0].x*W, pts[0].y*H);
+      for(let i=1;i<pts.length;i++) c.lineTo(pts[i].x*W, pts[i].y*H);
+      c.stroke();
     }
   } else if(s.tool === 'line'){
-    ctx.beginPath();
-    ctx.moveTo(s.x1*W, s.y1*H);
-    ctx.lineTo(s.x2*W, s.y2*H);
-    ctx.stroke();
+    c.beginPath(); c.moveTo(s.x1*W, s.y1*H); c.lineTo(s.x2*W, s.y2*H); c.stroke();
   } else if(s.tool === 'rect'){
-    ctx.strokeRect(s.x1*W, s.y1*H, (s.x2-s.x1)*W, (s.y2-s.y1)*H);
+    c.strokeRect(s.x1*W, s.y1*H, (s.x2-s.x1)*W, (s.y2-s.y1)*H);
   } else if(s.tool === 'circle'){
-    const rx = Math.abs((s.x2-s.x1)*W/2);
-    const ry = Math.abs((s.y2-s.y1)*H/2);
-    ctx.beginPath();
-    ctx.ellipse((s.x1+s.x2)/2*W, (s.y1+s.y2)/2*H, Math.max(rx,1), Math.max(ry,1), 0, 0, Math.PI*2);
-    ctx.stroke();
+    const rx = Math.abs((s.x2-s.x1)*W/2), ry = Math.abs((s.y2-s.y1)*H/2);
+    c.beginPath(); c.ellipse((s.x1+s.x2)/2*W, (s.y1+s.y2)/2*H, Math.max(rx,1), Math.max(ry,1), 0, 0, Math.PI*2); c.stroke();
   } else if(s.tool === 'text'){
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.font = `${s.fontSize}px 'DM Sans', sans-serif`;  // CSS px, transform handles dpr
-    ctx.fillStyle = resolvedColor;
-    ctx.fillText(s.text, s.x*W, s.y*H);
+    c.globalCompositeOperation = 'source-over';
+    c.font = `${s.fontSize}px 'DM Sans', sans-serif`;
+    c.fillStyle = rc; c.fillText(s.text, s.x*W, s.y*H);
   } else if(s.tool === 'image'){
-    if(!s.src){ ctx.restore(); return; }
+    if(!s.src){ c.restore(); return; }
     if(!_imgCache[s.src]){
       const _i = new Image();
-      _i.onload = ()=>{ _imgCache[s.src]=_i; renderAll(); };
-      _i.src = s.src;
-      ctx.restore(); return;
+      _i.onload = () => { _imgCache[s.src] = _i; renderAll(); };
+      _i.src = s.src; c.restore(); return;
     }
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.drawImage(_imgCache[s.src], s.x*W, s.y*H, s.w*W, s.h*H);
+    c.globalCompositeOperation = 'source-over';
+    c.drawImage(_imgCache[s.src], s.x*W, s.y*H, s.w*W, s.h*H);
+  }
+  c.restore();
+}
+
+function renderAll(){
+  // Clear (identity transform = physical pixels)
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // World transform: world-px → CSS-px → physical-px
+  // physical = world * zoom * dpr + pan * dpr
+  ctx.setTransform(dpr*zoom, 0, 0, dpr*zoom, panX*dpr, panY*dpr);
+
+  // Pass 1: non-image strokes (eraser operates here)
+  for(const s of strokes) if(s.tool !== 'image') _drawStrokeOn(ctx, s);
+  if(currentStroke && currentStroke.tool !== 'image') _drawStrokeOn(ctx, currentStroke);
+
+  // Pass 2: images on top — not erasable
+  ctx.globalCompositeOperation = 'source-over';
+  for(const s of strokes) if(s.tool === 'image') _drawStrokeOn(ctx, s);
+  if(currentStroke && currentStroke.tool === 'image') _drawStrokeOn(ctx, currentStroke);
+
+  // Overlays in CSS-pixel space
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  _drawOverlays();
+}
+
+/* ── Overlays (selection box, export rect) ── */
+function _fracRect(x1,y1,x2,y2){
+  const a = fracToScreen(Math.min(x1,x2), Math.min(y1,y2));
+  const b = fracToScreen(Math.max(x1,x2), Math.max(y1,y2));
+  return {x:a.x, y:a.y, w:b.x-a.x, h:b.y-a.y};
+}
+function _drawOverlays(){
+  ctx.save();
+  // Selection drag box
+  if(selectionBox){
+    const r = _fracRect(selectionBox.x1, selectionBox.y1, selectionBox.x2, selectionBox.y2);
+    ctx.strokeStyle = 'rgba(59,130,246,0.85)'; ctx.lineWidth = 1;
+    ctx.setLineDash([5,3]); ctx.strokeRect(r.x,r.y,r.w,r.h);
+    ctx.fillStyle = 'rgba(59,130,246,0.07)'; ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.setLineDash([]);
+  }
+  // Selected strokes bounding box
+  if(selectedIds.size){
+    const bounds = _selectionBounds();
+    if(bounds){
+      const r = _fracRect(bounds.x, bounds.y, bounds.x+bounds.w, bounds.y+bounds.h);
+      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1.5;
+      ctx.setLineDash([5,3]); ctx.strokeRect(r.x,r.y,r.w,r.h); ctx.setLineDash([]);
+      // Resize handles for single selected image
+      const sel = strokes.filter(s => selectedIds.has(s.id));
+      if(sel.length === 1 && sel[0].tool === 'image'){
+        const hs = 8;
+        [[r.x,r.y],[r.x+r.w,r.y],[r.x,r.y+r.h],[r.x+r.w,r.y+r.h]].forEach(([hx,hy])=>{
+          ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.rect(hx-hs/2, hy-hs/2, hs, hs); ctx.fill(); ctx.stroke();
+        });
+      }
+    }
+  }
+  // Export area rect
+  if(exportRect){
+    const r = _fracRect(exportRect.x1, exportRect.y1, exportRect.x2, exportRect.y2);
+    ctx.strokeStyle = 'rgba(234,179,8,0.9)'; ctx.lineWidth = 2;
+    ctx.setLineDash([6,3]); ctx.strokeRect(r.x,r.y,r.w,r.h);
+    ctx.fillStyle = 'rgba(234,179,8,0.05)'; ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.setLineDash([]);
   }
   ctx.restore();
 }
 
-function renderAll(){
-  ctx.clearRect(0, 0, cssW, cssH);  // CSS pixels (transform is active)
-  for(const s of strokes) drawStroke(s);
-  if(currentStroke) drawStroke(currentStroke);
+/* ── Selection helpers ── */
+function _getStrokeBounds(s){
+  if(!s) return null;
+  if(s.tool==='pen'||s.tool==='eraser'){
+    if(!s.points||!s.points.length) return null;
+    let x0=s.points[0].x,y0=s.points[0].y,x1=x0,y1=y0;
+    for(const p of s.points){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y);}
+    const pw=s.width/REF_W*0.5;
+    return {x:x0-pw,y:y0-pw,w:x1-x0+pw*2,h:y1-y0+pw*2};
+  } else if(s.tool==='line'||s.tool==='rect'||s.tool==='circle'){
+    return {x:Math.min(s.x1,s.x2),y:Math.min(s.y1,s.y2),w:Math.abs(s.x2-s.x1),h:Math.abs(s.y2-s.y1)};
+  } else if(s.tool==='text'){
+    return {x:s.x,y:s.y-s.fontSize/REF_H*1.2,w:0.15,h:s.fontSize/REF_H*1.5};
+  } else if(s.tool==='image'){
+    return {x:s.x,y:s.y,w:s.w,h:s.h};
+  }
+  return null;
+}
+function _selectionBounds(){
+  const sel = strokes.filter(s=>selectedIds.has(s.id));
+  if(!sel.length) return null;
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const s of sel){
+    const b=_getStrokeBounds(s); if(!b) continue;
+    x0=Math.min(x0,b.x);y0=Math.min(y0,b.y);x1=Math.max(x1,b.x+b.w);y1=Math.max(y1,b.y+b.h);
+  }
+  return x0===Infinity?null:{x:x0,y:y0,w:x1-x0,h:y1-y0};
+}
+function _hitTest(s,fx,fy){
+  const b=_getStrokeBounds(s); if(!b) return false;
+  const tol=10/(zoom*REF_W);
+  return fx>=b.x-tol&&fx<=b.x+b.w+tol&&fy>=b.y-tol&&fy<=b.y+b.h+tol;
+}
+function clearSelection(){ selectedIds=new Set(); selDrag=null; renderAll(); }
+function deleteSelected(){
+  if(!selectedIds.size) return;
+  selectedIds.forEach(id=>{
+    strokes=strokes.filter(s=>s.id!==id);
+    socket.emit('wb_delete_stroke',{room,id});
+  });
+  selectedIds=new Set(); renderAll();
+}
+function _getResizeCorner(fx,fy){
+  if(selectedIds.size!==1) return null;
+  const s=strokes.find(st=>selectedIds.has(st.id));
+  if(!s||s.tool!=='image') return null;
+  const corners=[{c:'tl',cx:s.x,cy:s.y},{c:'tr',cx:s.x+s.w,cy:s.y},{c:'bl',cx:s.x,cy:s.y+s.h},{c:'br',cx:s.x+s.w,cy:s.y+s.h}];
+  const tol=12/(zoom*REF_W);
+  for(const {c,cx,cy} of corners) if(Math.abs(fx-cx)<tol&&Math.abs(fy-cy)<tol) return c;
+  return null;
+}
+
+/* ── Stroke manipulation ── */
+function _moveStroke(s,dx,dy){
+  const n={...s};
+  if(s.tool==='pen'||s.tool==='eraser') n.points=s.points.map(p=>({x:p.x+dx,y:p.y+dy}));
+  else if(s.tool==='line'||s.tool==='rect'||s.tool==='circle'){n.x1=s.x1+dx;n.y1=s.y1+dy;n.x2=s.x2+dx;n.y2=s.y2+dy;}
+  else if(s.tool==='text'||s.tool==='image'){n.x=s.x+dx;n.y=s.y+dy;}
+  return n;
+}
+function _resizeImage(s,corner,dfx,dfy){
+  const n={...s};
+  if(corner==='br'){n.w=Math.max(0.02,s.w+dfx);n.h=Math.max(0.02,s.h+dfy);}
+  else if(corner==='bl'){const nw=Math.max(0.02,s.w-dfx);n.x=s.x+s.w-nw;n.w=nw;n.h=Math.max(0.02,s.h+dfy);}
+  else if(corner==='tr'){const nh=Math.max(0.02,s.h-dfy);n.y=s.y+s.h-nh;n.h=nh;n.w=Math.max(0.02,s.w+dfx);}
+  else if(corner==='tl'){const nw=Math.max(0.02,s.w-dfx),nh=Math.max(0.02,s.h-dfy);n.x=s.x+s.w-nw;n.y=s.y+s.h-nh;n.w=nw;n.h=nh;}
+  return n;
 }
 
 /* ── Input ── */
-function getPos(e){
-  const rect = canvas.getBoundingClientRect();
-  const src  = e.touches ? e.touches[0] : e;
-  return {
-    x: (src.clientX - rect.left) / rect.width,
-    y: (src.clientY - rect.top)  / rect.height,
-  };
-}
-
 function startDraw(e){
-  if(activeTool === 'text'){ startText(e); return; }
-  drawing = true;
-  const pos = getPos(e);
+  if(activeTool==='hand'||e.button===1){
+    isPanning=true; _panStart={sx:e.clientX,sy:e.clientY,px:panX,py:panY};
+    e.preventDefault(); return;
+  }
+  const pos=getPos(e);
+
+  if(activeTool==='select'){
+    // Resize handle?
+    const corner=_getResizeCorner(pos.x,pos.y);
+    if(corner){
+      const orig=strokes.find(s=>selectedIds.has(s.id));
+      selDrag={mode:'resize',corner,startFX:pos.x,startFY:pos.y,origStroke:{...orig},idx:strokes.indexOf(orig)};
+      e.preventDefault(); return;
+    }
+    // Click within current selection bounds → move
+    const bounds=_selectionBounds();
+    if(bounds&&selectedIds.size&&pos.x>=bounds.x&&pos.x<=bounds.x+bounds.w&&pos.y>=bounds.y&&pos.y<=bounds.y+bounds.h){
+      const origMap={}; strokes.forEach((s,i)=>{ if(selectedIds.has(s.id)) origMap[s.id]={...s,_pts:s.points?s.points.map(p=>({...p})):undefined}; });
+      selDrag={mode:'move',startFX:pos.x,startFY:pos.y,origMap};
+      e.preventDefault(); return;
+    }
+    // Click on unselected stroke → select & move
+    let hit=-1;
+    for(let i=strokes.length-1;i>=0;i--) if(_hitTest(strokes[i],pos.x,pos.y)){hit=i;break;}
+    if(hit>=0){
+      selectedIds=new Set([strokes[hit].id]);
+      const orig={...strokes[hit],_pts:strokes[hit].points?strokes[hit].points.map(p=>({...p})):undefined};
+      selDrag={mode:'move',startFX:pos.x,startFY:pos.y,origMap:{[orig.id]:orig}};
+      renderAll(); e.preventDefault(); return;
+    }
+    // Box select
+    clearSelection();
+    selectionBox={x1:pos.x,y1:pos.y,x2:pos.x,y2:pos.y};
+    e.preventDefault(); return;
+  }
+
+  if(activeTool==='exportarea'){
+    exportRect={x1:pos.x,y1:pos.y,x2:pos.x,y2:pos.y};
+    _exportDragging=true;
+    document.getElementById('export-confirm').style.display='none';
+    e.preventDefault(); return;
+  }
+
+  if(activeTool==='text'){ startText(e); return; }
+
+  drawing=true;
   if(activeTool==='pen'||activeTool==='eraser'){
-    currentStroke = {tool:activeTool, color:activeColor, width:activeWidth, points:[pos]};
+    currentStroke={tool:activeTool,color:activeColor,width:activeWidth,points:[pos],id:genId()};
   } else {
-    currentStroke = {tool:activeTool, color:activeColor, width:activeWidth, x1:pos.x, y1:pos.y, x2:pos.x, y2:pos.y};
+    currentStroke={tool:activeTool,color:activeColor,width:activeWidth,x1:pos.x,y1:pos.y,x2:pos.x,y2:pos.y,id:genId()};
   }
 }
+
 function continueDraw(e){
+  if(isPanning&&_panStart){
+    panX=_panStart.px+(e.clientX-_panStart.sx);
+    panY=_panStart.py+(e.clientY-_panStart.sy);
+    renderAll(); return;
+  }
+  const pos=getPos(e);
+  if(activeTool==='select'){
+    if(selDrag){
+      if(selDrag.mode==='move'){
+        const dx=pos.x-selDrag.startFX, dy=pos.y-selDrag.startFY;
+        strokes=strokes.map(s=>{
+          if(!selectedIds.has(s.id)) return s;
+          const orig=selDrag.origMap[s.id];
+          if(!orig) return s;
+          const n=_moveStroke(orig,dx,dy);
+          if(orig._pts) n.points=orig._pts.map(p=>({x:p.x+dx,y:p.y+dy}));
+          return n;
+        });
+        renderAll();
+      } else if(selDrag.mode==='resize'){
+        const dfx=pos.x-selDrag.startFX, dfy=pos.y-selDrag.startFY;
+        strokes[selDrag.idx]=_resizeImage(selDrag.origStroke,selDrag.corner,dfx,dfy);
+        renderAll();
+      }
+    } else if(selectionBox){
+      selectionBox.x2=pos.x; selectionBox.y2=pos.y; renderAll();
+    }
+    return;
+  }
+  if(activeTool==='exportarea'&&_exportDragging&&exportRect){
+    exportRect.x2=pos.x; exportRect.y2=pos.y; renderAll(); return;
+  }
   if(!drawing||!currentStroke) return;
-  const pos = getPos(e);
   if(activeTool==='pen'||activeTool==='eraser'){
     currentStroke.points.push(pos);
   } else {
-    currentStroke.x2 = pos.x;
-    currentStroke.y2 = pos.y;
+    currentStroke.x2=pos.x; currentStroke.y2=pos.y;
   }
   renderAll();
 }
+
 function endDraw(){
+  if(isPanning){ isPanning=false; _panStart=null; return; }
+  if(activeTool==='select'){
+    if(selDrag){
+      if(selDrag.mode==='move'){
+        strokes.forEach(s=>{ if(selectedIds.has(s.id)) socket.emit('wb_update_stroke',{room,stroke:s}); });
+      } else if(selDrag.mode==='resize'){
+        socket.emit('wb_update_stroke',{room,stroke:strokes[selDrag.idx]});
+      }
+      selDrag=null;
+    } else if(selectionBox){
+      const bx1=Math.min(selectionBox.x1,selectionBox.x2), by1=Math.min(selectionBox.y1,selectionBox.y2);
+      const bx2=Math.max(selectionBox.x1,selectionBox.x2), by2=Math.max(selectionBox.y1,selectionBox.y2);
+      if(bx2-bx1>0.005||by2-by1>0.005){
+        selectedIds=new Set();
+        strokes.forEach(s=>{ const b=_getStrokeBounds(s); if(b&&b.x>=bx1&&b.y>=by1&&b.x+b.w<=bx2&&b.y+b.h<=by2) selectedIds.add(s.id); });
+      }
+      selectionBox=null; renderAll();
+    }
+    return;
+  }
+  if(activeTool==='exportarea'){
+    _exportDragging=false;
+    if(exportRect){
+      const w=Math.abs(exportRect.x2-exportRect.x1), h=Math.abs(exportRect.y2-exportRect.y1);
+      if(w>0.005&&h>0.005) document.getElementById('export-confirm').style.display='flex';
+      renderAll();
+    }
+    return;
+  }
   if(!drawing||!currentStroke) return;
-  drawing = false;
+  drawing=false;
   strokes.push(currentStroke);
-  socket.emit('wb_stroke', {room, stroke:currentStroke});
-  currentStroke = null;
+  socket.emit('wb_stroke',{room,stroke:currentStroke});
+  currentStroke=null;
   renderAll();
 }
 
-canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousedown', e=>{ if(e.button!==2) startDraw(e); });
 canvas.addEventListener('mousemove', continueDraw);
-canvas.addEventListener('mouseup', endDraw);
-canvas.addEventListener('mouseleave', endDraw);
-canvas.addEventListener('touchstart', e=>{e.preventDefault();startDraw(e);},{passive:false});
-canvas.addEventListener('touchmove',  e=>{e.preventDefault();continueDraw(e);},{passive:false});
-canvas.addEventListener('touchend',   e=>{e.preventDefault();endDraw();},{passive:false});
+canvas.addEventListener('mouseup',   endDraw);
+canvas.addEventListener('mouseleave',endDraw);
+canvas.addEventListener('touchstart',e=>{e.preventDefault();startDraw(e);},{passive:false});
+canvas.addEventListener('touchmove', e=>{e.preventDefault();continueDraw(e);},{passive:false});
+canvas.addEventListener('touchend',  e=>{e.preventDefault();endDraw();},{passive:false});
+
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+  const factor=e.deltaY<0?1.12:1/1.12;
+  panX=mx+(panX-mx)*factor; panY=my+(panY-my)*factor;
+  zoom=Math.max(0.05,Math.min(10,zoom*factor));
+  renderAll();
+},{passive:false});
+
+/* ── Space = temporary hand tool ── */
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'&&!e.repeat&&e.target.tagName!=='INPUT'){
+    e.preventDefault();
+    if(activeTool!=='hand'){ canvas._prevTool=activeTool; setTool('hand'); }
+  }
+});
+document.addEventListener('keyup',e=>{
+  if(e.code==='Space'&&canvas._prevTool){
+    setTool(canvas._prevTool); canvas._prevTool=null;
+  }
+});
 
 /* ── Text tool ── */
-const textInput = document.getElementById('wb-text-input');
-let textPos = null;
-
+const textInput=document.getElementById('wb-text-input');
+let textPos=null;
 function startText(e){
-  e.preventDefault();   // stop canvas stealing focus back
-  commitText();
-  const rect = canvas.getBoundingClientRect();
-  const src  = e.touches ? e.touches[0] : e;
-  const cx = src.clientX - rect.left;
-  const cy = src.clientY - rect.top;
-  textPos = {x: cx / rect.width, y: cy / rect.height};
-  const fontSize = activeWidth * 6 + 10;
-  textInput.style.left     = cx + 'px';
-  textInput.style.top      = (cy - fontSize - 8) + 'px';
-  textInput.style.fontSize = fontSize + 'px';
-  textInput.style.color    = activeColor;
-  textInput.style.display  = 'block';
-  textInput.value = '';
-  setTimeout(() => textInput.focus(), 0);  // defer so mousedown fully finishes first
+  e.preventDefault(); commitText();
+  const rect=canvas.getBoundingClientRect();
+  const src=e.touches?e.touches[0]:e;
+  const sx=src.clientX-rect.left, sy=src.clientY-rect.top;
+  textPos=screenToFrac(sx,sy);
+  const fontSize=activeWidth*6+10;
+  textInput.style.left=sx+'px'; textInput.style.top=(sy-fontSize-8)+'px';
+  textInput.style.fontSize=fontSize+'px';
+  textInput.style.color=activeColor==='__primary__'?getPrimaryColor():activeColor;
+  textInput.style.display='block'; textInput.value='';
+  setTimeout(()=>textInput.focus(),0);
 }
-
 function commitText(){
-  const val = textInput.value.trim();
-  if(val && textPos){
-    const fontSize = activeWidth * 6 + 10;
-    const s = {tool:'text', color:activeColor, fontSize, text:val, x:textPos.x, y:textPos.y};
-    strokes.push(s);
-    socket.emit('wb_stroke', {room, stroke:s});
-    renderAll();
+  const val=textInput.value.trim();
+  if(val&&textPos){
+    const fontSize=activeWidth*6+10;
+    const s={tool:'text',color:activeColor,fontSize,text:val,x:textPos.x,y:textPos.y,id:genId()};
+    strokes.push(s); socket.emit('wb_stroke',{room,stroke:s}); renderAll();
   }
-  textInput.style.display = 'none';
-  textInput.value = '';
-  textPos = null;
+  textInput.style.display='none'; textInput.value=''; textPos=null;
 }
-
-textInput.addEventListener('keydown', e=>{
-  if(e.key==='Enter'){ e.preventDefault(); commitText(); }
-  if(e.key==='Escape'){ textInput.style.display='none'; textInput.value=''; textPos=null; }
+textInput.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){e.preventDefault();commitText();}
+  if(e.key==='Escape'){textInput.style.display='none';textInput.value='';textPos=null;}
 });
-textInput.addEventListener('blur', ()=>{ setTimeout(commitText, 100); });
+textInput.addEventListener('blur',()=>{setTimeout(commitText,100);});
 
 /* ── Undo ── */
 function undoStroke(){
   if(!strokes.length) return;
-  strokes.pop();
-  renderAll();
+  strokes.pop(); clearSelection(); renderAll();
 }
 
-document.addEventListener('keydown', e=>{
+/* ── Keyboard ── */
+document.addEventListener('keydown',e=>{
   if(imgOverlayData){
-    if(e.key==='Enter'){ e.preventDefault(); commitImage(); return; }
-    if(e.key==='Escape'){ cancelImage(); return; }
+    if(e.key==='Enter'){e.preventDefault();commitImage();return;}
+    if(e.key==='Escape'){cancelImage();return;}
   }
-  if((e.ctrlKey||e.metaKey) && e.key==='z'){ e.preventDefault(); undoStroke(); return; }
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();undoStroke();return;}
+  if((e.key==='Delete'||e.key==='Backspace')&&selectedIds.size&&document.activeElement.tagName!=='INPUT'){
+    e.preventDefault();deleteSelected();return;
+  }
+  if(e.key==='Escape'){clearSelection();cancelExport();return;}
   if(e.target.tagName==='INPUT') return;
-  const map = {p:'pen',e:'eraser',l:'line',r:'rect',c:'circle',t:'text'};
+  if(e.key==='0'){resetView();return;}
+  const map={p:'pen',e:'eraser',l:'line',r:'rect',c:'circle',t:'text',h:'hand',s:'select'};
   if(map[e.key]) setTool(map[e.key]);
 });
 
-/* ── Fix 2: Clear also resets currentStroke ── */
+/* ── Clear ── */
 function clearBoard(){
-  const label = roomMode==='personal' ? 'your personal board' : 'this group board for everyone';
+  const label=roomMode==='personal'?'your personal board':'this group board for everyone';
   if(!confirm('Clear '+label+'?')) return;
-  strokes = [];
-  currentStroke = null;
-  drawing = false;
-  renderAll();
-  socket.emit('wb_clear', {room});
+  strokes=[]; currentStroke=null; drawing=false; clearSelection();
+  renderAll(); socket.emit('wb_clear',{room});
 }
 
-/* ── Export ── */
+/* ── Export (full board) ── */
 function exportPNG(){
-  const dpr  = window.devicePixelRatio || 1;
-  const tmp  = document.createElement('canvas');
-  tmp.width  = canvas.width;
-  tmp.height = canvas.height;
-  const tctx = tmp.getContext('2d');
-  tctx.scale(dpr, dpr);
-  const isDark = document.documentElement.getAttribute('data-theme')==='dark';
-  tctx.fillStyle = isDark ? '#1e1e1e' : '#f8f9fc';
-  tctx.fillRect(0, 0, cssW, cssH);
-  tctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, cssW, cssH);
-  const a    = document.createElement('a');
-  a.download = 'whiteboard.png';
-  a.href     = tmp.toDataURL('image/png');
-  a.click();
+  const tmp=document.createElement('canvas');
+  tmp.width=REF_W; tmp.height=REF_H;
+  const tc=tmp.getContext('2d');
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  tc.fillStyle=isDark?'#1e1e1e':'#f8f9fc'; tc.fillRect(0,0,REF_W,REF_H);
+  for(const s of strokes) if(s.tool!=='image') _drawStrokeOn(tc,s);
+  tc.globalCompositeOperation='source-over';
+  for(const s of strokes) if(s.tool==='image') _drawStrokeOn(tc,s);
+  const a=document.createElement('a'); a.download='whiteboard.png';
+  a.href=tmp.toDataURL('image/png'); a.click();
+}
+
+/* ── Export area ── */
+function startExportArea(){ setTool('exportarea'); }
+function cancelExport(){
+  exportRect=null; _exportDragging=false;
+  document.getElementById('export-confirm').style.display='none';
+  renderAll();
+}
+function doExport(){
+  if(!exportRect) return;
+  const x1w=Math.min(exportRect.x1,exportRect.x2)*REF_W;
+  const y1w=Math.min(exportRect.y1,exportRect.y2)*REF_H;
+  const x2w=Math.max(exportRect.x1,exportRect.x2)*REF_W;
+  const y2w=Math.max(exportRect.y1,exportRect.y2)*REF_H;
+  const pw=Math.round(x2w-x1w), ph=Math.round(y2w-y1w);
+  if(!pw||!ph) return;
+  const tmp=document.createElement('canvas'); tmp.width=pw; tmp.height=ph;
+  const tc=tmp.getContext('2d');
+  tc.translate(-x1w,-y1w);
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  tc.fillStyle=isDark?'#1e1e1e':'#f8f9fc'; tc.fillRect(x1w,y1w,pw,ph);
+  for(const s of strokes) if(s.tool!=='image') _drawStrokeOn(tc,s);
+  tc.globalCompositeOperation='source-over';
+  for(const s of strokes) if(s.tool==='image') _drawStrokeOn(tc,s);
+  const a=document.createElement('a'); a.download='whiteboard-area.png';
+  a.href=tmp.toDataURL('image/png'); a.click();
+  cancelExport(); setTool('pen');
 }
 
 /* ── Room management ── */
-function genCode(){
-  return Math.random().toString(36).slice(2,8).toUpperCase();
-}
-
+function genCode(){ return Math.random().toString(36).slice(2,8).toUpperCase(); }
 function switchRoomMode(mode){
-  roomMode = mode;
-  document.getElementById('rb-personal').classList.toggle('active', mode==='personal');
-  document.getElementById('rb-group').classList.toggle('active', mode==='group');
-  document.getElementById('rb-meeting')?.classList.toggle('active', mode==='meeting');
-  document.getElementById('room-code-bar').style.display = mode==='group' ? 'flex' : 'none';
-
-  if(mode === 'personal'){
-    joinRoom('personal_' + myUserId);
-  } else if(mode === 'meeting'){
-    var mc = window.currentMeeting;
-    if(!mc){ alert('No active meeting.'); switchRoomMode('personal'); return; }
-    joinRoom('meeting_' + mc.room_code);
+  roomMode=mode;
+  document.getElementById('rb-personal').classList.toggle('active',mode==='personal');
+  document.getElementById('rb-group').classList.toggle('active',mode==='group');
+  document.getElementById('rb-meeting')?.classList.toggle('active',mode==='meeting');
+  document.getElementById('room-code-bar').style.display=mode==='group'?'flex':'none';
+  if(mode==='personal'){
+    joinRoom('personal_'+myUserId);
+  } else if(mode==='meeting'){
+    var mc=window.currentMeeting;
+    if(!mc){alert('No active meeting.');switchRoomMode('personal');return;}
+    joinRoom('meeting_'+mc.room_code);
   } else {
-    // Use URL hash if present, else generate a new code
-    const hash = window.location.hash.slice(1);
-    groupCode = hash || genCode();
-    joinRoom('group_' + groupCode);
+    const hash=window.location.hash.slice(1);
+    groupCode=hash||genCode();
+    joinRoom('group_'+groupCode);
   }
 }
-
-function newGroupRoom(){
-  groupCode = genCode();
-  joinRoom('group_' + groupCode);
-}
-
+function newGroupRoom(){ groupCode=genCode(); joinRoom('group_'+groupCode); }
 function joinRoom(newRoom){
-  room = newRoom;
-  if(roomMode === 'group'){
-    groupCode = room.replace('group_','');
-    document.getElementById('room-code-val').textContent = groupCode;
-    history.replaceState(history.state, '', location.pathname + '#' + groupCode);
-    localStorage.setItem('wb_own_hash', groupCode);  // mark as ours so reload stays on personal
+  room=newRoom;
+  if(roomMode==='group'){
+    groupCode=room.replace('group_','');
+    document.getElementById('room-code-val').textContent=groupCode;
+    history.replaceState(history.state,'',location.pathname+'#'+groupCode);
+    localStorage.setItem('wb_own_hash',groupCode);
   } else {
-    history.replaceState(history.state, '', location.pathname);  // clear hash when going personal
+    history.replaceState(history.state,'',location.pathname);
     localStorage.removeItem('wb_own_hash');
   }
-  strokes = [];
-  currentStroke = null;
-  drawing = false;
-  renderAll();
-  socket.emit('wb_join', {room});
+  strokes=[]; currentStroke=null; drawing=false; clearSelection();
+  renderAll(); socket.emit('wb_join',{room});
 }
-
 function copyRoomLink(){
-  const url = window.location.origin + window.location.pathname + '#' + groupCode;
+  const url=window.location.origin+window.location.pathname+'#'+groupCode;
   navigator.clipboard.writeText(url).then(()=>{
-    const btn = event.target.closest('button');
-    const orig = btn.innerHTML;
-    btn.innerHTML = '✓ Copied!';
-    btn.style.color = 'var(--g1)';
-    setTimeout(()=>{ btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    const btn=event.target.closest('button'), orig=btn.innerHTML;
+    btn.innerHTML='✓ Copied!'; btn.style.color='var(--g1)';
+    setTimeout(()=>{btn.innerHTML=orig;btn.style.color='';},2000);
   });
 }
 
 /* ── Socket.IO ── */
-const socket = io({transports:['websocket','polling']});
-
-socket.on('connect', ()=>{ socket.emit('wb_join', {room}); });
-
-socket.on('wb_sync', data=>{
-  strokes = data.strokes || [];
-  renderAll();
+const socket=io({transports:['websocket','polling']});
+socket.on('connect',()=>{ socket.emit('wb_join',{room}); });
+socket.on('wb_sync',  data=>{ strokes=data.strokes||[]; renderAll(); });
+socket.on('wb_stroke',data=>{ strokes.push(data.stroke); renderAll(); });
+socket.on('wb_cleared',()=>{ strokes=[];currentStroke=null;drawing=false;clearSelection();renderAll(); });
+socket.on('wb_update_stroke',data=>{
+  const idx=strokes.findIndex(s=>s.id===data.stroke.id);
+  if(idx>=0){ strokes[idx]=data.stroke; renderAll(); }
 });
-socket.on('wb_stroke', data=>{
-  strokes.push(data.stroke);
-  renderAll();
-});
-/* Fix 2 (server side): also reset currentStroke on clear */
-socket.on('wb_cleared', ()=>{
-  strokes = [];
-  currentStroke = null;
-  drawing = false;
+socket.on('wb_delete_stroke',data=>{
+  strokes=strokes.filter(s=>s.id!==data.id);
+  selectedIds.delete(data.id);
   renderAll();
 });
 
 /* ── Image paste ── */
 function showImageOverlay(dataUrl){
-  const img = new Image();
-  img.onload = function(){
-    const maxW = cssW * 0.5;
-    const scale = Math.min(1, maxW / img.naturalWidth);
-    const w = Math.round(img.naturalWidth * scale);
-    const h = Math.round(img.naturalHeight * scale);
-    const x = Math.round((cssW - w) / 2);
-    const y = Math.round((cssH - h) / 2);
-    imgOverlayData = {src: dataUrl, x, y, w, h};
-    const ov = document.getElementById('img-overlay');
-    document.getElementById('img-overlay-img').src = dataUrl;
-    ov.style.left = x+'px'; ov.style.top = y+'px';
-    ov.style.width = w+'px'; ov.style.height = h+'px';
-    ov.style.display = 'block';
+  const img=new Image();
+  img.onload=function(){
+    const maxPx=cssW*0.5;
+    const scale=Math.min(1,maxPx/img.naturalWidth);
+    const w=Math.round(img.naturalWidth*scale), h=Math.round(img.naturalHeight*scale);
+    const x=Math.round((cssW-w)/2), y=Math.round((cssH-h)/2);
+    imgOverlayData={src:dataUrl,x,y,w,h};
+    const ov=document.getElementById('img-overlay');
+    document.getElementById('img-overlay-img').src=dataUrl;
+    ov.style.left=x+'px'; ov.style.top=y+'px';
+    ov.style.width=w+'px'; ov.style.height=h+'px';
+    ov.style.display='block';
     initImageDrag();
   };
-  img.src = dataUrl;
+  img.src=dataUrl;
 }
-
 function initImageDrag(){
-  const ov = document.getElementById('img-overlay');
-  if(_imgDragCleanup) _imgDragCleanup();
-  var dragging=false, resizing=false, corner='';
-  var sx=0, sy=0, sl=0, st=0, sw=0, sh=0;
+  const ov=document.getElementById('img-overlay');
+  if(_imgDragCleanup)_imgDragCleanup();
+  var dragging=false,resizing=false,corner='',sx=0,sy=0,sl=0,st=0,sw=0,sh=0;
   function onDown(e){
     if(e.target.classList.contains('img-rh')){
-      resizing=true; corner=e.target.dataset.corner;
-      sl=imgOverlayData.x; st=imgOverlayData.y; sw=imgOverlayData.w; sh=imgOverlayData.h;
+      resizing=true;corner=e.target.dataset.corner;sl=imgOverlayData.x;st=imgOverlayData.y;sw=imgOverlayData.w;sh=imgOverlayData.h;
     } else if(!e.target.closest('#img-overlay-bar')){
-      dragging=true; sl=imgOverlayData.x; st=imgOverlayData.y;
+      dragging=true;sl=imgOverlayData.x;st=imgOverlayData.y;
     }
-    sx=e.clientX; sy=e.clientY; e.preventDefault();
+    sx=e.clientX;sy=e.clientY;e.preventDefault();
   }
   function onMove(e){
-    const dx=e.clientX-sx, dy=e.clientY-sy;
+    const dx=e.clientX-sx,dy=e.clientY-sy;
     if(dragging){
-      imgOverlayData.x=sl+dx; imgOverlayData.y=st+dy;
-      ov.style.left=imgOverlayData.x+'px'; ov.style.top=imgOverlayData.y+'px';
+      imgOverlayData.x=sl+dx;imgOverlayData.y=st+dy;
+      ov.style.left=imgOverlayData.x+'px';ov.style.top=imgOverlayData.y+'px';
     } else if(resizing){
       let nx=sl,ny=st,nw=sw,nh=sh;
       if(corner==='br'){nw=Math.max(40,sw+dx);nh=Math.max(40,sh+dy);}
@@ -559,55 +834,53 @@ function initImageDrag(){
       ov.style.left=nx+'px';ov.style.top=ny+'px';ov.style.width=nw+'px';ov.style.height=nh+'px';
     }
   }
-  function onUp(){ dragging=false; resizing=false; }
-  ov.addEventListener('mousedown', onDown);
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
-  _imgDragCleanup = function(){
-    ov.removeEventListener('mousedown', onDown);
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    _imgDragCleanup = null;
+  function onUp(){dragging=false;resizing=false;}
+  ov.addEventListener('mousedown',onDown);
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onUp);
+  _imgDragCleanup=function(){
+    ov.removeEventListener('mousedown',onDown);
+    document.removeEventListener('mousemove',onMove);
+    document.removeEventListener('mouseup',onUp);
+    _imgDragCleanup=null;
   };
 }
-
 function commitImage(){
-  if(!imgOverlayData) return;
-  const {src,x,y,w,h} = imgOverlayData;
-  const stroke = {tool:'image', src, x:x/cssW, y:y/cssH, w:w/cssW, h:h/cssH};
+  if(!imgOverlayData)return;
+  const{src,x,y,w,h}=imgOverlayData;
+  const stroke={tool:'image',src,id:genId(),
+    x:(x-panX)/(zoom*REF_W), y:(y-panY)/(zoom*REF_H),
+    w:w/(zoom*REF_W),        h:h/(zoom*REF_H)};
   strokes.push(stroke);
-  socket.emit('wb_stroke', {room, stroke});
-  renderAll();
-  cancelImage();
+  socket.emit('wb_stroke',{room,stroke});
+  renderAll(); cancelImage();
 }
-
 function cancelImage(){
-  if(_imgDragCleanup) _imgDragCleanup();
-  imgOverlayData = null;
-  document.getElementById('img-overlay').style.display = 'none';
+  if(_imgDragCleanup)_imgDragCleanup();
+  imgOverlayData=null;
+  document.getElementById('img-overlay').style.display='none';
 }
-
-document.addEventListener('paste', function(e){
-  const items = e.clipboardData && e.clipboardData.items;
-  if(!items) return;
+document.addEventListener('paste',function(e){
+  const items=e.clipboardData&&e.clipboardData.items;
+  if(!items)return;
   for(let i=0;i<items.length;i++){
     if(items[i].type.startsWith('image/')){
-      const blob = items[i].getAsFile();
-      const reader = new FileReader();
-      reader.onload = function(ev){
-        const img = new Image();
-        img.onload = function(){
-          const MAX=1200, tw=img.naturalWidth, th=img.naturalHeight;
+      const blob=items[i].getAsFile();
+      const reader=new FileReader();
+      reader.onload=function(ev){
+        const img=new Image();
+        img.onload=function(){
+          const MAX=1200,tw=img.naturalWidth,th=img.naturalHeight;
           const sc=(tw>MAX||th>MAX)?MAX/Math.max(tw,th):1;
           const tmp=document.createElement('canvas');
-          tmp.width=Math.round(tw*sc); tmp.height=Math.round(th*sc);
+          tmp.width=Math.round(tw*sc);tmp.height=Math.round(th*sc);
           tmp.getContext('2d').drawImage(img,0,0,tmp.width,tmp.height);
           showImageOverlay(tmp.toDataURL('image/jpeg',0.82));
         };
         img.src=ev.target.result;
       };
       reader.readAsDataURL(blob);
-      e.preventDefault(); break;
+      e.preventDefault();break;
     }
   }
 });
@@ -615,36 +888,28 @@ document.addEventListener('paste', function(e){
 /* ── Boot ── */
 async function boot(){
   buildPalette();
-
-  const me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
-  if(!me||me.error){ location.href='/login'; return; }
-
-  myUserId = me.id;
-  localStorage.setItem('wb_uid', myUserId);
-  // If the cached uid was wrong (first visit), switch to correct personal room now
-  if(roomMode === 'personal' && room !== 'personal_' + myUserId){
-    room = 'personal_' + myUserId;
-    socket.emit('wb_join', {room});
+  const me=await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+  if(!me||me.error){location.href='/login';return;}
+  myUserId=me.id;
+  localStorage.setItem('wb_uid',myUserId);
+  if(roomMode==='personal'&&room!=='personal_'+myUserId){
+    room='personal_'+myUserId;
+    socket.emit('wb_join',{room});
   }
-
-  // Show meeting tab if user is currently in a meeting (PiP active)
   if(window.currentMeeting){
-    var mtgBtn = document.getElementById('rb-meeting');
-    if(mtgBtn) mtgBtn.style.display = '';
+    const mtgBtn=document.getElementById('rb-meeting');
+    if(mtgBtn)mtgBtn.style.display='';
   }
-
-  // Reflect group mode in UI only if this was a genuine shared invite link
   if(_isInvite){
-    groupCode = _hash;
-    roomMode  = 'group';
+    groupCode=_hash;roomMode='group';
     document.getElementById('rb-personal').classList.remove('active');
     document.getElementById('rb-group').classList.add('active');
-    document.getElementById('room-code-bar').style.display = 'flex';
-    document.getElementById('room-code-val').textContent = groupCode;
+    document.getElementById('room-code-bar').style.display='flex';
+    document.getElementById('room-code-val').textContent=groupCode;
   }
 }
 
-resize();  // set cssW/cssH immediately — before any mouse event can fire
+resize();
 boot();
 
 window.switchRoomMode  = switchRoomMode;
@@ -657,11 +922,17 @@ window.toggleColorPopup= toggleColorPopup;
 window.clearBoard      = clearBoard;
 window.exportPNG       = exportPNG;
 window.undoStroke      = undoStroke;
+window.resetView       = resetView;
+window.startExportArea = startExportArea;
+window.doExport        = doExport;
+window.cancelExport    = cancelExport;
+window.deleteSelected  = deleteSelected;
+window.commitImage     = commitImage;
+window.cancelImage     = cancelImage;
 
-window.__cleanup = function() {
-  cancelImage();
-  if (socket) { socket.disconnect(); }
+window.__cleanup = function(){
+  cancelImage(); clearSelection();
+  if(socket) socket.disconnect();
 };
-
 
 </script>
