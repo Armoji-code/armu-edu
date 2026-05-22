@@ -348,27 +348,28 @@ function _fracRect(x1,y1,x2,y2){
 }
 function _drawOverlays(){
   ctx.save();
+  const ac = getComputedStyle(document.documentElement).getPropertyValue('--g1').trim() || '#3dd68c';
   // Selection drag box
   if(selectionBox){
     const r = _fracRect(selectionBox.x1, selectionBox.y1, selectionBox.x2, selectionBox.y2);
-    ctx.strokeStyle = 'rgba(59,130,246,0.85)'; ctx.lineWidth = 1;
+    ctx.strokeStyle = ac; ctx.lineWidth = 1; ctx.globalAlpha = 0.85;
     ctx.setLineDash([5,3]); ctx.strokeRect(r.x,r.y,r.w,r.h);
-    ctx.fillStyle = 'rgba(59,130,246,0.07)'; ctx.fillRect(r.x,r.y,r.w,r.h);
-    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.07; ctx.fillStyle = ac; ctx.fillRect(r.x,r.y,r.w,r.h);
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
   }
   // Selected strokes bounding box
   if(selectedIds.size){
     const bounds = _selectionBounds();
     if(bounds){
       const r = _fracRect(bounds.x, bounds.y, bounds.x+bounds.w, bounds.y+bounds.h);
-      ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1.5;
+      ctx.strokeStyle = ac; ctx.lineWidth = 1.5;
       ctx.setLineDash([5,3]); ctx.strokeRect(r.x,r.y,r.w,r.h); ctx.setLineDash([]);
       // Resize handles for single selected image
       const sel = strokes.filter(s => selectedIds.has(s.id));
       if(sel.length === 1 && sel[0].tool === 'image'){
         const hs = 8;
         [[r.x,r.y],[r.x+r.w,r.y],[r.x,r.y+r.h],[r.x+r.w,r.y+r.h]].forEach(([hx,hy])=>{
-          ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1.5;
+          ctx.fillStyle = getPrimaryColor(); ctx.strokeStyle = ac; ctx.lineWidth = 1.5;
           ctx.beginPath(); ctx.rect(hx-hs/2, hy-hs/2, hs, hs); ctx.fill(); ctx.stroke();
         });
       }
