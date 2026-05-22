@@ -607,8 +607,10 @@ canvas.addEventListener('wheel',e=>{
   const rect=canvas.getBoundingClientRect();
   const mx=e.clientX-rect.left, my=e.clientY-rect.top;
   const factor=e.deltaY<0?1.12:1/1.12;
-  panX=mx+(panX-mx)*factor; panY=my+(panY-my)*factor;
-  zoom=Math.max(0.05,Math.min(4,zoom*factor));
+  const newZoom=Math.max(0.05,Math.min(4,zoom*factor));
+  const ef=newZoom/zoom;  // actual factor applied after clamping
+  panX=mx+(panX-mx)*ef; panY=my+(panY-my)*ef;
+  zoom=newZoom;
   renderAll();
 },{passive:false});
 
