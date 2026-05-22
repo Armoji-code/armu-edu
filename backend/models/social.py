@@ -53,6 +53,37 @@ class Message(db.Model):
         }
 
 
+class FlaggedMessage(db.Model):
+    __tablename__ = "flagged_messages"
+
+    id         = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey("messages.id"), nullable=False)
+    severity   = db.Column(db.Float, default=0.0)   # 0.0–1.0
+    reason     = db.Column(db.Text, nullable=True)
+    status     = db.Column(db.String(20), default="pending")  # pending/dismissed/actioned
+    flagged_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    message = db.relationship("Message")
+
+    def to_dict(self):
+        m = self.message
+        return {
+            "id":           self.id,
+            "message_id":   self.message_id,
+            "severity":     self.severity,
+            "reason":       self.reason,
+            "status":       self.status,
+            "flagged_at":   self.flagged_at.isoformat(),
+            "content":      m.content if m else "",
+            "sender_id":    m.sender_id if m else None,
+            "sender_name":  m.sender.name if m and m.sender else "Unknown",
+            "recipient_id": m.recipient_id if m else None,
+            "recipient_name": m.recipient.name if m and m.recipient else (
+                m.group.name if m and m.group else "Group"),
+            "sent_at":      m.created_at.isoformat() if m else None,
+        }
+
+
 activity_enrollments = db.Table(
     "activity_enrollments",
     db.Column("activity_id", db.Integer, db.ForeignKey("activities.id"), primary_key=True),

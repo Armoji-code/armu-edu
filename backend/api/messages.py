@@ -1,8 +1,9 @@
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from api import blueprint
 from auth import login_required
 from models import db
 from models.social import Message, Group
+from ai.moderation import scan_async
 
 @blueprint.route("/messages/personal", methods=["GET"])
 @login_required()
@@ -29,6 +30,7 @@ def send_personal(user):
     msg = Message(sender_id=user.id, recipient_id=recipient_id, content=content)
     db.session.add(msg)
     db.session.commit()
+    scan_async(msg.id, current_app._get_current_object())
     return jsonify(msg.to_dict()), 201
 
 @blueprint.route("/messages/groups/<int:group_id>", methods=["GET"])
@@ -58,4 +60,5 @@ def send_group_message(user, group_id):
     msg = Message(sender_id=user.id, group_id=group_id, content=content)
     db.session.add(msg)
     db.session.commit()
+    scan_async(msg.id, current_app._get_current_object())
     return jsonify(msg.to_dict()), 201

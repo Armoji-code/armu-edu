@@ -8,6 +8,8 @@ from models import db
 from models.user import User
 from models.school import School, Class, Subject
 from models.academic import Assignment, Grade
+from models.social import FlaggedMessage, Message
+from models.user import User as _User
 
 
 def _school(user):
@@ -156,6 +158,7 @@ def admin_get_settings(user):
         "turn_url":                    s.get("turn_url",      cfg.get("TURN_URL", "")),
         "turn_username":               s.get("turn_username", cfg.get("TURN_USERNAME", "")),
         "turn_credential_set":         bool(s.get("turn_credential", cfg.get("TURN_CREDENTIAL", ""))),
+        "message_scan_enabled":        bool(s.get("message_scan_enabled", False)),
     })
 
 
@@ -171,7 +174,8 @@ def admin_update_settings(user):
     if "hidden_tabs" in data:
         settings["hidden_tabs"] = list(data["hidden_tabs"])
     for key in ("ai_enabled", "tutor_enabled", "digest_enabled", "nudges_enabled",
-                "deadline_reminders_enabled", "weekly_digest_enabled"):
+                "deadline_reminders_enabled", "weekly_digest_enabled",
+                "message_scan_enabled"):
         if key in data:
             settings[key] = bool(data[key])
     # Provider selection
@@ -444,4 +448,35 @@ def admin_delete_subject(user, subject_id):
     ).first_or_404()
     db.session.delete(s)
     db.session.commit()
+    return jsonify({"ok": True})
+
+
+# ── Admin: flagged messages ────────────────────────────────────────────────────
+
+@blueprint.route("/admin/flagged-messages", methods=["GET"])
+@login_required(roles=["admin"])
+def admin_flagged_messages(user):
+    school = _school(user)
+    status = request.args.get("status", "pending")
+    q = (FlaggedMessage.query
+         .join(Message, Message.id == FlaggedMessage.message_id)
+         .join(_User, _User.id == Message.sender_id)
+         .filter(_User.school_id == school.id))
+    if status != "all":
+        q = q.filter(FlaggedMessage.status == status)
+    flags = q.order_by(FlaggedMessage.flagged_at.desc()).limit(200).all()
+    return jsonify([f.to_dict() for f in flags])
+
+
+@blueprint.route("/admin/flagged-messages/<int:flag_id>", methods=["PATCH"])
+@login_required(roles=["admin"])
+def admin_update_flag(user, flag_id):
+    school = _school(user)
+    flag = FlaggedMessage.query.get_or_404(flag_id)
+    if flag.message.sender.school_id != school.id:
+        return jsonify({"error": "forbidden"}), 403
+    data = request.get_json(silent=True) or {}
+    if "status" in data and data["status"] in ("pending", "dismissed", "actioned"):
+        flag.status = data["status"]
+        db.session.commit()
     return jsonify({"ok": True})
