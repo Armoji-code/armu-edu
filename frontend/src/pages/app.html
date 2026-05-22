@@ -1266,6 +1266,29 @@
     document.getElementById('brand-override').textContent=css;
     if(f.family&&f.family!=='DM Sans'){var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+f.family.replace(/ /g,'+')+'&display=swap';document.head.appendChild(l);}
   }catch(e){}
+  // Apply user appearance overrides on top
+  try {
+    var ua = JSON.parse(localStorage.getItem('user-appearance-cache') || 'null');
+    if (ua && ua.colors) {
+      var uc = ua.colors, ur = [], ud = [], ul = [];
+      if (uc.g1){ur.push('--g1:'+uc.g1);var rr=toRgb(uc.g1);if(rr)ur.push('--g1-rgb:'+rr);}
+      if (uc.g2){ur.push('--g2:'+uc.g2);var rr=toRgb(uc.g2);if(rr)ur.push('--g2-rgb:'+rr);}
+      if (uc.g3) ur.push('--g3:'+uc.g3);
+      if (ur.length){ur.push('--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3))');ur.push('--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%)');}
+      if (uc.dark_text2) ud.push('--text2:'+uc.dark_text2);
+      if (uc.dark_text3) ud.push('--text3:'+uc.dark_text3);
+      if (uc.light_text2) ul.push('--text2:'+uc.light_text2);
+      if (uc.light_text3) ul.push('--text3:'+uc.light_text3);
+      var ucss = '';
+      if (ur.length) ucss += ':root{'+ur.join(';')+'}';
+      if (ud.length) ucss += '[data-theme="dark"]{'+ud.join(';')+'}';
+      if (ul.length) ucss += '[data-theme="light"]{'+ul.join(';')+'}';
+      // use a separate style element so user overrides don't get wiped by admin brand refresh
+      var uEl = document.createElement('style'); uEl.id = 'user-appearance-override';
+      document.head.appendChild(uEl);
+      uEl.textContent = ucss;
+    }
+  } catch(e) {}
 })();
 </script>
 </head>
@@ -1630,6 +1653,11 @@ function applyBrandingData(b) {
   if (c.light_bg3) light.push(`--bg3:${c.light_bg3}`);
   if (c.light_bg4) light.push(`--bg4:${c.light_bg4}`);
 
+  if (c.dark_text2)  dark.push(`--text2:${c.dark_text2}`);
+  if (c.dark_text3)  dark.push(`--text3:${c.dark_text3}`);
+  if (c.light_text2) light.push(`--text2:${c.light_text2}`);
+  if (c.light_text3) light.push(`--text3:${c.light_text3}`);
+
   const f = b.font || {};
   if (f.dark_text)  dark.push(`--text:${f.dark_text}`);
   if (f.light_text) light.push(`--text:${f.light_text}`);
@@ -1677,6 +1705,31 @@ function applyBrandingData(b) {
 }
 window.applyBrandingData = applyBrandingData;
 
+function applyUserAppearance(a) {
+  try { localStorage.setItem('user-appearance-cache', JSON.stringify(a || {})); } catch(e) {}
+  const c = (a && a.colors) || {};
+  const root = [], dark = [], light = [];
+  if (c.g1) { root.push(`--g1:${c.g1}`); const r = hexToRgbStr(c.g1); if (r) root.push(`--g1-rgb:${r}`); }
+  if (c.g2) { root.push(`--g2:${c.g2}`); const r = hexToRgbStr(c.g2); if (r) root.push(`--g2-rgb:${r}`); }
+  if (c.g3) root.push(`--g3:${c.g3}`);
+  if (root.length) {
+    root.push('--gradient:linear-gradient(135deg,var(--g1),var(--g2),var(--g3))');
+    root.push('--gradient-text:linear-gradient(120deg,var(--g1) 0%,var(--g2) 60%,var(--g3) 100%)');
+  }
+  if (c.dark_text2)  dark.push(`--text2:${c.dark_text2}`);
+  if (c.dark_text3)  dark.push(`--text3:${c.dark_text3}`);
+  if (c.light_text2) light.push(`--text2:${c.light_text2}`);
+  if (c.light_text3) light.push(`--text3:${c.light_text3}`);
+  let css = '';
+  if (root.length)  css += `:root{${root.join(';')}}`;
+  if (dark.length)  css += `[data-theme="dark"]{${dark.join(';')}}`;
+  if (light.length) css += `[data-theme="light"]{${light.join(';')}}`;
+  let uEl = document.getElementById('user-appearance-override');
+  if (!uEl) { uEl = document.createElement('style'); uEl.id = 'user-appearance-override'; document.head.appendChild(uEl); }
+  uEl.textContent = css;
+}
+window.applyUserAppearance = applyUserAppearance;
+
 async function applyBranding() {
   try {
     const b = await fetch('/api/branding').then(r => r.json()).catch(() => null);
@@ -1693,6 +1746,7 @@ async function boot() {
   if (!me || me.error) { location.href = '/login'; return; }
   window.__me = me;
   applyBranding();
+  fetch('/api/user/appearance').then(r => r.ok ? r.json() : null).then(ua => { if (ua) applyUserAppearance(ua); }).catch(() => {});
 
   document.getElementById('userName').textContent  = me.name || me.email;
   document.getElementById('userAvatar').textContent = initials(me.name || me.email);

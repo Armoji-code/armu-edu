@@ -24,6 +24,43 @@
     </div>
   </div>
 
+  <div class="card" id="personalizeCard">
+    <div class="card-title">Personalize</div>
+
+    <div style="margin-bottom:18px;">
+      <div class="setting-label" style="margin-bottom:10px;">Color palette</div>
+      <div id="paletteRow" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+    </div>
+
+    <div style="margin-bottom:18px;">
+      <div class="setting-label" style="margin-bottom:10px;">Accent colors</div>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;" id="accentSwatches"></div>
+    </div>
+
+    <div style="margin-bottom:18px;">
+      <div class="setting-label" style="margin-bottom:2px;">Context text</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Secondary and subtle gray text — adjust if the defaults are hard to read</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px;">Dark mode</div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;" id="textSwatchesDark"></div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px;">Light mode</div>
+          <div style="display:flex;flex-wrap:wrap;gap:14px;" id="textSwatchesLight"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="saveAppearance()">
+        <svg class="icon icon-14"><use href="#ic-save"/></svg> Save
+      </button>
+      <button class="btn" onclick="resetAppearance()">Use school colors</button>
+      <span id="appearanceMsg" style="font-size:13px;color:var(--g1);opacity:0;transition:opacity 0.3s;">Saved!</span>
+    </div>
+  </div>
+
   <div class="card">
     <div class="card-title">AI Tutor</div>
     <div class="setting-row" style="flex-direction:column;align-items:flex-start;gap:12px;">
@@ -95,8 +132,21 @@
 </div>
 
 <script>
+const PALETTES = [
+  { id: 'school',  label: 'School',  g1: null,      g2: null,      g3: null      },
+  { id: 'emerald', label: 'Emerald', g1: '#3dd68c', g2: '#38bdf8', g3: '#6ee7b7' },
+  { id: 'ocean',   label: 'Ocean',   g1: '#06b6d4', g2: '#6366f1', g3: '#67e8f9' },
+  { id: 'sunset',  label: 'Sunset',  g1: '#f97316', g2: '#ec4899', g3: '#fb923c' },
+  { id: 'forest',  label: 'Forest',  g1: '#22c55e', g2: '#84cc16', g3: '#86efac' },
+  { id: 'violet',  label: 'Violet',  g1: '#8b5cf6', g2: '#a78bfa', g3: '#c4b5fd' },
+  { id: 'rose',    label: 'Rose',    g1: '#f43f5e', g2: '#fb7185', g3: '#fda4af' },
+  { id: 'amber',   label: 'Amber',   g1: '#f59e0b', g2: '#fbbf24', g3: '#fcd34d' },
+];
+
+// Theme init
 (function(){
   const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
   const btn = document.getElementById('themeBtn');
   if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
 })();
@@ -108,11 +158,9 @@ function applyTheme(t) {
   if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
   document.getElementById('darkToggle').checked = (t === 'dark');
 }
-
 function toggleTheme() {
   applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 }
-
 function onThemeToggle(cb) { applyTheme(cb.checked ? 'dark' : 'light'); }
 
 function saveBool(key, val) { localStorage.setItem(key, val ? '1' : '0'); }
@@ -136,6 +184,183 @@ window.onThemeToggle = onThemeToggle;
 window.saveBool      = saveBool;
 window.setModelTier  = setModelTier;
 window.logout        = logout;
+window.toggleTheme   = toggleTheme;
+
+/* ── Personalize ─────────────────────────────────────────── */
+function mkColorSwatch(id, defVal, label) {
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:inline-flex;flex-direction:column;align-items:center;gap:5px;';
+  const box = document.createElement('div');
+  box.id = 'box_' + id;
+  box.style.cssText = 'width:40px;height:40px;border-radius:8px;border:2px solid var(--border);cursor:pointer;background:' + defVal + ';flex-shrink:0;';
+  box.onclick = () => document.getElementById(id).click();
+  const inp = document.createElement('input');
+  inp.type = 'color'; inp.id = id; inp.value = defVal;
+  inp.style.cssText = 'position:fixed;width:0;height:0;opacity:0;border:none;padding:0;';
+  inp.oninput = () => { box.style.background = inp.value; selectPalette('custom'); };
+  const lbl = document.createElement('span');
+  lbl.style.cssText = 'font-size:10px;font-family:"DM Mono",monospace;color:var(--text3);text-align:center;';
+  lbl.textContent = label;
+  wrap.append(box, inp, lbl);
+  return wrap;
+}
+
+function renderPersonalize(currentColors) {
+  const c = currentColors || {};
+
+  // Palette row
+  const paletteRow = document.getElementById('paletteRow');
+  paletteRow.innerHTML = '';
+  PALETTES.forEach(p => {
+    const item = document.createElement('div');
+    item.id = 'palette_' + p.id;
+    item.dataset.pid = p.id;
+    item.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;';
+    item.onclick = () => selectPalette(p.id);
+
+    const circle = document.createElement('div');
+    if (p.id === 'school') {
+      circle.style.cssText = 'width:44px;height:44px;border-radius:50%;background:var(--bg4);border:3px solid transparent;box-sizing:border-box;transition:border-color 0.15s;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text3);';
+      circle.textContent = 'def';
+    } else {
+      const bg = 'linear-gradient(135deg,' + p.g1 + ',' + p.g2 + ')';
+      circle.style.cssText = 'width:44px;height:44px;border-radius:50%;background:' + bg + ';border:3px solid transparent;box-sizing:border-box;transition:border-color 0.15s;';
+    }
+
+    const lbl = document.createElement('span');
+    lbl.style.cssText = 'font-size:10px;font-family:"DM Mono",monospace;color:var(--text3);';
+    lbl.textContent = p.label;
+
+    item.append(circle, lbl);
+    paletteRow.appendChild(item);
+  });
+
+  // Accent color swatches
+  const accentEl = document.getElementById('accentSwatches');
+  accentEl.innerHTML = '';
+  [['ap_g1','Primary'],['ap_g2','Secondary'],['ap_g3','Tertiary']].forEach(([id, lbl]) => {
+    accentEl.appendChild(mkColorSwatch(id, '#888888', lbl));
+  });
+
+  // Text swatches dark
+  const darkEl = document.getElementById('textSwatchesDark');
+  darkEl.innerHTML = '';
+  [['ap_dark_text2','Secondary'],['ap_dark_text3','Subtle']].forEach(([id, lbl]) => {
+    darkEl.appendChild(mkColorSwatch(id, '#888888', lbl));
+  });
+
+  // Text swatches light
+  const lightEl = document.getElementById('textSwatchesLight');
+  lightEl.innerHTML = '';
+  [['ap_light_text2','Secondary'],['ap_light_text3','Subtle']].forEach(([id, lbl]) => {
+    lightEl.appendChild(mkColorSwatch(id, '#4b5563', lbl));
+  });
+
+  // Apply current saved colors to pickers
+  const colorMap = {
+    ap_g1: c.g1 || '#3dd68c',
+    ap_g2: c.g2 || '#38bdf8',
+    ap_g3: c.g3 || '#6ee7b7',
+    ap_dark_text2:  c.dark_text2  || '#888888',
+    ap_dark_text3:  c.dark_text3  || '#444444',
+    ap_light_text2: c.light_text2 || '#4b5563',
+    ap_light_text3: c.light_text3 || '#9ca3af',
+  };
+  Object.entries(colorMap).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    const box = document.getElementById('box_' + id);
+    if (el) el.value = val;
+    if (box) box.style.background = val;
+  });
+
+  // Determine active palette
+  const activePid = detectPalette(c);
+  markActivePalette(activePid);
+}
+
+function detectPalette(c) {
+  if (!c.g1 && !c.g2) return 'school';
+  const match = PALETTES.find(p => p.g1 && p.g1 === c.g1 && p.g2 === c.g2);
+  return match ? match.id : 'custom';
+}
+
+function markActivePalette(pid) {
+  document.querySelectorAll('#paletteRow [data-pid]').forEach(el => {
+    const circle = el.querySelector('div');
+    if (circle) circle.style.borderColor = el.dataset.pid === pid ? 'var(--g1)' : 'transparent';
+  });
+}
+
+function selectPalette(pid) {
+  const p = PALETTES.find(x => x.id === pid);
+  if (p && p.g1) {
+    ['ap_g1','ap_g2','ap_g3'].forEach((id, i) => {
+      const val = [p.g1, p.g2, p.g3][i];
+      const el = document.getElementById(id);
+      const box = document.getElementById('box_' + id);
+      if (el) el.value = val;
+      if (box) box.style.background = val;
+    });
+  }
+  markActivePalette(pid);
+}
+window.selectPalette = selectPalette;
+
+async function saveAppearance() {
+  // Detect active palette by checking which circle has g1 border color
+  let activePid = 'custom';
+  document.querySelectorAll('#paletteRow [data-pid]').forEach(el => {
+    const circle = el.querySelector('div');
+    if (circle && circle.style.borderColor && circle.style.borderColor !== 'transparent') {
+      activePid = el.dataset.pid;
+    }
+  });
+
+  let colors = {};
+  if (activePid !== 'school') {
+    colors = {
+      g1: document.getElementById('ap_g1')?.value || '',
+      g2: document.getElementById('ap_g2')?.value || '',
+      g3: document.getElementById('ap_g3')?.value || '',
+      dark_text2:  document.getElementById('ap_dark_text2')?.value  || '',
+      dark_text3:  document.getElementById('ap_dark_text3')?.value  || '',
+      light_text2: document.getElementById('ap_light_text2')?.value || '',
+      light_text3: document.getElementById('ap_light_text3')?.value || '',
+    };
+    // Filter empty values
+    Object.keys(colors).forEach(k => { if (!colors[k]) delete colors[k]; });
+  }
+  const ok = await fetch('/api/user/appearance', {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({colors}),
+    credentials: 'include',
+  }).then(r => r.ok).catch(() => false);
+  if (ok) {
+    if (window.applyUserAppearance) window.applyUserAppearance({colors});
+    const msg = document.getElementById('appearanceMsg');
+    msg.style.opacity = '1';
+    setTimeout(() => { msg.style.opacity = '0'; }, 2000);
+  }
+}
+window.saveAppearance = saveAppearance;
+
+async function resetAppearance() {
+  const ok = await fetch('/api/user/appearance', {
+    method: 'PATCH',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({colors:{}}),
+    credentials: 'include',
+  }).then(r => r.ok).catch(() => false);
+  if (ok) {
+    if (window.applyUserAppearance) window.applyUserAppearance({colors:{}});
+    markActivePalette('school');
+    const msg = document.getElementById('appearanceMsg');
+    msg.style.opacity = '1';
+    setTimeout(() => { msg.style.opacity = '0'; }, 2000);
+  }
+}
+window.resetAppearance = resetAppearance;
 
 async function boot() {
   applyTheme(localStorage.getItem('theme') || 'dark');
@@ -153,6 +378,14 @@ async function boot() {
 
   document.getElementById('typingToggle').checked    = loadBool('armu_typing', true);
   document.getElementById('autoTitleToggle').checked = loadBool('armu_autotitle', true);
+
+  // Load user appearance
+  try {
+    const ua = await fetch('/api/user/appearance').then(r => r.ok ? r.json() : {}).catch(() => ({}));
+    renderPersonalize(ua.colors || {});
+  } catch {
+    renderPersonalize({});
+  }
 }
 
 boot();

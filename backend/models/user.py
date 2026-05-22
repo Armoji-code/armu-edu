@@ -15,6 +15,7 @@ class User(db.Model):
     parent_of_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     can_change_password = db.Column(db.Boolean, default=True, nullable=False, server_default='1')
+    preferences = db.Column(db.JSON, nullable=True, default=None)
 
     school = db.relationship("School", back_populates="users")
     klass = db.relationship("Class", back_populates="students", foreign_keys=[class_id])

@@ -73,3 +73,22 @@ def change_password(user):
     user.set_password(new_pw)
     db.session.commit()
     return jsonify({"ok": True})
+
+@blueprint.route("/user/appearance", methods=["GET"])
+@login_required()
+def get_user_appearance(user):
+    return jsonify((user.preferences or {}).get("appearance", {}))
+
+@blueprint.route("/user/appearance", methods=["PATCH"])
+@login_required()
+def save_user_appearance(user):
+    data = request.get_json(silent=True) or {}
+    prefs = dict(user.preferences or {})
+    allowed = ("g1","g2","g3","dark_text2","dark_text3","light_text2","light_text3")
+    colors = {}
+    if isinstance(data.get("colors"), dict):
+        colors = {k: v for k, v in data["colors"].items() if k in allowed and isinstance(v, str) and v.startswith('#') and len(v) in (4,7)}
+    prefs["appearance"] = {"colors": colors}
+    user.preferences = prefs
+    db.session.commit()
+    return jsonify({"ok": True})

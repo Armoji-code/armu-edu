@@ -237,7 +237,8 @@ def admin_save_branding(user):
         branding["logo_height"] = max(16, min(94, int(data["logo_height"])))
     if isinstance(data.get("colors"), dict):
         allowed = ("g1","g2","g3","dark_bg","dark_bg2","dark_bg3","dark_bg4",
-                   "light_bg","light_bg2","light_bg3","light_bg4")
+                   "light_bg","light_bg2","light_bg3","light_bg4",
+                   "dark_text2","dark_text3","light_text2","light_text3")
         branding["colors"] = {k: v for k, v in data["colors"].items() if k in allowed}
     if isinstance(data.get("font"), dict):
         allowed_fonts = ("family", "size", "weight", "dark_text", "light_text")

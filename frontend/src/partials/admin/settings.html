@@ -388,6 +388,9 @@ function renderAll(s) {
         </div>
       </div>
 
+      <div class="sub-label">Quick Templates</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;" id="adminPaletteRow"></div>
+
       <div class="sub-label">Accent Colors</div>
       <div style="margin-bottom:18px;">
         ${colorSwatch('c_g1','#3dd68c','Primary')}${colorSwatch('c_g2','#38bdf8','Secondary')}${colorSwatch('c_g3','#6ee7b7','Tertiary')}
@@ -401,6 +404,14 @@ function renderAll(s) {
       <div class="sub-label">Light Mode Backgrounds</div>
       <div style="margin-bottom:18px;">
         ${colorSwatch('c_light_bg','#f5f7fa','Base')}${colorSwatch('c_light_bg2','#ffffff','Surface')}${colorSwatch('c_light_bg3','#eef1f7','Raised')}${colorSwatch('c_light_bg4','#e4e8f2','Overlay')}
+      </div>
+
+      <div class="sub-label">Context Text</div>
+      <div style="margin-bottom:18px;">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">Dark mode secondary and subtle gray text</div>
+        <div>${colorSwatch('c_dark_text2','#888888','Sec (dark)')}${colorSwatch('c_dark_text3','#444444','Sub (dark)')}</div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text3);margin-bottom:8px;">Light mode secondary and subtle gray text</div>
+        <div>${colorSwatch('c_light_text2','#4b5563','Sec (lt)')}${colorSwatch('c_light_text3','#9ca3af','Sub (lt)')}</div>
       </div>
 
       <div style="display:flex;gap:8px;align-items:center;margin-top:16px;flex-wrap:wrap;">
@@ -727,8 +738,10 @@ function resetColors() {
   var defaults = {
     c_g1:'#3dd68c', c_g2:'#38bdf8', c_g3:'#6ee7b7',
     c_dark_bg:'#111111', c_dark_bg2:'#1a1a1a', c_dark_bg3:'#222222', c_dark_bg4:'#2c2c2c',
-    c_light_bg:'#f5f7fa', c_light_bg2:'#ffffff', c_light_bg3:'#eef1f7', c_light_bg4:'#e4e8f2',
+    c_light_bg:'#fafaf8', c_light_bg2:'#ffffff', c_light_bg3:'#eef1f7', c_light_bg4:'#e4e8f2',
     font_dark_text:'#f0f0f0', font_light_text:'#111827',
+    c_dark_text2:'#888888', c_dark_text3:'#444444',
+    c_light_text2:'#4b5563', c_light_text3:'#9ca3af',
   };
   Object.entries(defaults).forEach(function([id, val]) {
     var el = document.getElementById(id);
@@ -746,6 +759,8 @@ function initBranding(b) {
     c_g1: c.g1, c_g2: c.g2, c_g3: c.g3,
     c_dark_bg: c.dark_bg, c_dark_bg2: c.dark_bg2, c_dark_bg3: c.dark_bg3, c_dark_bg4: c.dark_bg4,
     c_light_bg: c.light_bg, c_light_bg2: c.light_bg2, c_light_bg3: c.light_bg3, c_light_bg4: c.light_bg4,
+    c_dark_text2: c.dark_text2, c_dark_text3: c.dark_text3,
+    c_light_text2: c.light_text2, c_light_text3: c.light_text3,
   };
   Object.entries(map).forEach(function([id, val]) {
     var el = document.getElementById(id);
@@ -768,7 +783,45 @@ function initBranding(b) {
   if (b.logo_icon_data) { brandIconLogo = b.logo_icon_data; }
   updateLogoPreview();
   updateIconLogoPreview();
+  renderAdminPalettes();
 }
+
+var ADMIN_PALETTES = [
+  { id: 'emerald', label: 'Emerald', g1: '#3dd68c', g2: '#38bdf8', g3: '#6ee7b7' },
+  { id: 'ocean',   label: 'Ocean',   g1: '#06b6d4', g2: '#6366f1', g3: '#67e8f9' },
+  { id: 'sunset',  label: 'Sunset',  g1: '#f97316', g2: '#ec4899', g3: '#fb923c' },
+  { id: 'forest',  label: 'Forest',  g1: '#22c55e', g2: '#84cc16', g3: '#86efac' },
+  { id: 'violet',  label: 'Violet',  g1: '#8b5cf6', g2: '#a78bfa', g3: '#c4b5fd' },
+  { id: 'rose',    label: 'Rose',    g1: '#f43f5e', g2: '#fb7185', g3: '#fda4af' },
+  { id: 'amber',   label: 'Amber',   g1: '#f59e0b', g2: '#fbbf24', g3: '#fcd34d' },
+];
+
+function renderAdminPalettes() {
+  var row = document.getElementById('adminPaletteRow');
+  if (!row) return;
+  row.innerHTML = '';
+  ADMIN_PALETTES.forEach(function(p) {
+    var btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.style.cssText = 'display:flex;align-items:center;gap:6px;padding:5px 10px;';
+    var swatch = document.createElement('span');
+    swatch.style.cssText = 'display:inline-block;width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,' + p.g1 + ',' + p.g2 + ');flex-shrink:0;';
+    var lbl = document.createElement('span');
+    lbl.textContent = p.label;
+    btn.append(swatch, lbl);
+    btn.onclick = function() { applyAdminPalette(p); };
+    row.appendChild(btn);
+  });
+}
+
+function applyAdminPalette(p) {
+  var map = { c_g1: p.g1, c_g2: p.g2, c_g3: p.g3 };
+  Object.entries(map).forEach(function([id, val]) {
+    var el = document.getElementById(id);
+    if (el) { el.value = val; syncColorBox(el); }
+  });
+}
+window.applyAdminPalette = applyAdminPalette;
 
 async function saveBranding() {
   var payload = {
@@ -788,6 +841,10 @@ async function saveBranding() {
       light_bg2: document.getElementById('c_light_bg2').value,
       light_bg3: document.getElementById('c_light_bg3').value,
       light_bg4: document.getElementById('c_light_bg4').value,
+      dark_text2:  document.getElementById('c_dark_text2').value,
+      dark_text3:  document.getElementById('c_dark_text3').value,
+      light_text2: document.getElementById('c_light_text2').value,
+      light_text3: document.getElementById('c_light_text3').value,
     },
     font: {
       family:     document.getElementById('fontFamily').value,
