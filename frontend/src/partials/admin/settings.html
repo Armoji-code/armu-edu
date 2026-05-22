@@ -359,15 +359,24 @@ function renderAll(s) {
           <span style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;min-width:60px;">Font</span>
           <select id="fontFamily" style="padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;outline:none;cursor:pointer;" onchange="previewFont()">
             <option value="DM Sans">DM Sans (default)</option>
-            <option value="Inter">Inter</option>
-            <option value="Roboto">Roboto</option>
-            <option value="Roboto Condensed">Roboto Condensed</option>
-            <option value="Noto Sans">Noto Sans</option>
-            <option value="Nunito">Nunito</option>
-            <option value="Poppins">Poppins</option>
-            <option value="Space Grotesk">Space Grotesk</option>
-            <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-            <option value="Lato">Lato</option>
+            <optgroup label="Web fonts">
+              <option value="Inter">Inter</option>
+              <option value="Roboto">Roboto</option>
+              <option value="Roboto Condensed">Roboto Condensed</option>
+              <option value="Noto Sans">Noto Sans</option>
+              <option value="Nunito">Nunito</option>
+              <option value="Poppins">Poppins</option>
+              <option value="Space Grotesk">Space Grotesk</option>
+              <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+              <option value="Lato">Lato</option>
+            </optgroup>
+            <optgroup label="System fonts">
+              <option value="Arial">Arial</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Trebuchet MS">Trebuchet MS</option>
+              <option value="Verdana">Verdana</option>
+            </optgroup>
           </select>
           <span id="fontPreviewText" style="font-size:14px;color:var(--text2);transition:font-family 0.2s;">The quick brown fox jumps over the lazy dog</span>
         </div>
@@ -720,11 +729,13 @@ function updateFontWeight(v) {
 }
 window.updateFontWeight = updateFontWeight;
 
+var SYSTEM_FONTS = new Set(['Arial','Georgia','Times New Roman','Trebuchet MS','Verdana']);
+
 function previewFont() {
   var family = document.getElementById('fontFamily').value;
   var preview = document.getElementById('fontPreviewText');
   if (!preview) return;
-  if (family !== 'DM Sans') {
+  if (family !== 'DM Sans' && !SYSTEM_FONTS.has(family)) {
     var encoded = family.replace(/ /g, '+');
     var existing = document.getElementById('gfont-settings-preview');
     if (!existing) { existing = document.createElement('link'); existing.id = 'gfont-settings-preview'; existing.rel = 'stylesheet'; document.head.appendChild(existing); }

@@ -84,11 +84,29 @@ def get_user_appearance(user):
 def save_user_appearance(user):
     data = request.get_json(silent=True) or {}
     prefs = dict(user.preferences or {})
-    allowed = ("g1","g2","g3","dark_text2","dark_text3","light_text2","light_text3")
+
+    allowed_colors = ("g1","g2","g3","dark_text2","dark_text3","light_text2","light_text3")
     colors = {}
     if isinstance(data.get("colors"), dict):
-        colors = {k: v for k, v in data["colors"].items() if k in allowed and isinstance(v, str) and v.startswith('#') and len(v) in (4,7)}
-    prefs["appearance"] = {"colors": colors}
+        colors = {k: v for k, v in data["colors"].items()
+                  if k in allowed_colors and isinstance(v, str) and v.startswith('#') and len(v) in (4,7)}
+
+    allowed_families = {
+        'DM Sans','Inter','Roboto','Roboto Condensed','Noto Sans','Nunito','Poppins',
+        'Space Grotesk','Plus Jakarta Sans','Lato',
+        'Arial','Georgia','Times New Roman','Trebuchet MS','Verdana',
+    }
+    font = {}
+    if isinstance(data.get("font"), dict):
+        fd = data["font"]
+        if fd.get("family") in allowed_families:
+            font["family"] = fd["family"]
+        if isinstance(fd.get("size"), (int, float)):
+            font["size"] = max(11, min(20, int(fd["size"])))
+        if isinstance(fd.get("weight"), (int, float)) and int(fd["weight"]) in (300,400,500,600,700):
+            font["weight"] = int(fd["weight"])
+
+    prefs["appearance"] = {"colors": colors, "font": font}
     user.preferences = prefs
     db.session.commit()
     return jsonify({"ok": True})

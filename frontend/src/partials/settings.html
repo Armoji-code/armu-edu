@@ -52,6 +52,53 @@
       </div>
     </div>
 
+    <div style="margin-bottom:18px;">
+      <div class="setting-label" style="margin-bottom:10px;">Typography</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;min-width:52px;">Font</span>
+          <select id="ap_font_family" style="padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;outline:none;cursor:pointer;" onchange="previewStudentFont()">
+            <option value="">School default</option>
+            <option value="DM Sans">DM Sans</option>
+            <optgroup label="Web fonts">
+              <option value="Inter">Inter</option>
+              <option value="Roboto">Roboto</option>
+              <option value="Roboto Condensed">Roboto Condensed</option>
+              <option value="Noto Sans">Noto Sans</option>
+              <option value="Nunito">Nunito</option>
+              <option value="Poppins">Poppins</option>
+              <option value="Space Grotesk">Space Grotesk</option>
+              <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+              <option value="Lato">Lato</option>
+            </optgroup>
+            <optgroup label="System fonts">
+              <option value="Arial">Arial</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Times New Roman">Times New Roman</option>
+              <option value="Trebuchet MS">Trebuchet MS</option>
+              <option value="Verdana">Verdana</option>
+            </optgroup>
+          </select>
+          <span id="ap_font_preview" style="font-size:13px;color:var(--text2);transition:font-family 0.2s;min-width:160px;">The quick brown fox</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;min-width:52px;">Size</span>
+          <input type="range" id="ap_font_size" min="11" max="20" value="14" style="width:110px;accent-color:var(--g1);" oninput="document.getElementById('ap_font_size_lbl').textContent=this.value+'px'">
+          <span id="ap_font_size_lbl" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);min-width:32px;">14px</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;min-width:52px;">Weight</span>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;" id="weightPills">
+            <button class="mode-btn" data-w="300" onclick="setWeight(300)">Light</button>
+            <button class="mode-btn active" data-w="400" onclick="setWeight(400)">Regular</button>
+            <button class="mode-btn" data-w="500" onclick="setWeight(500)">Medium</button>
+            <button class="mode-btn" data-w="600" onclick="setWeight(600)">Semibold</button>
+            <button class="mode-btn" data-w="700" onclick="setWeight(700)">Bold</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-primary" onclick="saveAppearance()">
         <svg class="icon icon-14"><use href="#ic-save"/></svg> Save
@@ -205,8 +252,33 @@ function mkColorSwatch(id, defVal, label) {
   return wrap;
 }
 
-function renderPersonalize(currentColors) {
-  const c = currentColors || {};
+const _stSysFonts = new Set(['Arial','Georgia','Times New Roman','Trebuchet MS','Verdana']);
+
+function previewStudentFont() {
+  const family = document.getElementById('ap_font_family').value;
+  const preview = document.getElementById('ap_font_preview');
+  if (!preview) return;
+  if (family && family !== 'DM Sans' && !_stSysFonts.has(family)) {
+    let lnk = document.getElementById('gfont-st-preview');
+    if (!lnk) { lnk = document.createElement('link'); lnk.id = 'gfont-st-preview'; lnk.rel = 'stylesheet'; document.head.appendChild(lnk); }
+    lnk.href = 'https://fonts.googleapis.com/css2?family=' + family.replace(/ /g, '+') + ':wght@400;500&display=swap';
+  }
+  preview.style.fontFamily = family ? "'" + family + "', sans-serif" : '';
+}
+window.previewStudentFont = previewStudentFont;
+
+let _selectedWeight = 400;
+function setWeight(w) {
+  _selectedWeight = w;
+  document.querySelectorAll('#weightPills .mode-btn').forEach(b => {
+    b.classList.toggle('active', +b.dataset.w === w);
+  });
+}
+window.setWeight = setWeight;
+
+function renderPersonalize(appearance) {
+  const c = (appearance && appearance.colors) || {};
+  const f = (appearance && appearance.font)   || {};
 
   // Palette row
   const paletteRow = document.getElementById('paletteRow');
@@ -276,6 +348,14 @@ function renderPersonalize(currentColors) {
   // Determine active palette
   const activePid = detectPalette(c);
   markActivePalette(activePid);
+
+  // Apply saved font settings
+  const famEl = document.getElementById('ap_font_family');
+  if (famEl && f.family) { famEl.value = f.family; previewStudentFont(); }
+  const sizeEl = document.getElementById('ap_font_size');
+  const sizeLbl = document.getElementById('ap_font_size_lbl');
+  if (sizeEl && f.size) { sizeEl.value = f.size; if (sizeLbl) sizeLbl.textContent = f.size + 'px'; }
+  if (f.weight) setWeight(f.weight);
 }
 
 function detectPalette(c) {
@@ -307,7 +387,7 @@ function selectPalette(pid) {
 window.selectPalette = selectPalette;
 
 async function saveAppearance() {
-  // Detect active palette by checking which circle has g1 border color
+  // Detect active palette
   let activePid = 'custom';
   document.querySelectorAll('#paletteRow [data-pid]').forEach(el => {
     const circle = el.querySelector('div');
@@ -327,17 +407,25 @@ async function saveAppearance() {
       light_text2: document.getElementById('ap_light_text2')?.value || '',
       light_text3: document.getElementById('ap_light_text3')?.value || '',
     };
-    // Filter empty values
     Object.keys(colors).forEach(k => { if (!colors[k]) delete colors[k]; });
   }
+
+  const family = document.getElementById('ap_font_family')?.value || '';
+  const size   = parseInt(document.getElementById('ap_font_size')?.value || '14', 10);
+  const font = {};
+  if (family) font.family = family;
+  if (size)   font.size   = size;
+  if (_selectedWeight !== 400) font.weight = _selectedWeight;
+
+  const payload = {colors, font};
   const ok = await fetch('/api/user/appearance', {
     method: 'PATCH',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({colors}),
+    body: JSON.stringify(payload),
     credentials: 'include',
   }).then(r => r.ok).catch(() => false);
   if (ok) {
-    if (window.applyUserAppearance) window.applyUserAppearance({colors});
+    if (window.applyUserAppearance) window.applyUserAppearance(payload);
     const msg = document.getElementById('appearanceMsg');
     msg.style.opacity = '1';
     setTimeout(() => { msg.style.opacity = '0'; }, 2000);
@@ -349,12 +437,18 @@ async function resetAppearance() {
   const ok = await fetch('/api/user/appearance', {
     method: 'PATCH',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({colors:{}}),
+    body: JSON.stringify({colors:{}, font:{}}),
     credentials: 'include',
   }).then(r => r.ok).catch(() => false);
   if (ok) {
-    if (window.applyUserAppearance) window.applyUserAppearance({colors:{}});
+    if (window.applyUserAppearance) window.applyUserAppearance({colors:{}, font:{}});
     markActivePalette('school');
+    // Reset font controls
+    const famEl = document.getElementById('ap_font_family');
+    if (famEl) { famEl.value = ''; document.getElementById('ap_font_preview').style.fontFamily = ''; }
+    const sizeEl = document.getElementById('ap_font_size');
+    if (sizeEl) { sizeEl.value = 14; document.getElementById('ap_font_size_lbl').textContent = '14px'; }
+    setWeight(400);
     const msg = document.getElementById('appearanceMsg');
     msg.style.opacity = '1';
     setTimeout(() => { msg.style.opacity = '0'; }, 2000);
@@ -382,7 +476,7 @@ async function boot() {
   // Load user appearance
   try {
     const ua = await fetch('/api/user/appearance').then(r => r.ok ? r.json() : {}).catch(() => ({}));
-    renderPersonalize(ua.colors || {});
+    renderPersonalize(ua);
   } catch {
     renderPersonalize({});
   }
