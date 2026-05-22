@@ -1,21 +1,84 @@
 
 <style>
-.browse-tab-bar{display:flex;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border1);flex-shrink:0;background:var(--bg2);}
-.browse-tab{background:none;border:none;color:var(--text3);cursor:pointer;padding:6px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:background .15s,color .15s;}
-.browse-tab.active{background:var(--surface1);color:var(--text1);}
-.browse-tab:hover:not(.active){background:var(--hover1);}
-.pip-minimize-btn.dimmed{opacity:0.35;}
+/* ── Lobby ─────────────────────────────────────── */
+.lobby-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.lobby-title{font-size:18px;font-weight:600;}
+.meeting-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.meeting-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;display:flex;flex-direction:column;gap:12px;}
+.meeting-card-title{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.meeting-card-dot{width:8px;height:8px;border-radius:50%;background:var(--g1);flex-shrink:0;}
+.meeting-card-meta{display:flex;gap:12px;font-size:12px;color:var(--text3);}
+.meeting-card-actions{display:flex;gap:8px;margin-top:4px;}
+
+/* ── In-call topbar controls ───────────────────── */
+.call-ctrl-group{display:none;align-items:center;gap:6px;}
+.call-ctrl-group.visible{display:flex;}
+.call-info{font-size:12px;color:var(--text3);display:flex;align-items:center;gap:8px;margin-right:4px;}
+.call-info strong{color:var(--text);font-weight:600;}
+.ctrl-btn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--transition);}
+.ctrl-btn.on{background:var(--bg3);color:var(--text);}
+.ctrl-btn.on:hover{background:var(--bg4);}
+.ctrl-btn.off{background:rgba(239,68,68,0.15);color:#ef4444;}
+.ctrl-btn.leave{background:#ef4444;color:#fff;}
+.ctrl-btn.leave:hover{background:#dc2626;}
+.ctrl-btn.dimmed{opacity:0.4;}
+
+/* ── In-call content ───────────────────────────── */
+#callWrap{display:flex;height:100%;overflow:hidden;gap:0;}
+.video-grid{flex:1;display:grid;gap:8px;padding:16px;background:var(--bg);align-content:start;overflow-y:auto;}
+.video-grid.solo{grid-template-columns:1fr;}
+.video-grid.duo{grid-template-columns:1fr 1fr;}
+.video-grid.multi{grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
+.video-tile{background:var(--bg2);border-radius:var(--radius);overflow:hidden;position:relative;aspect-ratio:16/9;}
+.video-tile video{width:100%;height:100%;object-fit:cover;display:block;}
+.tile-name{position:absolute;bottom:8px;left:10px;font-size:11px;font-weight:600;color:#fff;background:rgba(0,0,0,0.5);padding:2px 8px;border-radius:20px;}
+.tile-avatar{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--g1),var(--g2));}
+
+/* ── Participants panel ─────────────────────────── */
+.call-sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;transition:width var(--transition);}
+.call-sidebar.hidden{display:none;}
+.call-sidebar-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.7px;padding:14px 16px 10px;border-bottom:1px solid var(--border);}
+.participant-row{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;}
+.participant-av{width:28px;height:28px;border-radius:50%;background:var(--gradient);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;flex-shrink:0;}
 </style>
 
-<div class="topbar">
-<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-meeting"></use></svg>
-<span class="topbar-title">Meeting</span>
-<div class="topbar-right">
-<div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"></use></svg></div>
+<!-- Topbar -->
+<div class="topbar" id="meetingTopbar">
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-meeting"></use></svg>
+  <span class="topbar-title" id="topbarTitle">Meeting</span>
+
+  <!-- In-call controls (hidden until in a call) -->
+  <div class="call-ctrl-group" id="callCtrlGroup">
+    <div class="call-info">
+      <strong id="callTitleLabel"></strong>
+      <span id="callDuration"></span>
+    </div>
+    <button class="ctrl-btn on" id="btnMic" onclick="toggleMic()" title="Mic (M)">
+      <svg class="icon icon-16"><use href="#ic-mic"/></svg>
+    </button>
+    <button class="ctrl-btn on" id="btnCam" onclick="toggleCam()" title="Camera (C)">
+      <svg class="icon icon-16"><use href="#ic-cam"/></svg>
+    </button>
+    <button class="ctrl-btn on" id="btnScreen" onclick="toggleScreen()" title="Screen share">
+      <svg class="icon icon-16"><use href="#ic-screen"/></svg>
+    </button>
+    <button class="ctrl-btn on" id="btnParticipants" onclick="toggleParticipants()" title="Participants">
+      <svg class="icon icon-16"><use href="#ic-users"/></svg>
+    </button>
+    <button class="ctrl-btn leave" onclick="leaveMeeting()" title="Leave (Esc)">
+      <svg class="icon icon-16"><use href="#ic-phone-off"/></svg>
+    </button>
+  </div>
+
+  <div class="topbar-right" id="topbarRight">
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()">
+      <svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+    </div>
+  </div>
 </div>
-</div>
-<div class="content" id="mainContent">
-<div style="padding:48px;text-align:center;color:var(--text3);">Loading…</div>
+
+<div class="content" id="mainContent" style="padding:28px;">
+  <div style="padding:48px;text-align:center;color:var(--text3);">Loading…</div>
 </div>
 
 <!-- Start Meeting Modal -->
@@ -41,67 +104,7 @@
   </div>
 </div>
 
-<!-- In-call overlay -->
-<div class="call-overlay" id="callOverlay">
-  <div class="call-topbar">
-    <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-meeting"/></svg>
-    <span class="call-title" id="callTitle">Meeting</span>
-    <span class="call-duration" id="callDuration"></span>
-    <div class="call-spacer"></div>
-    <button class="pip-minimize-btn" id="btnToggleParticipants" onclick="toggleParticipants()" title="Toggle participants">
-      <svg class="icon icon-18"><use href="#ic-users"/></svg>
-    </button>
-    <button class="pip-minimize-btn" onclick="toggleBrowsePanel()" title="Open whiteboard">
-      <svg class="icon icon-18"><use href="#ic-whiteboard"/></svg>
-    </button>
-  </div>
-  <div class="call-body">
-    <div class="video-grid" id="videoGrid"></div>
-    <!-- Left browse panel (replaces video grid when open) -->
-    <div id="leftBrowsePanel" style="display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0;background:var(--bg1);">
-      <div class="browse-tab-bar">
-        <button class="browse-tab active" data-page="whiteboard" onclick="selectTab('whiteboard')">Whiteboard</button>
-      </div>
-      <div id="leftBrowseContent" style="flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;"></div>
-    </div>
-    <!-- Right panel: participants -->
-    <div class="call-sidebar" id="callRightPanel">
-      <div class="call-sidebar-title">Participants</div>
-      <div id="participantView" style="flex:1;overflow-y:auto;">
-        <div id="participantList"></div>
-      </div>
-    </div>
-  </div>
-  <div class="call-controls">
-    <div class="ctrl-wrap">
-      <button class="ctrl-btn on" id="btnMic" onclick="toggleMic()">
-        <svg class="icon icon-18"><use href="#ic-mic"/></svg>
-      </button>
-      <div class="ctrl-label">Mic</div>
-    </div>
-    <div class="ctrl-wrap">
-      <button class="ctrl-btn on" id="btnCam" onclick="toggleCam()">
-        <svg class="icon icon-18"><use href="#ic-cam"/></svg>
-      </button>
-      <div class="ctrl-label">Camera</div>
-    </div>
-    <div class="ctrl-wrap">
-      <button class="ctrl-btn on" id="btnScreen" onclick="toggleScreen()">
-        <svg class="icon icon-18"><use href="#ic-screen"/></svg>
-      </button>
-      <div class="ctrl-label">Share</div>
-    </div>
-    <div class="ctrl-wrap">
-      <button class="ctrl-btn leave" onclick="leaveMeeting()">
-        <svg class="icon icon-18"><use href="#ic-phone-off"/></svg>
-      </button>
-      <div class="ctrl-label" style="color:#ef4444">Leave</div>
-    </div>
-  </div>
-</div>
-
 <script>
-
 (function(){
   const t = localStorage.getItem('theme') || 'dark';
   document.documentElement.setAttribute('data-theme', t);
@@ -114,156 +117,27 @@ function toggleTheme(){
   document.getElementById('themeBtn').querySelector('use').setAttribute('href',n==='dark'?'#ic-sun':'#ic-moon');
 }
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let me = null;
-let meetings = [];
-let iceServers = [];
-let socket = null;
-let localStream = null;
-let screenStream = null;
-let peerConnections = {};
-let peerNames = {};
-let currentMeeting = null;
-let callStartTime = null;
-let durationInterval = null;
-let micOn = true, camOn = true, screenOn = false;
+// ── State ──────────────────────────────────────────────────────────────────────
+var me, meetings=[], iceServers=[], socket=null, localStream=null, screenStream=null;
+var peerConnections={}, peerNames={}, currentMeeting=null;
+var callStartTime=null, durationInterval=null;
+var micOn=true, camOn=true, screenOn=false, participantsVisible=true;
 
-// ── Participants panel toggle ─────────────────────────────────────────────────
-function toggleParticipants() {
-  const panel = document.getElementById('callRightPanel');
-  const btn   = document.getElementById('btnToggleParticipants');
-  const hidden = panel.style.display === 'none';
-  panel.style.display = hidden ? '' : 'none';
-  btn.classList.toggle('dimmed', !hidden);
-}
-
-// ── Left-panel browse (tabs) ──────────────────────────────────────────────────
-let activeBrowsePage = null;
-
-function toggleBrowsePanel() {
-  const panel = document.getElementById('leftBrowsePanel');
-  if (panel.style.display === 'none') showBrowsePanel();
-  else hideBrowsePanel();
-}
-
-function showBrowsePanel() {
-  document.getElementById('videoGrid').style.display = 'none';
-  document.getElementById('leftBrowsePanel').style.display = 'flex';
-  if (!activeBrowsePage) selectTab('whiteboard');
-}
-
-function hideBrowsePanel() {
-  if (window.__browseCleanup) {
-    try { window.__browseCleanup(); } catch(e) {}
-    window.__browseCleanup = null;
-  }
-  activeBrowsePage = null;
-  document.getElementById('leftBrowseContent').innerHTML = '';
-  document.getElementById('leftBrowsePanel').style.display = 'none';
-  document.getElementById('videoGrid').style.display = '';
-}
-
-function selectTab(page) {
-  if (activeBrowsePage === page) return;
-  if (window.__browseCleanup) {
-    try { window.__browseCleanup(); } catch(e) {}
-    window.__browseCleanup = null;
-  }
-  activeBrowsePage = page;
-  document.querySelectorAll('.browse-tab').forEach(t => {
-    t.classList.toggle('active', t.dataset.page === page);
-  });
-  browseLoad(page);
-}
-
-async function browseLoad(page) {
-  const bv = document.getElementById('leftBrowseContent');
-  bv.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);">Loading…</div>';
-
-  const html = await fetch('/partials/' + page + '.html').then(r => r.ok ? r.text() : null).catch(() => null);
-  if (!html) {
-    bv.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text3);">Could not load.</div>';
-    return;
-  }
-
-  const tmp = document.createElement('div');
-  tmp.innerHTML = html;
-  tmp.querySelector('.topbar')?.remove();
-  const scripts = [...tmp.querySelectorAll('script')].map(s => s.textContent);
-  tmp.querySelectorAll('script').forEach(s => s.remove());
-
-  bv.innerHTML = tmp.innerHTML;
-
-  const savedCleanup = window.__cleanup;
-  scripts.forEach(text => {
-    if (!text.trim()) return;
-    const el = document.createElement('script');
-    el.textContent = `(function(){\n${text}\n})();`;
-    document.body.appendChild(el);
-    document.body.removeChild(el);
-  });
-
-  if (window.__cleanup !== savedCleanup) {
-    window.__browseCleanup = window.__cleanup;
-    window.__cleanup = savedCleanup;
-  }
-}
-
-// ── Boot ──────────────────────────────────────────────────────────────────────
-async function boot() {
-  me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
-  if (!me || me.error) { location.href='/login'; return; }
-
-  const [iceResp, mtgResp] = await Promise.all([
-    fetch('/api/meetings/ice-config').then(r=>r.json()).catch(()=>({ice_servers:[]})),
-    fetch('/api/meetings').then(r=>r.json()).catch(()=>[]),
-  ]);
-  iceServers = iceResp.ice_servers || [];
-  meetings   = mtgResp;
-
-  renderLobby();
-  initSocket();
-  setInterval(refreshMeetings, 8000);
-
-  window.__cleanup = function() {
-    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-    if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
-    Object.values(peerConnections).forEach(pc => pc.close());
-    peerConnections = {};
-    clearInterval(durationInterval);
-    if (socket) { socket.disconnect(); socket = null; }
-  };
-}
-
-function initials(name) {
-  return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-}
-
-// ── Socket ────────────────────────────────────────────────────────────────────
+// ── Socket ─────────────────────────────────────────────────────────────────────
 function initSocket() {
   socket = io();
   socket.emit('user_join', {user_id: me.id});
-  socket.on('meeting:peers', ({peers}) => {
-    peers.forEach(p => { peerNames[p.id] = p.name; createOffer(p.id); });
-    renderParticipants();
-  });
-  socket.on('meeting:peer-joined', ({id, name}) => {
-    peerNames[id] = name; ensurePeerConnection(id); renderParticipants();
-  });
-  socket.on('meeting:peer-left', ({id}) => { closePeer(id); renderParticipants(); });
-  socket.on('meeting:signal', async ({from, data}) => {
-    if (data.type === 'offer') await handleOffer(from, data);
-    else if (data.type === 'answer') {
-      const pc = peerConnections[from];
-      if (pc) await pc.setRemoteDescription(new RTCSessionDescription(data));
-    } else if (data.candidate) {
-      const pc = peerConnections[from];
-      if (pc) await pc.addIceCandidate(new RTCIceCandidate(data)).catch(()=>{});
-    }
+  socket.on('meeting:peers',      ({peers}) => { peers.forEach(p => { peerNames[p.id]=p.name; createOffer(p.id); }); renderParticipants(); });
+  socket.on('meeting:peer-joined',({id,name}) => { peerNames[id]=name; ensurePeerConnection(id); renderParticipants(); });
+  socket.on('meeting:peer-left',  ({id}) => { closePeer(id); renderParticipants(); });
+  socket.on('meeting:signal', async ({from,data}) => {
+    if (data.type==='offer') await handleOffer(from,data);
+    else if (data.type==='answer') { const pc=peerConnections[from]; if(pc) await pc.setRemoteDescription(new RTCSessionDescription(data)); }
+    else if (data.candidate) { const pc=peerConnections[from]; if(pc) await pc.addIceCandidate(new RTCIceCandidate(data)).catch(()=>{}); }
   });
 }
 
-// ── WebRTC ────────────────────────────────────────────────────────────────────
+// ── WebRTC ─────────────────────────────────────────────────────────────────────
 function ensurePeerConnection(peerId) {
   if (peerConnections[peerId]) return peerConnections[peerId];
   const pc = new RTCPeerConnection({iceServers});
@@ -272,109 +146,113 @@ function ensurePeerConnection(peerId) {
   const remoteStream = new MediaStream();
   pc.ontrack = e => { remoteStream.addTrack(e.track); updateRemoteVideo(peerId, remoteStream); };
   pc.onicecandidate = e => { if (e.candidate) signal(peerId, e.candidate.toJSON()); };
-  pc.onconnectionstatechange = () => {
-    if (['failed','disconnected','closed'].includes(pc.connectionState)) { closePeer(peerId); renderParticipants(); }
-  };
-  addRemoteTile(peerId);
   return pc;
 }
 async function createOffer(peerId) {
   const pc = ensurePeerConnection(peerId);
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
-  signal(peerId, {type: offer.type, sdp: offer.sdp});
+  signal(peerId, offer);
 }
-async function handleOffer(peerId, offerData) {
-  peerNames[peerId] = peerNames[peerId] || 'Peer';
-  const pc = ensurePeerConnection(peerId);
-  await pc.setRemoteDescription(new RTCSessionDescription(offerData));
+async function handleOffer(from, offer) {
+  const pc = ensurePeerConnection(from);
+  await pc.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
-  signal(peerId, {type: answer.type, sdp: answer.sdp});
+  signal(from, answer);
 }
-function signal(toId, data) {
-  socket.emit('meeting:signal', {to: toId, room_code: currentMeeting.room_code, data});
-}
-function closePeer(peerId) {
-  peerConnections[peerId]?.close();
-  delete peerConnections[peerId]; delete peerNames[peerId];
-  document.getElementById(`tile-${peerId}`)?.remove();
+function signal(to, data) { socket.emit('meeting:signal', {to, data}); }
+function closePeer(id) {
+  if (peerConnections[id]) { peerConnections[id].close(); delete peerConnections[id]; }
+  delete peerNames[id];
+  const tile = document.getElementById('tile-'+id);
+  if (tile) tile.remove();
   updateGridLayout();
 }
 
-// ── Video tiles ───────────────────────────────────────────────────────────────
+// ── Video tiles ────────────────────────────────────────────────────────────────
 function addLocalTile() {
   const grid = document.getElementById('videoGrid');
+  if (!grid) return;
   const tile = document.createElement('div');
-  tile.className = 'video-tile local'; tile.id = 'tile-local';
+  tile.className = 'video-tile'; tile.id = 'tile-local';
   const video = document.createElement('video');
   video.autoplay = true; video.muted = true; video.playsInline = true;
   video.srcObject = localStream;
   tile.appendChild(video);
   const label = document.createElement('div');
-  label.className = 'tile-label';
-  label.textContent = (me.name || 'You') + ' (You)';
-  tile.appendChild(label);
-  grid.appendChild(tile);
-  updateGridLayout();
-}
-function addRemoteTile(peerId) {
-  if (document.getElementById(`tile-${peerId}`)) return;
-  const grid = document.getElementById('videoGrid');
-  const tile = document.createElement('div');
-  tile.className = 'video-tile'; tile.id = `tile-${peerId}`;
-  const avatar = document.createElement('div');
-  avatar.className = 'tile-avatar';
-  avatar.textContent = initials(peerNames[peerId] || '?');
-  tile.appendChild(avatar);
-  const label = document.createElement('div');
-  label.className = 'tile-label';
-  label.textContent = peerNames[peerId] || 'Connecting…';
+  label.className = 'tile-name'; label.textContent = (me?.name || 'You') + ' (you)';
   tile.appendChild(label);
   grid.appendChild(tile);
   updateGridLayout();
 }
 function updateRemoteVideo(peerId, stream) {
-  const tile = document.getElementById(`tile-${peerId}`);
-  if (!tile) return;
-  let video = tile.querySelector('video');
-  if (!video) {
-    video = document.createElement('video');
+  let tile = document.getElementById('tile-'+peerId);
+  if (!tile) {
+    tile = document.createElement('div');
+    tile.className = 'video-tile'; tile.id = 'tile-'+peerId;
+    const video = document.createElement('video');
     video.autoplay = true; video.playsInline = true;
-    tile.insertBefore(video, tile.firstChild);
-    tile.querySelector('.tile-avatar')?.remove();
+    tile.appendChild(video);
+    const label = document.createElement('div');
+    label.className = 'tile-name'; label.textContent = peerNames[peerId] || peerId;
+    tile.appendChild(label);
+    document.getElementById('videoGrid')?.appendChild(tile);
+    updateGridLayout();
   }
-  video.srcObject = stream;
+  tile.querySelector('video').srcObject = stream;
 }
 function updateGridLayout() {
   const grid = document.getElementById('videoGrid');
   if (!grid) return;
   const n = grid.children.length;
-  grid.style.gridTemplateColumns = n <= 1 ? '1fr' : n <= 2 ? '1fr 1fr' : n <= 4 ? '1fr 1fr' : 'repeat(3,1fr)';
-  grid.style.gridTemplateRows    = n <= 2 ? '1fr' : n <= 4 ? '1fr 1fr' : 'auto';
+  grid.className = 'video-grid ' + (n<=1?'solo':n<=2?'duo':'multi');
 }
+
+// ── Participants ───────────────────────────────────────────────────────────────
 function renderParticipants() {
   const list = document.getElementById('participantList');
   if (!list) return;
-  const all = [{id:'local', name:(me.name||'You')+' (You)'}];
-  Object.entries(peerNames).forEach(([id, name]) => all.push({id, name}));
+  const all = [{id:'local', name:(me?.name||'You')+'  (you)'}, ...Object.entries(peerNames).map(([id,name])=>({id,name}))];
   list.innerHTML = all.map(p => `
-    <div class="participant-item">
-      <div class="participant-avatar">${initials(p.name)}</div>
-      <div class="participant-name">${p.name}</div>
+    <div class="participant-row">
+      <div class="participant-av">${p.name.slice(0,2).toUpperCase()}</div>
+      <span>${p.name}</span>
     </div>`).join('');
 }
+function toggleParticipants() {
+  participantsVisible = !participantsVisible;
+  const panel = document.getElementById('callSidebar');
+  if (panel) panel.classList.toggle('hidden', !participantsVisible);
+  document.getElementById('btnParticipants').classList.toggle('dimmed', !participantsVisible);
+}
 
-// ── Join / Leave ──────────────────────────────────────────────────────────────
+// ── Join / Leave ───────────────────────────────────────────────────────────────
 async function joinMeeting(meeting) {
   currentMeeting = meeting;
-  document.getElementById('callTitle').textContent = meeting.title;
-  document.getElementById('videoGrid').innerHTML = '';
-  peerConnections = {}; peerNames = {};
+  peerConnections={}; peerNames={};
   try {
-    localStream = await navigator.mediaDevices.getUserMedia({video: true, audio: true});
-  } catch (e) { alert('Could not access camera/microphone: ' + e.message); return; }
-  document.getElementById('callOverlay').classList.add('active');
+    localStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+  } catch(e) { alert('Could not access camera/microphone: '+e.message); return; }
+
+  // Switch topbar to call mode
+  document.getElementById('topbarTitle').textContent = '';
+  document.getElementById('callTitleLabel').textContent = meeting.title;
+  document.getElementById('callCtrlGroup').classList.add('visible');
+
+  // Render call layout in content area (no padding)
+  const content = document.getElementById('mainContent');
+  content.style.padding = '0';
+  content.style.overflow = 'hidden';
+  content.innerHTML = `
+    <div id="callWrap">
+      <div class="video-grid solo" id="videoGrid"></div>
+      <div class="call-sidebar" id="callSidebar">
+        <div class="call-sidebar-title">Participants</div>
+        <div id="participantList"></div>
+      </div>
+    </div>`;
+
   addLocalTile(); renderParticipants();
   callStartTime = Date.now();
   durationInterval = setInterval(() => {
@@ -382,33 +260,42 @@ async function joinMeeting(meeting) {
     const el = document.getElementById('callDuration');
     if (el) el.textContent = Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   }, 1000);
+  micOn=true; camOn=true; screenOn=false; participantsVisible=true;
+  ['btnMic','btnCam','btnScreen'].forEach(id => { const b=document.getElementById(id); if(b) b.className='ctrl-btn on'; });
   socket.emit('meeting:join', {room_code: meeting.room_code});
 }
 
 async function leaveMeeting() {
-  hideBrowsePanel();
-  if (currentMeeting && socket) socket.emit('meeting:leave', {room_code: currentMeeting.room_code});
+  if (!currentMeeting) return;
+  if (socket) socket.emit('meeting:leave', {room_code: currentMeeting.room_code});
   Object.values(peerConnections).forEach(pc => pc.close());
-  peerConnections = {}; peerNames = {};
-  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
-  if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
+  peerConnections={}; peerNames={};
+  if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream=null; }
+  if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream=null; }
   clearInterval(durationInterval);
-  document.getElementById('callOverlay').classList.remove('active');
-  document.getElementById('videoGrid').innerHTML = '';
-  currentMeeting = null; micOn = true; camOn = true; screenOn = false;
-  ['btnMic','btnCam','btnScreen'].forEach(id => { const b = document.getElementById(id); if(b) b.className='ctrl-btn on'; });
+  currentMeeting=null;
+
+  // Restore topbar
+  document.getElementById('topbarTitle').textContent = 'Meeting';
+  document.getElementById('callCtrlGroup').classList.remove('visible');
+  document.getElementById('callDuration').textContent = '';
+
+  // Restore content
+  const content = document.getElementById('mainContent');
+  content.style.padding = '';
+  content.style.overflow = '';
   refreshMeetings();
 }
 
-// ── Controls ──────────────────────────────────────────────────────────────────
+// ── Controls ───────────────────────────────────────────────────────────────────
 function toggleMic() {
   micOn = !micOn;
-  localStream?.getAudioTracks().forEach(t => t.enabled = micOn);
+  localStream?.getAudioTracks().forEach(t => t.enabled=micOn);
   document.getElementById('btnMic').className = `ctrl-btn ${micOn?'on':'off'}`;
 }
 function toggleCam() {
   camOn = !camOn;
-  localStream?.getVideoTracks().forEach(t => t.enabled = camOn);
+  localStream?.getVideoTracks().forEach(t => t.enabled=camOn);
   const v = document.querySelector('#tile-local video');
   if (v) v.style.display = camOn ? '' : 'none';
   document.getElementById('btnCam').className = `ctrl-btn ${camOn?'on':'off'}`;
@@ -424,26 +311,27 @@ async function toggleScreen() {
       const lv = document.querySelector('#tile-local video');
       if (lv) lv.srcObject = screenStream;
       track.onended = () => { screenOn=true; toggleScreen(); };
-      screenOn = true;
+      screenOn=true;
       document.getElementById('btnScreen').className = 'ctrl-btn off';
     } catch(e) {}
   } else {
-    const camTrack = localStream?.getVideoTracks()[0];
-    if (camTrack) Object.values(peerConnections).forEach(pc => {
-      pc.getSenders().find(s=>s.track?.kind==='video')?.replaceTrack(camTrack);
+    screenStream?.getTracks().forEach(t => t.stop()); screenStream=null;
+    const track = localStream?.getVideoTracks()[0];
+    if (track) Object.values(peerConnections).forEach(pc => {
+      pc.getSenders().find(s=>s.track?.kind==='video')?.replaceTrack(track);
     });
-    screenStream?.getTracks().forEach(t=>t.stop()); screenStream=null;
     const lv = document.querySelector('#tile-local video');
-    if (lv) lv.srcObject = localStream;
-    screenOn = false;
+    if (lv && localStream) lv.srcObject = localStream;
+    screenOn=false;
     document.getElementById('btnScreen').className = 'ctrl-btn on';
   }
 }
 
-// ── Lobby ─────────────────────────────────────────────────────────────────────
+// ── Lobby ──────────────────────────────────────────────────────────────────────
 function renderLobby() {
   const c = document.getElementById('mainContent');
-  if (!c) return;
+  if (!c || currentMeeting) return;
+  c.style.padding = '28px';
   c.innerHTML = `
     <div class="lobby-header">
       <div class="lobby-title">Active Meetings</div>
@@ -470,17 +358,17 @@ function renderLobby() {
       <div class="meeting-card-meta"><span>Host: ${m.host_name}</span><span>${m.participant_count} online</span></div>
       <div class="meeting-card-actions">
         <button class="btn btn-primary" onclick="joinMeeting(${JSON.stringify(m).replace(/"/g,'&quot;')})">Join</button>
-        ${canEnd ? `<button class="btn btn-ghost" onclick="endMeeting(${m.id})">End</button>` : ''}
+        ${canEnd?`<button class="btn" onclick="endMeeting(${m.id})">End</button>`:''}
       </div>`;
     grid.appendChild(card);
   });
 }
 async function refreshMeetings() {
   meetings = await fetch('/api/meetings').then(r=>r.json()).catch(()=>[]);
-  if (!document.getElementById('callOverlay')?.classList.contains('active')) renderLobby();
+  if (!currentMeeting) renderLobby();
 }
 
-// ── Start meeting modal ───────────────────────────────────────────────────────
+// ── Modal ──────────────────────────────────────────────────────────────────────
 async function openModal() {
   const sel = document.getElementById('newMeetingClass');
   if (me.role==='teacher'||me.role==='admin') {
@@ -504,6 +392,29 @@ async function endMeeting(id) {
   refreshMeetings();
 }
 
+// ── Boot ───────────────────────────────────────────────────────────────────────
+async function boot() {
+  me = await fetch('/api/auth/me').then(r=>r.json()).catch(()=>null);
+  if (!me||me.error) { location.href='/login'; return; }
+  const [iceResp, mtgResp] = await Promise.all([
+    fetch('/api/meetings/ice-config').then(r=>r.json()).catch(()=>({ice_servers:[]})),
+    fetch('/api/meetings').then(r=>r.json()).catch(()=>[]),
+  ]);
+  iceServers = iceResp.ice_servers||[];
+  meetings   = mtgResp;
+  renderLobby();
+  initSocket();
+  setInterval(refreshMeetings, 8000);
+  window.__cleanup = function() {
+    if (localStream) { localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
+    if (screenStream) { screenStream.getTracks().forEach(t=>t.stop()); screenStream=null; }
+    Object.values(peerConnections).forEach(pc=>pc.close());
+    peerConnections={};
+    clearInterval(durationInterval);
+    if (socket) { socket.disconnect(); socket=null; }
+  };
+}
+
 document.addEventListener('keydown', e => {
   if (!currentMeeting) return;
   if (e.key==='m') toggleMic();
@@ -512,5 +423,4 @@ document.addEventListener('keydown', e => {
 });
 
 boot();
-
 </script>
