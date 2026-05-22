@@ -64,6 +64,7 @@ _DEFAULTS = {
             {"label": "Users",       "icon": "ic-groups",     "path": "/admin/users"},
             {"label": "School",      "icon": "ic-schedule",   "path": "/admin/school"},
             {"label": "Performance", "icon": "ic-chart",      "path": "/admin/performance"},
+            {"label": "Flagged",     "icon": "ic-flag",       "path": "/admin/flagged"},
             {"label": "Settings",    "icon": "ic-settings",   "path": "/admin/settings"},
             {"label": "Navigation",  "icon": "ic-menu",       "path": "/admin/nav"},
             {"label": "Terminal",    "icon": "ic-terminal",   "path": "/admin/terminal"},

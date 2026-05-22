@@ -301,22 +301,6 @@ function renderAll(s) {
       <div style="font-size:12px;color:var(--text3);margin-top:10px;">Install <code style="font-family:monospace;background:var(--bg3);padding:1px 5px;border-radius:4px">coturn</code> on your server for self-hosted TURN. See the README for a minimal config.</div>
     </div>
 
-    <!-- Flagged Messages -->
-    <div class="section" id="section-flags">
-      <div class="section-head">
-        <div class="section-icon" style="background:linear-gradient(135deg,rgba(239,68,68,0.15),rgba(251,191,36,0.15))">
-          <svg class="icon icon-18" style="color:#ef4444"><use href="#ic-flag"/></svg>
-        </div>
-        <div>
-          <div class="section-title">Flagged Messages</div>
-          <div class="section-desc">Messages flagged by AI as potentially harmful — review and decide what to do</div>
-        </div>
-      </div>
-      <div id="flagsBody">
-        <div style="font-size:13px;color:var(--text3)">Enable <strong>Message Scanning</strong> above to start collecting flags.</div>
-      </div>
-    </div>
-
     <!-- Customize -->
     <div class="section" id="section-customize">
       <div class="section-head">
@@ -907,75 +891,6 @@ window.saveBranding     = saveBranding;
 window.syncColorBox     = syncColorBox;
 
 /* ── Boot ─────────────────────────────────────────────── */
-/* ── Flagged messages ── */
-var _flagsStatus = 'pending';
-async function loadFlags(status) {
-  _flagsStatus = status || _flagsStatus;
-  const body = document.getElementById('flagsBody');
-  if (!body) return;
-  body.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:8px 0">Loading…</div>';
-  const flags = await fetch('/api/admin/flagged-messages?status=' + _flagsStatus)
-    .then(r => r.json()).catch(() => null);
-  if (!flags) { body.innerHTML = '<div style="font-size:13px;color:var(--text3)">Failed to load.</div>'; return; }
-
-  const tabs = ['pending','dismissed','actioned'];
-  let html = '<div style="display:flex;gap:6px;margin-bottom:14px;">';
-  tabs.forEach(t => {
-    html += `<button onclick="loadFlags('${t}')" style="padding:4px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:${_flagsStatus===t?'var(--g1)':'var(--bg3)'};color:${_flagsStatus===t?'#fff':'var(--text2)'};cursor:pointer;font-size:12px;font-weight:600;">${t.charAt(0).toUpperCase()+t.slice(1)}</button>`;
-  });
-  html += '</div>';
-
-  if (!flags.length) {
-    html += `<div style="font-size:13px;color:var(--text3);padding:16px 0;text-align:center;">No ${_flagsStatus} flags.</div>`;
-    body.innerHTML = html; return;
-  }
-
-  flags.forEach(f => {
-    const sev = Math.round(f.severity * 100);
-    const sevColor = sev >= 80 ? '#ef4444' : sev >= 50 ? '#f59e0b' : '#3dd68c';
-    const date = new Date(f.flagged_at).toLocaleString();
-    html += `
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
-            <span style="font-size:13px;font-weight:600;color:var(--text)">${escAttr(f.sender_name)}</span>
-            <svg class="icon icon-12" style="color:var(--text3);flex-shrink:0"><use href="#ic-chevright"/></svg>
-            <span style="font-size:13px;color:var(--text2)">${escAttr(f.recipient_name)}</span>
-            <span style="font-size:11px;color:var(--text3);margin-left:4px">${date}</span>
-          </div>
-          <div style="font-size:13px;color:var(--text);background:var(--bg3);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:8px;word-break:break-word;">${escAttr(f.content)}</div>
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-            <div style="display:flex;align-items:center;gap:6px;">
-              <div style="width:80px;height:5px;border-radius:3px;background:var(--bg4);overflow:hidden;">
-                <div style="width:${sev}%;height:100%;background:${sevColor};border-radius:3px;"></div>
-              </div>
-              <span style="font-size:11px;font-weight:600;color:${sevColor}">${sev}%</span>
-            </div>
-            <span style="font-size:12px;color:var(--text3);font-style:italic">${escAttr(f.reason)}</span>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;align-self:flex-start;">
-          ${f.status==='pending' ? `
-          <button onclick="flagAction(${f.id},'dismissed')" style="padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:12px;">Dismiss</button>
-          <button onclick="flagAction(${f.id},'actioned')" style="padding:4px 10px;border-radius:var(--radius-sm);border:none;background:#ef4444;color:#fff;cursor:pointer;font-size:12px;font-weight:600;">Action</button>
-          ` : `<span style="font-size:12px;color:var(--text3);padding:4px 0">${f.status}</span>`}
-        </div>
-      </div>
-    </div>`;
-  });
-  body.innerHTML = html;
-}
-
-async function flagAction(id, status) {
-  await fetch('/api/admin/flagged-messages/' + id, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status }),
-  });
-  loadFlags();
-}
-
 async function boot() {
   const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
 
@@ -990,7 +905,6 @@ async function boot() {
   renderAll(s);
   initBranding(branding);
   checkUpdate(true);
-  if (s.message_scan_enabled) loadFlags();
 }
 
 async function checkUpdate(silent) {

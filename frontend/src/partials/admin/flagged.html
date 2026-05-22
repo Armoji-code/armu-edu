@@ -1,0 +1,136 @@
+<div class="topbar">
+  <svg class="icon icon-20" style="color:#ef4444"><use href="#ic-flag"/></svg>
+  <span class="topbar-title">Flagged Messages</span>
+  <div class="topbar-right">
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+      <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+    </div>
+  </div>
+</div>
+
+<div class="content" style="max-width:900px">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+    <div>
+      <div style="font-size:15px;font-weight:600;color:var(--text)">AI-flagged messages</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:2px">Messages flagged as potentially harmful — review and decide what to do</div>
+    </div>
+    <button class="btn" onclick="loadFlags()">
+      <svg class="icon icon-14"><use href="#ic-settings"/></svg> Refresh
+    </button>
+  </div>
+
+  <div id="scanDisabledBanner" style="display:none;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;font-size:13px;color:#f87171;">
+    <strong>Message Scanning is disabled.</strong>
+    Enable it in <a href="/admin/settings" style="color:#f87171;text-decoration:underline;" onclick="navigate('/admin/settings');return false;">Settings</a> to start collecting flags.
+  </div>
+
+  <!-- Status filter tabs -->
+  <div style="display:flex;gap:6px;margin-bottom:18px;" id="flagTabs"></div>
+
+  <!-- Flags list -->
+  <div id="flagsBody">
+    <div style="font-size:13px;color:var(--text3);padding:24px 0;text-align:center">Loading…</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const t = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', t);
+  const btn = document.getElementById('themeBtn');
+  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
+})();
+
+var _flagsStatus = 'pending';
+
+function renderTabs() {
+  const tabs = ['pending','dismissed','actioned'];
+  const container = document.getElementById('flagTabs');
+  container.innerHTML = tabs.map(t =>
+    `<button onclick="loadFlags('${t}')" style="padding:5px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:${_flagsStatus===t?'var(--g1)':'var(--bg3)'};color:${_flagsStatus===t?'#fff':'var(--text2)'};cursor:pointer;font-size:12px;font-weight:600;transition:background 0.15s;">${t.charAt(0).toUpperCase()+t.slice(1)}</button>`
+  ).join('');
+}
+
+async function loadFlags(status) {
+  if (status) _flagsStatus = status;
+  renderTabs();
+  const body = document.getElementById('flagsBody');
+  body.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:24px 0;text-align:center">Loading…</div>';
+
+  const flags = await fetch('/api/admin/flagged-messages?status=' + _flagsStatus)
+    .then(r => r.json()).catch(() => null);
+
+  if (!flags) {
+    body.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:24px 0;text-align:center">Failed to load.</div>';
+    return;
+  }
+
+  if (!flags.length) {
+    body.innerHTML = `<div style="font-size:13px;color:var(--text3);padding:32px 0;text-align:center;">No ${_flagsStatus} flags.</div>`;
+    return;
+  }
+
+  let html = '';
+  flags.forEach(f => {
+    const sev = Math.round(f.severity * 100);
+    const sevColor = sev >= 80 ? '#ef4444' : sev >= 50 ? '#f59e0b' : '#3dd68c';
+    const date = new Date(f.flagged_at).toLocaleString();
+    html += `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:12px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+            <span style="font-size:13px;font-weight:600;color:var(--text)">${esc(f.sender_name)}</span>
+            <svg class="icon icon-12" style="color:var(--text3);flex-shrink:0"><use href="#ic-chevright"/></svg>
+            <span style="font-size:13px;color:var(--text2)">${esc(f.recipient_name)}</span>
+            <span style="font-size:11px;color:var(--text3);margin-left:4px">${date}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text);background:var(--bg3);border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:10px;word-break:break-word;line-height:1.5;">${esc(f.content)}</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="width:80px;height:5px;border-radius:3px;background:var(--bg4);overflow:hidden;">
+                <div style="width:${sev}%;height:100%;background:${sevColor};border-radius:3px;"></div>
+              </div>
+              <span style="font-size:11px;font-weight:600;color:${sevColor}">${sev}%</span>
+            </div>
+            <span style="font-size:12px;color:var(--text3);font-style:italic">${esc(f.reason)}</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;align-self:flex-start;margin-top:2px;">
+          ${f.status==='pending' ? `
+          <button onclick="flagAction(${f.id},'dismissed')" style="padding:5px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:12px;">Dismiss</button>
+          <button onclick="flagAction(${f.id},'actioned')" style="padding:5px 12px;border-radius:var(--radius-sm);border:none;background:#ef4444;color:#fff;cursor:pointer;font-size:12px;font-weight:600;">Action</button>
+          ` : `<span style="font-size:12px;color:var(--text3);padding:5px 0;text-transform:capitalize;">${f.status}</span>`}
+        </div>
+      </div>
+    </div>`;
+  });
+  body.innerHTML = html;
+}
+
+async function flagAction(id, status) {
+  await fetch('/api/admin/flagged-messages/' + id, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+  loadFlags();
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.loadFlags  = loadFlags;
+window.flagAction = flagAction;
+
+async function boot() {
+  const s = await fetch('/api/admin/settings').then(r => r.json()).catch(() => null);
+  if (s && !s.message_scan_enabled) {
+    document.getElementById('scanDisabledBanner').style.display = 'block';
+  }
+  loadFlags();
+}
+
+boot();
+</script>
