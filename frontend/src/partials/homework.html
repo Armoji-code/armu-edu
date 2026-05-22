@@ -69,15 +69,9 @@ let allTests = [];
 let hwFilter = 'all';
 let checkedIds = new Set(JSON.parse(localStorage.getItem('hw_checked') || '[]'));
 
-const SUBJECT_ICON = {
-  math:'📐', algebra:'📐', geometry:'📐', calculus:'📐',
-  chemistry:'⚗️', physics:'⚡', biology:'🔬', science:'🔬',
-  english:'📚', literature:'📚', history:'📖', geography:'🌍',
-  art:'🎨', music:'🎵', pe:'🏃', computer:'💻',
-};
 function subjectIcon(name) {
-  const lower = (name || '').toLowerCase();
-  return Object.entries(SUBJECT_ICON).find(([k]) => lower.includes(k))?.[1] ?? '📝';
+  const parts = (name || '??').trim().split(/\s+/);
+  return parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (name || '??').slice(0,2).toUpperCase();
 }
 
 /* ── Tab ────────────────────────────────────────────── */
