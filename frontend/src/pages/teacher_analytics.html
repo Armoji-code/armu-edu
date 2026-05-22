@@ -75,7 +75,7 @@
   .st-row:hover{background:var(--bg3);}
   .st-row.header{background:var(--bg3);font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;}
   .st-row.header:hover{background:var(--bg3);}
-  .score-pill{display:inline-flex;padding:2px 10px;border-radius:100px;font-size:12px;font-weight:600;font-family:'DM Mono',monospace;}
+  .score-pill{display:inline-flex;padding:2px 10px;border-radius:100px;font-size:12px;font-weight:600;font-family:inherit;}
 
   /* Canvas chart */
   .chart-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:24px;}
@@ -230,7 +230,7 @@ function renderSubject(s) {
             <span style="font-size:13px;">${st.name}</span>
             <span style="font-size:11px;color:var(--text3);">${st.count} grade${st.count !== 1 ? 's' : ''}</span>
           </div>
-          <div style="text-align:center;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:${col};">${st.avg !== null ? st.avg : '—'}</div>
+          <div style="text-align:center;font-family:inherit;font-size:13px;font-weight:600;color:${col};">${st.avg !== null ? st.avg : '—'}</div>
           <div style="text-align:center;"><span class="score-pill" style="background:${col}22;color:${col};">${gradeLetter(st.avg)}</span></div>
         </div>`;
       }).join('')}

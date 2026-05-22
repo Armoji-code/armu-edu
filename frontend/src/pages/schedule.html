@@ -47,8 +47,8 @@
   .sched-subject{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .sched-room{font-size:10px;color:var(--text3);margin-top:2px;}
   .sched-time-col{padding:10px;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg3);display:flex;flex-direction:column;justify-content:center;}
-  .sched-period-num{font-size:11px;font-weight:700;color:var(--text2);font-family:'DM Mono',monospace;}
-  .sched-period-time{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-top:2px;}
+  .sched-period-num{font-size:11px;font-weight:700;color:var(--text2);font-family:inherit;}
+  .sched-period-time{font-size:10px;color:var(--text3);font-family:inherit;margin-top:2px;}
   .sched-day-header{padding:12px 10px;font-size:12px;font-weight:600;color:var(--text2);text-align:center;border-right:1px solid var(--border);}
   .sched-day-header:last-child{border-right:none;}
   .sched-day-header.today{color:var(--g1);background:linear-gradient(135deg,rgba(var(--g1-rgb),0.08),rgba(var(--g2-rgb),0.08));}
@@ -138,7 +138,7 @@
     <div style="margin-bottom:20px;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
         <div style="font-size:13px;font-weight:600;color:var(--text);" id="sched-today-label">Loading…</div>
-        <div style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;" id="sched-time-label">--:--</div>
+        <div style="font-size:12px;color:var(--text3);font-family:inherit;" id="sched-time-label">--:--</div>
       </div>
       <div style="height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;">
         <div id="sched-progress-bar" style="height:100%;width:0%;background:var(--gradient);border-radius:3px;transition:width 1s linear;"></div>

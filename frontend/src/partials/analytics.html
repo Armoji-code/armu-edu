@@ -95,7 +95,7 @@ function renderSubject(s) {
             <span style="font-size:13px;">${st.name}</span>
             <span style="font-size:11px;color:var(--text3);">${st.count} grade${st.count !== 1 ? 's' : ''}</span>
           </div>
-          <div style="text-align:center;font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:${col};">${st.avg !== null ? st.avg : '—'}</div>
+          <div style="text-align:center;font-family:inherit;font-size:13px;font-weight:600;color:${col};">${st.avg !== null ? st.avg : '—'}</div>
           <div style="text-align:center;"><span class="score-pill" style="background:${col}22;color:${col};">${gradeLetter(st.avg)}</span></div>
         </div>`;
       }).join('')}

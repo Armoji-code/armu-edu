@@ -42,11 +42,11 @@
       <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Secondary and subtle gray text — adjust if the defaults are hard to read</div>
       <div style="display:flex;flex-direction:column;gap:10px;">
         <div>
-          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px;">Dark mode</div>
+          <div style="font-size:11px;font-family:inherit;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px;">Dark mode</div>
           <div style="display:flex;flex-wrap:wrap;gap:14px;" id="textSwatchesDark"></div>
         </div>
         <div>
-          <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px;">Light mode</div>
+          <div style="font-size:11px;font-family:inherit;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:6px;">Light mode</div>
           <div style="display:flex;flex-wrap:wrap;gap:14px;" id="textSwatchesLight"></div>
         </div>
       </div>
@@ -56,7 +56,7 @@
       <div class="setting-label" style="margin-bottom:10px;">Typography</div>
       <div style="display:flex;flex-direction:column;gap:12px;">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;min-width:52px;">Font</span>
+          <span style="font-size:11px;font-family:inherit;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;min-width:52px;">Font</span>
           <select id="ap_font_family" style="padding:7px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;outline:none;cursor:pointer;" onchange="previewStudentFont()">
             <option value="">School default (Trebuchet MS)</option>
             <optgroup label="System fonts">
@@ -82,12 +82,12 @@
           <span id="ap_font_preview" style="font-size:13px;color:var(--text2);transition:font-family 0.2s;min-width:160px;">The quick brown fox</span>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;min-width:52px;">Size</span>
+          <span style="font-size:11px;font-family:inherit;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;min-width:52px;">Size</span>
           <input type="range" id="ap_font_size" min="11" max="20" value="14" style="width:110px;accent-color:var(--g1);" oninput="document.getElementById('ap_font_size_lbl').textContent=this.value+'px'">
-          <span id="ap_font_size_lbl" style="font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);min-width:32px;">14px</span>
+          <span id="ap_font_size_lbl" style="font-size:12px;font-family:inherit;color:var(--text3);min-width:32px;">14px</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;min-width:52px;">Weight</span>
+          <span style="font-size:11px;font-family:inherit;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;min-width:52px;">Weight</span>
           <div style="display:flex;gap:4px;flex-wrap:wrap;" id="weightPills">
             <button class="mode-btn" data-w="300" onclick="setWeight(300)">Light</button>
             <button class="mode-btn active" data-w="400" onclick="setWeight(400)">Regular</button>
