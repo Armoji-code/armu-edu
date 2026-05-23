@@ -56,6 +56,7 @@ def list_personal(user):
 @blueprint.route("/messages/personal", methods=["POST"])
 @login_required()
 def send_personal(user):
+    from models.user import User as _User
     data = request.get_json(silent=True) or {}
     recipient_id = data.get("recipient_id")
     content      = data.get("content", "").strip()
@@ -64,6 +65,9 @@ def send_personal(user):
     file_name    = data.get("file_name", "").strip()
     if not recipient_id or (not content and not file_url):
         return err("recipient_id and content or file required", 400)
+    recipient = _User.query.filter_by(id=recipient_id, school_id=user.school_id).first()
+    if not recipient:
+        return err("recipient not found", 404)
     msg = Message(
         sender_id=user.id,
         recipient_id=recipient_id,
@@ -86,8 +90,12 @@ def mark_personal_read(user):
     other_id = data.get("other_id")
     if not other_id:
         return err("other_id required", 400)
+    try:
+        other_id = int(other_id)
+    except (TypeError, ValueError):
+        return err("invalid other_id", 400)
     Message.query.filter(
-        Message.sender_id == int(other_id),
+        Message.sender_id == other_id,
         Message.recipient_id == user.id,
         Message.is_read == False,
         Message.is_deleted != True,
@@ -126,10 +134,20 @@ def delete_personal(user, msg_id):
     return jsonify({"ok": True, "id": msg_id})
 
 
+def _can_access_message(user, msg):
+    """Check the user is a participant in the message's conversation."""
+    if msg.group_id:
+        group = Group.query.get(msg.group_id)
+        return group is not None and user in group.members
+    return msg.sender_id == user.id or msg.recipient_id == user.id
+
+
 @blueprint.route("/messages/<int:msg_id>/react", methods=["POST"])
 @login_required()
 def react_message(user, msg_id):
     msg   = Message.query.get_or_404(msg_id)
+    if not _can_access_message(user, msg):
+        return err("forbidden", 403)
     data  = request.get_json(silent=True) or {}
     emoji = str(data.get("emoji", "")).strip()[:10]
     if not emoji:
@@ -150,6 +168,8 @@ def react_message(user, msg_id):
 @login_required()
 def report_message(user, msg_id):
     msg = Message.query.get_or_404(msg_id)
+    if not _can_access_message(user, msg):
+        return err("forbidden", 403)
     if msg.sender_id == user.id:
         return err("cannot report own message", 400)
     existing = FlaggedMessage.query.filter_by(message_id=msg_id, status="pending").first()
