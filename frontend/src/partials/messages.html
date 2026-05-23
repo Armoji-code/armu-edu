@@ -85,29 +85,24 @@
   display: flex;
   flex-direction: column;
   max-width: 66%;
-  position: relative;
 }
-.msg-row.mine .msg-bubble-col { align-items: flex-end; }
+.msg-row.mine .msg-bubble-col   { align-items: flex-end; }
 .msg-row.theirs .msg-bubble-col { align-items: flex-start; }
 
 .msg-actions {
-  display: none;
-  position: absolute;
-  bottom: 0;
+  display: flex;
   flex-direction: row;
-  gap: 1px;
+  gap: 2px;
   align-items: center;
-  z-index: 10;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 2px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
-  white-space: nowrap;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.12s ease, opacity 0.1s, padding 0.12s;
+  padding: 0;
 }
-.msg-row.mine .msg-actions    { right: calc(100% + 6px); }
-.msg-row.theirs .msg-actions  { left:  calc(100% + 6px); }
-.msg-row:hover .msg-actions   { display: flex; }
+.msg-row.mine .msg-actions    { justify-content: flex-end; }
+.msg-row.theirs .msg-actions  { justify-content: flex-start; }
+.msg-row:hover .msg-actions   { max-height: 34px; opacity: 1; padding-top: 4px; }
 
 .bab {
   background: none;
@@ -327,10 +322,10 @@ function renderMsg(m) {
 
   return '<div class="msg-row '+(mine?'mine':'theirs')+'" id="mw-'+m.id+'">'
     + '<div class="msg-bubble-col">'
-    +   '<div class="msg-actions">'+btns+'</div>'
     +   '<div class="msg-bubble '+(mine?'mine':'theirs')+'">'
     +     quoteHtml + contentHtml + metaHtml
     +   '</div>'
+    +   '<div class="msg-actions">'+btns+'</div>'
     +   reactHtml
     + '</div>'
     + '</div>';
