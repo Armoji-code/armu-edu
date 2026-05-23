@@ -532,14 +532,11 @@ async function sendMsg() {
     body: JSON.stringify(payload),
   }).then(function(r){ return r.json(); }).catch(function(){ return null; });
   if (btn) btn.disabled = false;
-  if (res && !res.error) {
-    var conv = conversations[activeIdx];
-    conv.messages.push(res);
-    conversations.splice(activeIdx, 1);
-    conversations.unshift(conv);
-    activeIdx = 0;
-    renderConvList();
-    renderMsgsList(true);
+  // UI update is handled by the message:new socket event the backend
+  // now emits to both sender and recipient rooms.
+  if (res && res.error) {
+    var inp = document.getElementById('composeInput');
+    if (inp) inp.value = content;  // restore input on error
   }
 }
 
@@ -856,7 +853,8 @@ async function boot() {
       if (idx === -1) {
         conversations.unshift({otherId: otherId, otherName: otherName, messages: [msg]});
       } else {
-        conversations[idx].messages.push(msg);
+        var already = conversations[idx].messages.some(function(m){ return m.id === msg.id; });
+        if (!already) conversations[idx].messages.push(msg);
         var conv = conversations.splice(idx, 1)[0];
         conversations.unshift(conv);
       }

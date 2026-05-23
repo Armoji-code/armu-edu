@@ -75,8 +75,11 @@ def send_personal(user):
     db.session.add(msg)
     db.session.commit()
     scan_async(msg.id, current_app._get_current_object())
-    socketio.emit("message:new", msg.to_dict(), to=f"user_{recipient_id}")
-    return jsonify(msg.to_dict()), 201
+    payload = msg.to_dict()
+    rooms = {f"user_{recipient_id}", f"user_{user.id}"}
+    for room in rooms:
+        socketio.emit("message:new", payload, to=room)
+    return jsonify(payload), 201
 
 
 @blueprint.route("/messages/personal/read", methods=["POST"])
