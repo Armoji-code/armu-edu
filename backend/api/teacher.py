@@ -158,11 +158,14 @@ def create_assignment(user):
     except ValueError:
         return err("invalid due_date", 400)
 
+    a_type = data.get("type", "homework")
+    if a_type not in ("homework", "test", "project"):
+        a_type = "homework"
     a = Assignment(
         subject_id=subject_id,
         title=data.get("title", "").strip(),
         description=data.get("description", "").strip(),
-        type=data.get("type", "homework"),
+        type=a_type,
         due_date=due_date,
     )
     if not a.title:

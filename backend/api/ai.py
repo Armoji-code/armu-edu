@@ -108,11 +108,21 @@ def list_sessions(user):
 @blueprint.route("/ai/sessions", methods=["POST"])
 @login_required()
 def create_session(user):
-    data = request.get_json(silent=True) or {}
+    data       = request.get_json(silent=True) or {}
+    group_id   = data.get("group_id")
+    model_tier = data.get("model_tier", "standard")
+
+    if model_tier not in ("standard", "advanced"):
+        model_tier = "standard"
+    if group_id:
+        g = Group.query.get(group_id)
+        if not g or user not in g.members:
+            return err("group not found or not a member", 403)
+
     session = AISession(
         user_id=user.id,
-        group_id=data.get("group_id"),
-        model_tier=data.get("model_tier", "standard"),
+        group_id=group_id,
+        model_tier=model_tier,
     )
     db.session.add(session)
     db.session.commit()
