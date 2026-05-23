@@ -57,13 +57,6 @@
 </div>
 
 <script>
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  const btn = document.getElementById('themeBtn');
-  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
 let allHw    = [];
 let allTests = [];
 let hwFilter = 'all';
@@ -220,7 +213,5 @@ function relDue(iso) {
   if (d === 1) return 'Tomorrow';
   return `In ${d}d.`;
 }
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-
 boot();
 </script>

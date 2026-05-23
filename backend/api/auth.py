@@ -1,5 +1,5 @@
 from flask import request, jsonify, session
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.user import User, PasswordResetToken
@@ -20,11 +20,11 @@ def login():
     password = data.get("password", "")
 
     if not email or not password:
-        return jsonify({"error": "email and password required"}), 400
+        return err("email and password required", 400)
 
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
-        return jsonify({"error": "invalid credentials"}), 401
+        return err("invalid credentials", 401)
 
     session["user_id"]   = user.id
     session["user_name"] = user.name
@@ -40,11 +40,11 @@ def logout():
 def me():
     user_id = session.get("user_id")
     if not user_id:
-        return jsonify({"error": "not authenticated"}), 401
+        return err("not authenticated", 401)
     user = User.query.get(user_id)
     if not user:
         session.clear()
-        return jsonify({"error": "not authenticated"}), 401
+        return err("not authenticated", 401)
     return jsonify(user.to_dict())
 
 @blueprint.route("/auth/me", methods=["PATCH"])
@@ -53,7 +53,7 @@ def update_me(user):
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
     if not name:
-        return jsonify({"error": "name required"}), 400
+        return err("name required", 400)
     user.name = name
     db.session.commit()
     return jsonify(user.to_dict())
@@ -62,17 +62,17 @@ def update_me(user):
 @login_required()
 def change_password(user):
     if not user.can_change_password:
-        return jsonify({"error": "Password changes are disabled for this account."}), 403
+        return err("Password changes are disabled for this account.", 403)
     data = request.get_json(silent=True) or {}
     current = data.get("current", "")
     new_pw = data.get("new", "")
     if not user.check_password(current):
-        return jsonify({"error": "Current password is incorrect"}), 400
+        return err("Current password is incorrect", 400)
     if len(new_pw) < 8:
-        return jsonify({"error": "New password must be at least 8 characters"}), 400
+        return err("New password must be at least 8 characters", 400)
     user.set_password(new_pw)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 @blueprint.route("/user/appearance", methods=["GET"])
 @login_required()
@@ -109,7 +109,7 @@ def save_user_appearance(user):
     prefs["appearance"] = {"colors": colors, "font": font}
     user.preferences = prefs
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/auth/forgot-password", methods=["POST"])
@@ -117,11 +117,11 @@ def forgot_password():
     data = request.get_json(silent=True) or {}
     email = data.get("email", "").strip().lower()
     if not email:
-        return jsonify({"error": "email required"}), 400
+        return err("email required", 400)
 
     user = User.query.filter_by(email=email).first()
     if not user:
-        return jsonify({"ok": True})  # don't reveal whether email exists
+        return ok()  # don't reveal whether email exists
 
     # Invalidate prior tokens
     PasswordResetToken.query.filter_by(user_id=user.id, used=False).update({"used": True})
@@ -137,7 +137,7 @@ def forgot_password():
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/auth/reset-password", methods=["POST"])
@@ -148,19 +148,19 @@ def reset_password():
     new_pw = data.get("new_password", "")
 
     if not email or not code or not new_pw:
-        return jsonify({"error": "email, code, and new_password required"}), 400
+        return err("email, code, and new_password required", 400)
     if len(new_pw) < 8:
-        return jsonify({"error": "Password must be at least 8 characters"}), 400
+        return err("Password must be at least 8 characters", 400)
 
     user = User.query.filter_by(email=email).first()
     if not user:
-        return jsonify({"error": "Invalid code"}), 400
+        return err("Invalid code", 400)
 
     token_obj = PasswordResetToken.verify(user.id, code)
     if not token_obj:
-        return jsonify({"error": "Invalid or expired code"}), 400
+        return err("Invalid or expired code", 400)
 
     token_obj.used = True
     user.set_password(new_pw)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()

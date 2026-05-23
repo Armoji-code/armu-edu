@@ -87,12 +87,6 @@
 </div>
 
 <script>
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  const btn = document.getElementById('themeBtn');
-  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
 let me = null;
 
 function initials(name) {

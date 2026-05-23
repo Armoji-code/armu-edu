@@ -104,23 +104,6 @@
 <script>
 
 /* ── Theme ── */
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  const btn = document.getElementById('themeBtn');
-  if(btn) btn.querySelector('use').setAttribute('href', t==='dark'?'#ic-sun':'#ic-moon');
-})();
-function toggleTheme(){
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme')==='dark'?'light':'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next==='dark'?'#ic-sun':'#ic-moon');
-  const ps = document.querySelector('.color-swatch[data-primary]');
-  if(ps) ps.style.background = getPrimaryColor();
-  renderAll();
-}
-
 /* ── Theme-adaptive primary colour ── */
 function getPrimaryColor(){
   return document.documentElement.getAttribute('data-theme')==='dark' ? '#f0f0f0' : '#111111';
@@ -897,6 +880,10 @@ async function boot(){
   if(window.currentMeeting){
     const mtgBtn=document.getElementById('rb-meeting');
     if(mtgBtn)mtgBtn.style.display='';
+    if(window.__wbAutoMode==='meeting'){
+      delete window.__wbAutoMode;
+      switchRoomMode('meeting');
+    }
   }
   if(_isInvite){
     groupCode=_hash;roomMode='group';
@@ -915,7 +902,6 @@ window.newGroupRoom    = newGroupRoom;
 window.copyRoomLink    = copyRoomLink;
 window.setTool         = setTool;
 window.setWidth        = setWidth;
-window.toggleTheme     = toggleTheme;
 window.toggleColorPopup= toggleColorPopup;
 window.clearBoard      = clearBoard;
 window.exportPNG       = exportPNG;
@@ -928,8 +914,18 @@ window.deleteSelected  = deleteSelected;
 window.commitImage     = commitImage;
 window.cancelImage     = cancelImage;
 
+// Extend global toggleTheme to re-render canvas with new theme colours
+const _baseToggle = window.toggleTheme;
+window.toggleTheme = function() {
+  _baseToggle();
+  const ps = document.querySelector('.color-swatch[data-primary]');
+  if (ps) ps.style.background = getPrimaryColor();
+  renderAll();
+};
+
 window.__cleanup = function(){
   cancelImage(); clearSelection();
+  window.toggleTheme = _baseToggle;
   if(socket) socket.disconnect();
 };
 

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from flask import request, jsonify, Response, stream_with_context, current_app
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.library import Book, BookCheckout
@@ -76,7 +76,7 @@ def librarian_create_book(user):
     title = data.get("title", "").strip()
     author = data.get("author", "").strip()
     if not title or not author:
-        return jsonify({"error": "title and author required"}), 400
+        return err("title and author required", 400)
     b = Book(
         school_id    = _school_id(user),
         title        = title,
@@ -124,7 +124,7 @@ def librarian_delete_book(user, book_id):
         return jsonify({"error": f"{active} cop{'y' if active==1 else 'ies'} currently checked out"}), 400
     db.session.delete(b)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 # ── Loans ─────────────────────────────────────────────────────────────────────
@@ -152,11 +152,11 @@ def librarian_checkout(user):
     user_id = data.get("user_id")
     due_str = data.get("due_date")
     if not book_id or not user_id or not due_str:
-        return jsonify({"error": "book_id, user_id, due_date required"}), 400
+        return err("book_id, user_id, due_date required", 400)
 
     book = Book.query.filter_by(id=book_id, school_id=_school_id(user)).first_or_404()
     if book.available_copies < 1:
-        return jsonify({"error": "No copies available"}), 400
+        return err("No copies available", 400)
 
     due = datetime.fromisoformat(due_str)
     c = BookCheckout(book_id=book_id, user_id=user_id, due_date=due)
@@ -173,7 +173,7 @@ def librarian_return(user, loan_id):
         Book.school_id == _school_id(user)
     ).first_or_404()
     if c.returned_at:
-        return jsonify({"error": "Already returned"}), 400
+        return err("Already returned", 400)
     c.returned_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
     return jsonify(_loan_dict(c))
@@ -187,7 +187,7 @@ def librarian_book_covers(user):
     title  = request.args.get("title", "").strip()
     author = request.args.get("author", "").strip()
     if not title:
-        return jsonify({"error": "title required"}), 400
+        return err("title required", 400)
 
     # Subjects that are metadata noise, not actual genres
     _SKIP_SUBJECTS = {
@@ -242,7 +242,7 @@ def librarian_book_description(user):
     title  = request.args.get("title", "").strip()
     author = request.args.get("author", "").strip()
     if not title:
-        return jsonify({"error": "title required"}), 400
+        return err("title required", 400)
 
     ai_cfg = _ai.get_ai_config()
     model  = ai_cfg["tracker_model"]

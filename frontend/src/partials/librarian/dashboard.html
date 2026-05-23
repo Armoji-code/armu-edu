@@ -15,17 +15,17 @@
 </div>
 <div style="font-size:15px;font-weight:600;margin-bottom:14px;">Quick Actions</div>
 <div class="quick-grid">
-<a class="quick-card" href="/librarian/books">
+<a class="quick-card" href="/books">
 <div class="quick-icon" style="background:linear-gradient(135deg,rgba(var(--g1-rgb),0.15),rgba(var(--g2-rgb),0.15))"><svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-book"></use></svg></div>
 <div class="quick-title">Manage Books</div>
 <div class="quick-desc">Add, edit, or remove books from the catalog</div>
 </a>
-<a class="quick-card" href="/librarian/loans">
+<a class="quick-card" href="/loans">
 <div class="quick-icon" style="background:linear-gradient(135deg,rgba(var(--g2-rgb),0.15),rgba(110,231,183,0.15))"><svg class="icon icon-20" style="color:var(--g2)"><use href="#ic-list"></use></svg></div>
 <div class="quick-title">Loans</div>
 <div class="quick-desc">Check books in and out, view active loans</div>
 </a>
-<a class="quick-card" href="/librarian/loans?status=overdue">
+<a class="quick-card" href="/loans?status=overdue">
 <div class="quick-icon" style="background:rgba(248,113,113,0.1)"><svg class="icon icon-20" style="color:#f87171"><use href="#ic-clock"></use></svg></div>
 <div class="quick-title">Overdue</div>
 <div class="quick-desc">View all overdue loans that need a follow-up</div>
@@ -38,18 +38,6 @@
 </div>
 
 <script>
-
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-function toggleTheme() {
-  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
-}
 
 function fmtDate(iso) {
   return new Date(iso).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
@@ -86,7 +74,6 @@ async function boot() {
   }
 }
 
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 boot();
 
 </script>

@@ -16,22 +16,6 @@
 <script>
 
 
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  const btn = document.getElementById('themeBtn');
-  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
-  if (currentData) renderSubject(currentData[activeIndex]);
-}
-
 let analyticsData = [];
 let activeIndex  = 0;
 let currentData  = null;

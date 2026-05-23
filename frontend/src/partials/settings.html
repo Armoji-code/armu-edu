@@ -191,22 +191,12 @@ const PALETTES = [
 ];
 
 // Theme init
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  const btn = document.getElementById('themeBtn');
-  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
 function applyTheme(t) {
   document.documentElement.setAttribute('data-theme', t);
   localStorage.setItem('theme', t);
   const btn = document.getElementById('themeBtn');
   if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
   document.getElementById('darkToggle').checked = (t === 'dark');
-}
-function toggleTheme() {
-  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
 }
 function onThemeToggle(cb) { applyTheme(cb.checked ? 'dark' : 'light'); }
 

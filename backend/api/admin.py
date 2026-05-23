@@ -2,7 +2,7 @@ import os
 import psutil
 import requests as _requests
 from flask import request, jsonify, current_app
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.user import User
@@ -241,7 +241,7 @@ def admin_update_settings(user):
 
     school.settings = settings
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/admin/settings/smtp/test", methods=["POST"])
@@ -293,7 +293,7 @@ def admin_save_branding(user):
     settings["branding"] = branding
     school.settings = settings
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/admin/ai/pull", methods=["POST"])
@@ -305,7 +305,7 @@ def admin_ai_pull(user):
     data = request.get_json(silent=True) or {}
     model = str(data.get("model", "")).strip()
     if not model:
-        return jsonify({"error": "model name required"}), 400
+        return err("model name required", 400)
 
     school = _school(user)
     s = school.settings or {}
@@ -347,9 +347,9 @@ def admin_create_user(user):
     class_id = data.get("class_id") or None
 
     if not name or not email or not password:
-        return jsonify({"error": "name, email, and password required"}), 400
+        return err("name, email, and password required", 400)
     if User.query.filter_by(email=email).first():
-        return jsonify({"error": "email already in use"}), 409
+        return err("email already in use", 409)
 
     u = User(name=name, email=email, role=role, school_id=school.id, class_id=class_id)
     u.set_password(password)
@@ -370,7 +370,7 @@ def admin_update_user(user, uid):
     if "email" in data:
         new_email = data["email"].strip().lower()
         if new_email != target.email and User.query.filter_by(email=new_email).first():
-            return jsonify({"error": "email already in use"}), 409
+            return err("email already in use", 409)
         target.email = new_email
     if "role" in data:
         target.role = data["role"]
@@ -390,11 +390,11 @@ def admin_update_user(user, uid):
 def admin_delete_user(user, uid):
     school = _school(user)
     if uid == user.id:
-        return jsonify({"error": "cannot delete yourself"}), 400
+        return err("cannot delete yourself", 400)
     target = User.query.filter_by(id=uid, school_id=school.id).first_or_404()
     db.session.delete(target)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 # ── Admin: classes ────────────────────────────────────────────────────────────
@@ -426,7 +426,7 @@ def admin_create_class(user):
     name = data.get("name", "").strip()
     year = data.get("grade_year", 0)
     if not name:
-        return jsonify({"error": "name required"}), 400
+        return err("name required", 400)
     c = Class(name=name, grade_year=int(year), school_id=school.id)
     db.session.add(c)
     db.session.commit()
@@ -444,7 +444,7 @@ def admin_update_class(user, class_id):
     if "grade_year" in data:
         c.grade_year = int(data["grade_year"])
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/admin/classes/<int:class_id>", methods=["DELETE"])
@@ -454,7 +454,7 @@ def admin_delete_class(user, class_id):
     c = Class.query.filter_by(id=class_id, school_id=school.id).first_or_404()
     db.session.delete(c)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 # ── Admin: subjects ───────────────────────────────────────────────────────────
@@ -468,7 +468,7 @@ def admin_create_subject(user):
     class_id   = data.get("class_id")
     teacher_id = data.get("teacher_id")
     if not name or not class_id or not teacher_id:
-        return jsonify({"error": "name, class_id, teacher_id required"}), 400
+        return err("name, class_id, teacher_id required", 400)
     Class.query.filter_by(id=class_id, school_id=school.id).first_or_404()
     s = Subject(name=name, class_id=class_id, teacher_id=teacher_id)
     db.session.add(s)
@@ -486,7 +486,7 @@ def admin_delete_subject(user, subject_id):
     ).first_or_404()
     db.session.delete(s)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 # ── Admin: flagged messages ────────────────────────────────────────────────────
@@ -524,9 +524,9 @@ def admin_update_flag(user, flag_id):
     school = _school(user)
     flag = FlaggedMessage.query.get_or_404(flag_id)
     if flag.message.sender.school_id != school.id:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     data = request.get_json(silent=True) or {}
     if "status" in data and data["status"] in ("pending", "dismissed", "actioned"):
         flag.status = data["status"]
         db.session.commit()
-    return jsonify({"ok": True})
+    return ok()

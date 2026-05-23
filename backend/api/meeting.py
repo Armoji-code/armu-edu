@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from flask import request, jsonify, current_app
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.meeting import Meeting
@@ -58,7 +58,7 @@ def create_meeting(user):
 
     # Students can only create meetings within their own class
     if user.role == "student" and class_id and class_id != user.class_id:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
 
     m = Meeting(title=title, host_id=user.id, class_id=class_id)
     db.session.add(m)
@@ -71,11 +71,11 @@ def create_meeting(user):
 def end_meeting(user, mid):
     m = Meeting.query.get_or_404(mid)
     if m.host_id != user.id and user.role not in ("admin", "teacher"):
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     m.is_active = False
     m.ended_at  = datetime.now(timezone.utc)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 def _get_school(user):

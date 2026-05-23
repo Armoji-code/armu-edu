@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.nav_config import NavConfig
@@ -99,7 +99,7 @@ def update_nav_config(user):
     role = data.get("role")
     sections = data.get("sections")
     if not role or sections is None:
-        return jsonify({"error": "role and sections required"}), 400
+        return err("role and sections required", 400)
     cfg = NavConfig.query.filter_by(role=role).first()
     if cfg:
         cfg.sections = sections
@@ -107,7 +107,7 @@ def update_nav_config(user):
         cfg = NavConfig(role=role, sections=sections)
         db.session.add(cfg)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/nav/config/reset", methods=["POST"])
@@ -116,7 +116,7 @@ def reset_nav_config(user):
     data = request.get_json(force=True)
     role = data.get("role")
     if not role:
-        return jsonify({"error": "role required"}), 400
+        return err("role required", 400)
     NavConfig.query.filter_by(role=role).delete()
     db.session.commit()
     return jsonify({"ok": True, "sections": _DEFAULTS.get(role, [])})

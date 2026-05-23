@@ -221,12 +221,6 @@
 </style>
 
 <script>
-(function(){
-  var t = localStorage.getItem('theme') || 'dark';
-  var btn = document.getElementById('themeBtn');
-  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
 var myId          = null;
 var conversations  = [];
 var activeIdx     = -1;
@@ -249,10 +243,6 @@ function fmtTime(iso) {
   if (d.toDateString() === now.toDateString())
     return d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:false});
   return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
-}
-
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 /* ── Conversations ── */

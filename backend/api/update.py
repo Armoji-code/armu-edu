@@ -3,7 +3,7 @@ import sys
 import subprocess
 import threading
 from flask import jsonify
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))

@@ -38,21 +38,6 @@
 <script>
 
 
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  const btn = document.getElementById('themeBtn');
-  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
-}
-
 const SCHED_PERIODS = [
   { num:1,       label:'P1',    time:'8:00 – 8:50',   start:'8:00',  end:'8:50'  },
   { num:2,       label:'P2',    time:'8:55 – 9:45',   start:'8:55',  end:'9:45'  },

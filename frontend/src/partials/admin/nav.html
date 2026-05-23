@@ -53,13 +53,6 @@
 </div>
 
 <script>
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  const btn = document.getElementById('themeBtn');
-  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
 let currentRole  = 'student';
 let configs      = {};   // { student: [...sections], teacher: [...], librarian: [...] }
 let allIcons     = [];
@@ -225,8 +218,6 @@ async function navReset() {
     status.textContent = 'Failed to reset';
   }
 }
-
-function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
 // Expose onclick handlers
 window.navSwitchRole   = navSwitchRole;

@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 from flask import request, jsonify, current_app
 from werkzeug.utils import secure_filename
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.social import Message, Group, MessageReaction, FlaggedMessage
@@ -21,10 +21,10 @@ _UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', 'static', 'uploads',
 @login_required()
 def upload_message_file(user):
     if 'file' not in request.files:
-        return jsonify({"error": "no file"}), 400
+        return err("no file", 400)
     f = request.files['file']
     if not f.filename:
-        return jsonify({"error": "no file"}), 400
+        return err("no file", 400)
     ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
     if ext not in _ALLOWED_EXT:
         return jsonify({"error": f"file type .{ext} not allowed"}), 400
@@ -63,7 +63,7 @@ def send_personal(user):
     file_url     = data.get("file_url", "").strip()
     file_name    = data.get("file_name", "").strip()
     if not recipient_id or (not content and not file_url):
-        return jsonify({"error": "recipient_id and content or file required"}), 400
+        return err("recipient_id and content or file required", 400)
     msg = Message(
         sender_id=user.id,
         recipient_id=recipient_id,
@@ -85,7 +85,7 @@ def mark_personal_read(user):
     data = request.get_json(silent=True) or {}
     other_id = data.get("other_id")
     if not other_id:
-        return jsonify({"error": "other_id required"}), 400
+        return err("other_id required", 400)
     Message.query.filter(
         Message.sender_id == int(other_id),
         Message.recipient_id == user.id,
@@ -93,7 +93,7 @@ def mark_personal_read(user):
         Message.is_deleted != True,
     ).update({"is_read": True})
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/messages/personal/<int:msg_id>", methods=["PATCH"])
@@ -101,13 +101,13 @@ def mark_personal_read(user):
 def edit_personal(user, msg_id):
     msg = Message.query.get_or_404(msg_id)
     if msg.sender_id != user.id:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     if msg.is_deleted:
-        return jsonify({"error": "cannot edit deleted message"}), 400
+        return err("cannot edit deleted message", 400)
     data = request.get_json(silent=True) or {}
     content = data.get("content", "").strip()
     if not content:
-        return jsonify({"error": "content required"}), 400
+        return err("content required", 400)
     msg.content   = content
     msg.edited_at = datetime.now(timezone.utc)
     db.session.commit()
@@ -119,7 +119,7 @@ def edit_personal(user, msg_id):
 def delete_personal(user, msg_id):
     msg = Message.query.get_or_404(msg_id)
     if msg.sender_id != user.id:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     msg.is_deleted = True
     msg.content    = ""
     db.session.commit()
@@ -133,7 +133,7 @@ def react_message(user, msg_id):
     data  = request.get_json(silent=True) or {}
     emoji = str(data.get("emoji", "")).strip()[:10]
     if not emoji:
-        return jsonify({"error": "emoji required"}), 400
+        return err("emoji required", 400)
     existing = MessageReaction.query.filter_by(
         message_id=msg_id, user_id=user.id, emoji=emoji
     ).first()
@@ -151,7 +151,7 @@ def react_message(user, msg_id):
 def report_message(user, msg_id):
     msg = Message.query.get_or_404(msg_id)
     if msg.sender_id == user.id:
-        return jsonify({"error": "cannot report own message"}), 400
+        return err("cannot report own message", 400)
     existing = FlaggedMessage.query.filter_by(message_id=msg_id, status="pending").first()
     if not existing:
         flag = FlaggedMessage(
@@ -162,7 +162,7 @@ def report_message(user, msg_id):
         )
         db.session.add(flag)
         db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/messages/groups/<int:group_id>", methods=["GET"])
@@ -170,7 +170,7 @@ def report_message(user, msg_id):
 def list_group_messages(user, group_id):
     group = Group.query.get_or_404(group_id)
     if user not in group.members:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     messages = (
         Message.query
         .filter_by(group_id=group_id)
@@ -186,11 +186,11 @@ def list_group_messages(user, group_id):
 def send_group_message(user, group_id):
     group = Group.query.get_or_404(group_id)
     if user not in group.members:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     data    = request.get_json(silent=True) or {}
     content = data.get("content", "").strip()
     if not content:
-        return jsonify({"error": "content required"}), 400
+        return err("content required", 400)
     msg = Message(sender_id=user.id, group_id=group_id, content=content)
     db.session.add(msg)
     db.session.commit()

@@ -1,5 +1,5 @@
 from flask import request, jsonify
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.social import Group, group_members
@@ -22,7 +22,7 @@ def create_group(user):
     data = request.get_json(silent=True) or {}
     name = data.get("name", "").strip()
     if not name:
-        return jsonify({"error": "name required"}), 400
+        return err("name required", 400)
     g = Group(name=name)
     g.members.append(user)
     db.session.add(g)
@@ -35,7 +35,7 @@ def create_group(user):
 def get_group(user, group_id):
     g = Group.query.get_or_404(group_id)
     if user not in g.members:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     return jsonify(_group_dict(g, user.id))
 
 
@@ -44,16 +44,16 @@ def get_group(user, group_id):
 def add_member(user, group_id):
     g = Group.query.get_or_404(group_id)
     if user not in g.members:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     data = request.get_json(silent=True) or {}
     email = data.get("email", "").strip().lower()
     if not email:
-        return jsonify({"error": "email required"}), 400
+        return err("email required", 400)
     target = User.query.filter_by(email=email, school_id=user.school_id).first()
     if not target:
-        return jsonify({"error": "user not found in your school"}), 404
+        return err("user not found in your school", 404)
     if target in g.members:
-        return jsonify({"error": "already a member"}), 409
+        return err("already a member", 409)
     g.members.append(target)
     db.session.commit()
     return jsonify(_group_dict(g, user.id))
@@ -64,10 +64,10 @@ def add_member(user, group_id):
 def leave_group(user, group_id):
     g = Group.query.get_or_404(group_id)
     if user not in g.members:
-        return jsonify({"error": "not a member"}), 400
+        return err("not a member", 400)
     g.members.remove(user)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/users/classmates", methods=["GET"])

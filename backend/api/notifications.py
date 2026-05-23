@@ -1,5 +1,5 @@
 from flask import jsonify, request
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.notification import Notification
@@ -24,10 +24,10 @@ def list_notifications(user):
 def mark_read(user, notif_id):
     n = Notification.query.get_or_404(notif_id)
     if n.user_id != user.id:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     n.read = True
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/notifications/read-all", methods=["POST"])
@@ -35,4 +35,4 @@ def mark_read(user, notif_id):
 def mark_all_read(user):
     Notification.query.filter_by(user_id=user.id, read=False).update({"read": True})
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()

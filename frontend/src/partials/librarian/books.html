@@ -1,0 +1,234 @@
+
+<div class="topbar">
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-books"/></svg>
+  <span class="topbar-title">Books</span>
+  <input class="search-input" id="searchInput" type="text" placeholder="Search title, author, ISBN…" oninput="onSearch()">
+  <div class="topbar-right">
+    <button class="btn btn-primary" onclick="openModal()"><svg class="icon icon-14"><use href="#ic-plus"/></svg> Add Book</button>
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"/></svg></div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="book-table" id="bookTable">
+    <div class="empty">Loading…</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Add Book</div>
+
+    <div class="grid-2">
+      <div class="form-row" style="grid-column:1/-1">
+        <label class="form-label">Title *</label>
+        <input class="form-input" id="fTitle" placeholder="Book title" oninput="onTitleAuthorChange()">
+      </div>
+      <div class="form-row" style="grid-column:1/-1">
+        <label class="form-label">Author *</label>
+        <input class="form-input" id="fAuthor" placeholder="Author name" oninput="onTitleAuthorChange()">
+      </div>
+    </div>
+
+    <div class="enhance-row" id="enhanceRow" style="display:none">
+      <span class="enhance-label">✨ Auto-fill description &amp; find cover images from Open Library</span>
+      <button class="btn-enhance" id="enhanceBtn" onclick="enhance()">
+        <svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Enhance
+      </button>
+    </div>
+
+    <div class="grid-2">
+      <div class="form-row">
+        <label class="form-label">ISBN</label>
+        <input class="form-input" id="fIsbn" placeholder="978-…">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Genre</label>
+        <input class="form-input" id="fGenre" placeholder="Fiction, Science…">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Pages</label>
+        <input class="form-input" id="fPages" type="number" min="1" placeholder="320">
+      </div>
+      <div class="form-row">
+        <label class="form-label">Copies</label>
+        <input class="form-input" id="fCopies" type="number" min="1" value="1">
+      </div>
+
+      <div class="form-row" style="grid-column:1/-1">
+        <label class="form-label">Cover</label>
+        <input class="form-input" id="fCover" placeholder="https://… or pick below">
+        <div class="cover-picker" id="coverPicker"></div>
+      </div>
+
+      <div class="form-row" style="grid-column:1/-1">
+        <label class="form-label">Description</label>
+        <textarea class="form-input form-textarea" id="fDesc" placeholder="Short synopsis…"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveBook()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var books = [];
+var editId = null;
+var searchTimer = null;
+
+function renderTable(data) {
+  var tbl = document.getElementById('bookTable');
+  if (!data.length) { tbl.innerHTML = '<div class="empty">No books found.</div>'; return; }
+  tbl.innerHTML =
+    '<div class="book-row header"><span>Title</span><span>Author</span><span>Genre</span>' +
+    '<span style="text-align:center">Copies</span><span style="text-align:center">Available</span><span></span></div>' +
+    data.map(function(b) {
+      return '<div class="book-row">' +
+        '<span class="book-title">' + esc(b.title) + '</span>' +
+        '<span class="book-author">' + esc(b.author) + '</span>' +
+        '<span class="book-genre">' + esc(b.genre||'—') + '</span>' +
+        '<span style="text-align:center;color:var(--text2)">' + b.total_copies + '</span>' +
+        '<span style="text-align:center" class="' + (b.available_copies > 0 ? 'avail-good' : 'avail-none') + '">' + b.available_copies + '</span>' +
+        '<span class="row-actions">' +
+          '<button class="act-btn" onclick=\'openModal(' + JSON.stringify(b) + ')\' title="Edit"><svg class="icon icon-14"><use href="#ic-edit"/></svg></button>' +
+          '<button class="act-btn del" onclick="deleteBook(' + b.id + ',\'' + esc(b.title) + '\')" title="Delete"><svg class="icon icon-14"><use href="#ic-trash"/></svg></button>' +
+        '</span></div>';
+    }).join('');
+}
+
+async function loadBooks(q) {
+  var url = q ? '/api/librarian/books?q=' + encodeURIComponent(q) : '/api/librarian/books';
+  books = await fetch(url).then(function(r){ return r.json(); }).catch(function(){ return []; });
+  renderTable(books);
+}
+
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(function(){ loadBooks(document.getElementById('searchInput').value.trim()); }, 300);
+}
+
+function onTitleAuthorChange() {
+  if (editId) return;
+  var title = document.getElementById('fTitle').value.trim();
+  document.getElementById('enhanceRow').style.display = title ? '' : 'none';
+}
+
+function openModal(book) {
+  editId = book ? book.id : null;
+  document.getElementById('modalTitle').textContent = book ? 'Edit Book' : 'Add Book';
+  document.getElementById('fTitle').value  = book ? (book.title  || '') : '';
+  document.getElementById('fAuthor').value = book ? (book.author || '') : '';
+  document.getElementById('fIsbn').value   = book ? (book.isbn   || '') : '';
+  document.getElementById('fGenre').value  = book ? (book.genre  || '') : '';
+  document.getElementById('fPages').value  = book ? (book.pages  || '') : '';
+  document.getElementById('fCopies').value = book ? (book.total_copies || 1) : 1;
+  document.getElementById('fCover').value  = book ? (book.cover_url || '') : '';
+  document.getElementById('fDesc').value   = book ? (book.description || '') : '';
+  document.getElementById('coverPicker').innerHTML = '';
+  document.getElementById('enhanceRow').style.display = (!book && document.getElementById('fTitle').value) ? '' : 'none';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editId = null;
+}
+
+async function enhance() {
+  var title  = document.getElementById('fTitle').value.trim();
+  var author = document.getElementById('fAuthor').value.trim();
+  if (!title) return;
+
+  var btn = document.getElementById('enhanceBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">⟳</span> Working…';
+
+  var results = await Promise.all([
+    fetch('/api/librarian/book-covers?title=' + encodeURIComponent(title) + '&author=' + encodeURIComponent(author))
+      .then(function(r){ return r.json(); }).catch(function(){ return { covers: [] }; }),
+    streamDescription(title, author),
+  ]);
+  var coverResult = results[0];
+
+  if (coverResult.author && !document.getElementById('fAuthor').value.trim())
+    document.getElementById('fAuthor').value = coverResult.author;
+  if (coverResult.genre && !document.getElementById('fGenre').value.trim())
+    document.getElementById('fGenre').value = coverResult.genre;
+
+  renderCovers(coverResult.covers || []);
+  btn.disabled = false;
+  btn.innerHTML = '<svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Enhance again';
+}
+
+async function streamDescription(title, author) {
+  var desc = document.getElementById('fDesc');
+  desc.value = '';
+  desc.placeholder = 'Generating…';
+  try {
+    var resp = await fetch('/api/librarian/book-description?title=' + encodeURIComponent(title) + '&author=' + encodeURIComponent(author));
+    if (!resp.ok) { desc.placeholder = 'Short synopsis…'; return; }
+    var reader = resp.body.getReader();
+    var decoder = new TextDecoder();
+    while (true) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      desc.value += decoder.decode(chunk.value, { stream: true });
+    }
+  } catch (_) {}
+  desc.placeholder = 'Short synopsis…';
+}
+
+function renderCovers(urls) {
+  var picker = document.getElementById('coverPicker');
+  if (!urls.length) {
+    picker.innerHTML = '<span class="cover-loading">No covers found on Open Library</span>';
+    return;
+  }
+  picker.innerHTML = urls.map(function(url, i) {
+    return '<div class="cover-opt" id="copt-' + i + '" onclick="selectCover(\'' + url + '\',' + i + ')">' +
+      '<img src="' + url + '" alt="Cover option ' + (i+1) + '" onerror="this.parentElement.style.display=\'none\'">' +
+      '</div>';
+  }).join('');
+  selectCover(urls[0], 0);
+}
+
+function selectCover(url, idx) {
+  document.getElementById('fCover').value = url;
+  document.querySelectorAll('.cover-opt').forEach(function(el, i) {
+    el.classList.toggle('selected', i === idx);
+  });
+}
+
+async function saveBook() {
+  var payload = {
+    title:        document.getElementById('fTitle').value.trim(),
+    author:       document.getElementById('fAuthor').value.trim(),
+    isbn:         document.getElementById('fIsbn').value.trim(),
+    genre:        document.getElementById('fGenre').value.trim(),
+    pages:        document.getElementById('fPages').value || null,
+    total_copies: document.getElementById('fCopies').value || 1,
+    cover_url:    document.getElementById('fCover').value.trim(),
+    description:  document.getElementById('fDesc').value.trim(),
+  };
+  if (!payload.title || !payload.author) { alert('Title and author are required.'); return; }
+  var url    = editId ? '/api/librarian/books/' + editId : '/api/librarian/books';
+  var method = editId ? 'PATCH' : 'POST';
+  var res = await fetch(url, { method: method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  if (!res.ok) { var e = await res.json().catch(function(){}); alert((e && e.error) || 'Save failed'); return; }
+  closeModal();
+  loadBooks(document.getElementById('searchInput').value.trim());
+}
+
+async function deleteBook(id, title) {
+  if (!confirm('Delete "' + title + '"?')) return;
+  var res = await fetch('/api/librarian/books/' + id, { method: 'DELETE' });
+  if (!res.ok) { var e = await res.json().catch(function(){}); alert((e && e.error) || 'Delete failed'); return; }
+  loadBooks(document.getElementById('searchInput').value.trim());
+}
+
+loadBooks();
+</script>

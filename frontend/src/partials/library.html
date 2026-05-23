@@ -28,21 +28,6 @@
 <script>
 
 
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  const btn = document.getElementById('themeBtn');
-  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
-}
-
 function fmtDate(iso) {
   if (!iso) return '';
   return new Date(iso).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
@@ -127,10 +112,6 @@ async function boot() {
   ]);
 
   if (!me || me.error) { location.href = '/login'; return; }
-
-  
-  
-  if (me.class_name) 
 
   renderCheckedOut(Array.isArray(checkouts) ? checkouts : []);
   renderBooks(Array.isArray(books) ? books : []);

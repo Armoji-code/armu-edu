@@ -13,12 +13,6 @@
 </div>
 
 <script>
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  const btn = document.getElementById('themeBtn');
-  if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
 async function boot() {
   const schedule = await fetch('/api/teacher/schedule').then(r => r.json()).catch(() => []);
   const todayIdx = new Date().getDay() - 1;

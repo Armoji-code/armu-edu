@@ -134,18 +134,6 @@
 <script>
 
 
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('themeBtn')?.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-function toggleTheme() {
-  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
-  drawHistory();
-}
 window.addEventListener('resize', drawHistory);
 
 // ── History ──────────────────────────────────────────────────────────────────
@@ -364,10 +352,6 @@ function render(d) {
       </div>`).join('');
     table.innerHTML = headerRow + rows;
   }
-}
-
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
 }
 
 let fetching = false;

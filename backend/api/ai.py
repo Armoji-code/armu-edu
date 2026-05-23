@@ -1,5 +1,5 @@
 from flask import request, jsonify, Response, stream_with_context, current_app
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.ai_session import AISession, AIMessage
@@ -74,7 +74,7 @@ def _can_access(user, ai_session):
 def extract_file(user):
     f = request.files.get("file")
     if not f:
-        return jsonify({"error": "no file"}), 400
+        return err("no file", 400)
     filename = f.filename or ""
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 
@@ -87,7 +87,7 @@ def extract_file(user):
             doc = Document(io.BytesIO(f.read()))
             text = "\n".join(p.text for p in doc.paragraphs)
         else:
-            return jsonify({"error": "unsupported file type"}), 400
+            return err("unsupported file type", 400)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -133,7 +133,7 @@ def get_models(user):
 def get_session(user, session_id):
     ai_session = AISession.query.get_or_404(session_id)
     if not _can_access(user, ai_session):
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     return jsonify(ai_session.to_dict())
 
 @blueprint.route("/ai/sessions/<int:session_id>", methods=["PATCH"])
@@ -141,7 +141,7 @@ def get_session(user, session_id):
 def update_session(user, session_id):
     ai_session = AISession.query.get_or_404(session_id)
     if ai_session.user_id != user.id:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     data = request.get_json(silent=True) or {}
     if "model_tier" in data and data["model_tier"] in ("standard", "advanced"):
         ai_session.model_tier = data["model_tier"]
@@ -153,18 +153,18 @@ def update_session(user, session_id):
 def delete_session(user, session_id):
     ai_session = AISession.query.get_or_404(session_id)
     if ai_session.user_id != user.id:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     AIMessage.query.filter_by(session_id=session_id).delete()
     db.session.delete(ai_session)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 @blueprint.route("/ai/sessions/<int:session_id>/messages", methods=["GET"])
 @login_required()
 def get_messages(user, session_id):
     ai_session = AISession.query.get_or_404(session_id)
     if not _can_access(user, ai_session):
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     return jsonify([m.to_dict() for m in ai_session.messages])
 
 @blueprint.route("/ai/sessions/<int:session_id>/chat", methods=["POST"])
@@ -172,13 +172,13 @@ def get_messages(user, session_id):
 def chat(user, session_id):
     ai_session = AISession.query.get_or_404(session_id)
     if not _can_access(user, ai_session):
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
 
     data = request.get_json(silent=True) or {}
     user_content = data.get("message", "").strip()
     image_b64 = data.get("image")
     if not user_content and not image_b64:
-        return jsonify({"error": "message required"}), 400
+        return err("message required", 400)
 
     is_group = ai_session.group_id is not None
     core = user_content or "(image)"
@@ -253,7 +253,7 @@ def chat(user, session_id):
 def group_ai_session(user, group_id):
     g = Group.query.get_or_404(group_id)
     if user not in g.members:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
 
     session = (
         AISession.query

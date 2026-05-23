@@ -1,6 +1,6 @@
 from flask import jsonify
 from datetime import datetime, timezone
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models.social import Activity, ActivityEvent, CommunityService, activity_enrollments
 from models import db

@@ -1,5 +1,5 @@
 from flask import request, jsonify, current_app
-from api import blueprint
+from api import blueprint, err, ok
 from auth import login_required
 from models import db
 from models.school import Subject, Class
@@ -91,7 +91,7 @@ def teacher_class_students(user, class_id):
     # Verify teacher teaches in this class
     my_class_ids = {s.class_id for s in _teacher_subjects(user)}
     if class_id not in my_class_ids:
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
 
     klass = Class.query.get_or_404(class_id)
     subject_ids = _teacher_subject_ids(user)
@@ -148,15 +148,15 @@ def create_assignment(user):
     data = request.get_json(silent=True) or {}
     subject_id = data.get("subject_id")
     if subject_id not in _teacher_subject_ids(user):
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
 
     due_raw = data.get("due_date")
     if not due_raw:
-        return jsonify({"error": "due_date required"}), 400
+        return err("due_date required", 400)
     try:
         due_date = datetime.fromisoformat(due_raw.replace("Z", "+00:00"))
     except ValueError:
-        return jsonify({"error": "invalid due_date"}), 400
+        return err("invalid due_date", 400)
 
     a = Assignment(
         subject_id=subject_id,
@@ -166,7 +166,7 @@ def create_assignment(user):
         due_date=due_date,
     )
     if not a.title:
-        return jsonify({"error": "title required"}), 400
+        return err("title required", 400)
     db.session.add(a)
     db.session.commit()
     return jsonify({"id": a.id, "title": a.title}), 201
@@ -189,9 +189,9 @@ def update_assignment(user, assignment_id):
         try:
             a.due_date = datetime.fromisoformat(data["due_date"].replace("Z", "+00:00"))
         except ValueError:
-            return jsonify({"error": "invalid due_date"}), 400
+            return err("invalid due_date", 400)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 @blueprint.route("/teacher/assignments/<int:assignment_id>", methods=["DELETE"])
@@ -203,7 +203,7 @@ def delete_assignment(user, assignment_id):
     Grade.query.filter_by(assignment_id=a.id).delete()
     db.session.delete(a)
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 # ── Grades ────────────────────────────────────────────────────────────────────
@@ -239,13 +239,13 @@ def set_grade(user):
     quarter       = data.get("quarter", 1)
 
     if score is None:
-        return jsonify({"error": "score required"}), 400
+        return err("score required", 400)
     try:
         score = float(score)
     except (TypeError, ValueError):
-        return jsonify({"error": "invalid score"}), 400
+        return err("invalid score", 400)
     if not (0 <= score <= 100):
-        return jsonify({"error": "score must be 0–100"}), 400
+        return err("score must be 0–100", 400)
 
     a, err = _owns_assignment(user, assignment_id)
     if err:
@@ -254,7 +254,7 @@ def set_grade(user):
     # Verify student is in this class
     student_ids = {s.id for s in a.subject.klass.students}
     if student_id not in student_ids:
-        return jsonify({"error": "student not in class"}), 403
+        return err("student not in class", 403)
 
     existing = Grade.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
     if existing:
@@ -267,7 +267,7 @@ def set_grade(user):
             quarter=quarter,
         ))
     db.session.commit()
-    return jsonify({"ok": True})
+    return ok()
 
 
 # ── Conduct ───────────────────────────────────────────────────────────────────
@@ -283,9 +283,9 @@ def log_conduct(user):
     reason     = data.get("reason", "")
 
     if subject_id not in _teacher_subject_ids(user):
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     if points is None:
-        return jsonify({"error": "points required"}), 400
+        return err("points required", 400)
 
     ev = ConductEvent(
         student_id=student_id,
@@ -428,9 +428,9 @@ def teacher_announce(user):
     body_text  = (data.get("body") or "").strip()
 
     if subject_id not in _teacher_subject_ids(user):
-        return jsonify({"error": "forbidden"}), 403
+        return err("forbidden", 403)
     if not title:
-        return jsonify({"error": "title required"}), 400
+        return err("title required", 400)
 
     subj = Subject.query.get_or_404(subject_id)
     students = subj.klass.students

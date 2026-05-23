@@ -1,0 +1,204 @@
+
+<div class="topbar">
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-list"/></svg>
+  <span class="topbar-title">Loans</span>
+  <div class="tabs" id="filterTabs">
+    <button class="tab active" onclick="setFilter('active',this)">Active</button>
+    <button class="tab" onclick="setFilter('overdue',this)">Overdue</button>
+    <button class="tab" onclick="setFilter('all',this)">All History</button>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-primary" onclick="openCheckout()"><svg class="icon icon-14"><use href="#ic-plus"/></svg> Check Out</button>
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"/></svg></div>
+  </div>
+</div>
+
+<div class="content">
+  <div class="loan-table" id="loanTable">
+    <div class="empty">Loading…</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">Check Out Book</div>
+
+    <div class="form-row">
+      <label class="form-label">Book *</label>
+      <input class="form-input" id="bookSearch" placeholder="Search title or author…" oninput="searchBooks(this.value)" autocomplete="off">
+      <div class="suggest-list" id="bookSuggest"></div>
+      <input type="hidden" id="selectedBookId">
+      <div id="selectedBookLabel" style="font-size:12px;color:var(--g1);margin-top:4px;"></div>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">Borrower *</label>
+      <input class="form-input" id="memberSearch" placeholder="Search name or email…" oninput="searchMembers(this.value)" autocomplete="off">
+      <div class="suggest-list" id="memberSuggest"></div>
+      <input type="hidden" id="selectedUserId">
+      <div id="selectedUserLabel" style="font-size:12px;color:var(--g1);margin-top:4px;"></div>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">Due Date *</label>
+      <input class="form-input" id="dueDate" type="date">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitCheckout()">
+        <svg class="icon icon-14"><use href="#ic-check"/></svg> Check Out
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function fmtDate(iso){ return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+
+var currentFilter = 'active';
+
+(function(){
+  var p = new URLSearchParams(location.search);
+  if (p.get('status') === 'overdue') {
+    currentFilter = 'overdue';
+    document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active', i === 1); });
+  }
+})();
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  btn.classList.add('active');
+  loadLoans();
+}
+
+function statusBadge(loan) {
+  if (loan.returned_at) return '<span class="badge badge-returned">Returned</span>';
+  if (loan.overdue)     return '<span class="badge badge-overdue">Overdue</span>';
+  return '<span class="badge badge-active">Active</span>';
+}
+
+function renderLoans(loans) {
+  var tbl = document.getElementById('loanTable');
+  if (!loans.length) { tbl.innerHTML = '<div class="empty">No loans found.</div>'; return; }
+  tbl.innerHTML =
+    '<div class="loan-row header"><span>Book</span><span>Borrower</span><span>Checked Out</span><span>Due</span><span>Status</span><span></span></div>' +
+    loans.map(function(l) {
+      return '<div class="loan-row">' +
+        '<span style="font-weight:500">' + esc(l.book_title) + '<br><span style="font-size:11px;color:var(--text3)">' + esc(l.book_author) + '</span></span>' +
+        '<span>' + esc(l.user_name) + '<br><span style="font-size:11px;color:var(--text3)">' + esc(l.user_email) + '</span></span>' +
+        '<span style="color:var(--text2)">' + fmtDate(l.checked_out_at) + '</span>' +
+        '<span style="color:var(--text2)">' + fmtDate(l.due_date) + '</span>' +
+        '<span>' + statusBadge(l) + '</span>' +
+        '<span>' + (!l.returned_at ? '<button class="btn btn-sm btn-return" onclick="returnLoan(' + l.id + ')">Return</button>' : '') + '</span>' +
+        '</div>';
+    }).join('');
+}
+
+async function loadLoans() {
+  var loans = await fetch('/api/librarian/loans?status=' + currentFilter).then(function(r){ return r.json(); }).catch(function(){ return []; });
+  renderLoans(loans);
+}
+
+async function returnLoan(id) {
+  var res = await fetch('/api/librarian/loans/' + id + '/return', { method: 'POST' });
+  if (!res.ok) { var e = await res.json().catch(function(){}); alert((e && e.error) || 'Failed'); return; }
+  loadLoans();
+}
+
+var bookTimer, memberTimer;
+
+function openCheckout() {
+  document.getElementById('bookSearch').value   = '';
+  document.getElementById('memberSearch').value = '';
+  document.getElementById('selectedBookId').value = '';
+  document.getElementById('selectedUserId').value = '';
+  document.getElementById('selectedBookLabel').textContent = '';
+  document.getElementById('selectedUserLabel').textContent = '';
+  document.getElementById('bookSuggest').classList.remove('open');
+  document.getElementById('memberSuggest').classList.remove('open');
+  var d = new Date(); d.setDate(d.getDate() + 14);
+  document.getElementById('dueDate').value = d.toISOString().slice(0,10);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function searchBooks(q) {
+  clearTimeout(bookTimer);
+  if (!q.trim()) { document.getElementById('bookSuggest').classList.remove('open'); return; }
+  bookTimer = setTimeout(async function() {
+    var bks = await fetch('/api/librarian/books?q=' + encodeURIComponent(q)).then(function(r){ return r.json(); }).catch(function(){ return []; });
+    var list = document.getElementById('bookSuggest');
+    if (!bks.length) { list.classList.remove('open'); return; }
+    list.innerHTML = bks.map(function(b) {
+      return '<div class="suggest-item" onclick="selectBook(' + b.id + ',\'' + esc(b.title) + '\',' + b.available_copies + ')">' +
+        '<div>' + esc(b.title) + ' — <span style="color:var(--text3)">' + esc(b.author) + '</span></div>' +
+        '<div class="suggest-sub">' + b.available_copies + ' of ' + b.total_copies + ' available</div>' +
+        '</div>';
+    }).join('');
+    list.classList.add('open');
+  }, 250);
+}
+
+function selectBook(id, title, avail) {
+  document.getElementById('selectedBookId').value = id;
+  document.getElementById('bookSearch').value     = title;
+  document.getElementById('bookSuggest').classList.remove('open');
+  document.getElementById('selectedBookLabel').textContent = avail > 0 ? '✓ ' + avail + ' cop' + (avail===1?'y':'ies') + ' available' : '⚠ No copies available';
+  document.getElementById('selectedBookLabel').style.color = avail > 0 ? 'var(--g1)' : '#f87171';
+}
+
+function searchMembers(q) {
+  clearTimeout(memberTimer);
+  if (!q.trim()) { document.getElementById('memberSuggest').classList.remove('open'); return; }
+  memberTimer = setTimeout(async function() {
+    var members = await fetch('/api/librarian/members?q=' + encodeURIComponent(q)).then(function(r){ return r.json(); }).catch(function(){ return []; });
+    var list = document.getElementById('memberSuggest');
+    if (!members.length) { list.classList.remove('open'); return; }
+    list.innerHTML = members.map(function(m) {
+      return '<div class="suggest-item" onclick="selectMember(' + m.id + ',\'' + esc(m.name) + '\',\'' + esc(m.email) + '\')">' +
+        '<div>' + esc(m.name) + '</div>' +
+        '<div class="suggest-sub">' + esc(m.email) + ' · ' + m.role + '</div>' +
+        '</div>';
+    }).join('');
+    list.classList.add('open');
+  }, 250);
+}
+
+function selectMember(id, name, email) {
+  document.getElementById('selectedUserId').value  = id;
+  document.getElementById('memberSearch').value    = name;
+  document.getElementById('memberSuggest').classList.remove('open');
+  document.getElementById('selectedUserLabel').textContent = '✓ ' + email;
+}
+
+async function submitCheckout() {
+  var bookId  = document.getElementById('selectedBookId').value;
+  var userId  = document.getElementById('selectedUserId').value;
+  var dueDate = document.getElementById('dueDate').value;
+  if (!bookId || !userId || !dueDate) { alert('Please select a book, borrower, and due date.'); return; }
+  var res = await fetch('/api/librarian/loans', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ book_id: +bookId, user_id: +userId, due_date: dueDate }),
+  });
+  if (!res.ok) { var e = await res.json().catch(function(){}); alert((e && e.error) || 'Checkout failed'); return; }
+  closeModal();
+  currentFilter = 'active';
+  document.querySelectorAll('.tab').forEach(function(t,i){ t.classList.toggle('active', i === 0); });
+  loadLoans();
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#bookSearch') && !e.target.closest('#bookSuggest'))
+    document.getElementById('bookSuggest').classList.remove('open');
+  if (!e.target.closest('#memberSearch') && !e.target.closest('#memberSuggest'))
+    document.getElementById('memberSuggest').classList.remove('open');
+});
+
+loadLoans();
+</script>

@@ -362,10 +362,6 @@
     document.getElementById('themeIcon').setAttribute('href', theme === 'dark' ? '#ic-moon' : '#ic-sun');
     localStorage.setItem('theme', theme);
   }
-  function toggleTheme() {
-    setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
-  }
-
   // ── Helpers ──────────────────────────────────────────────────────────────────
   function daysUntil(iso) {
     const now = new Date(); now.setHours(0,0,0,0);
@@ -379,10 +375,6 @@
     if (d === 0) return 'Today';
     if (d === 1) return 'Tomorrow';
     return `In ${d}d.`;
-  }
-
-  function esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   boot();

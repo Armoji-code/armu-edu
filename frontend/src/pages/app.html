@@ -1491,8 +1491,8 @@ const ROUTES = {
   '/classes':             'classes',
   '/assignments':         'assignments',
   '/analytics':           'analytics',
-  '/books':               'books',
-  '/loans':               'loans',
+  '/books':               'librarian/books',
+  '/loans':               'librarian/loans',
   '/admin':               'admin/dashboard',
   '/admin/dashboard':     'admin/dashboard',
   '/admin/users':         'admin/users',
@@ -1505,10 +1505,11 @@ const ROUTES = {
 };
 
 function resolvePartialKey(path) {
+  const cleanPath = path.split('?')[0];
   const role = window.__me?.role || 'student';
-  const roleMap = ROLE_ROUTES[path];
+  const roleMap = ROLE_ROUTES[cleanPath];
   if (roleMap) return roleMap[role] || roleMap.default;
-  return ROUTES[path] ?? null;
+  return ROUTES[cleanPath] ?? null;
 }
 
 /* ── Router ───────────────────────────────────────────── */
@@ -1678,8 +1679,9 @@ function renderSidebar(sections) {
 }
 
 function updateActiveNav(path) {
+  const cleanPath = path.split('?')[0];
   document.querySelectorAll('#sidebarNav .nav-item').forEach(a =>
-    a.classList.toggle('active', a.getAttribute('href') === path)
+    a.classList.toggle('active', a.getAttribute('href') === cleanPath)
   );
 }
 
@@ -1721,6 +1723,8 @@ function toggleTheme() {
   );
 }
 window.toggleTheme = toggleTheme;
+function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+window.esc = esc;
 
 /* ── Branding ─────────────────────────────────────────── */
 function hexToRgbStr(hex) {

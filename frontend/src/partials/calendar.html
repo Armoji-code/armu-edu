@@ -415,8 +415,6 @@ function setTheme(t) {
   document.getElementById('themeIcon').setAttribute('href', t === 'dark' ? '#ic-moon' : '#ic-sun');
   localStorage.setItem('theme', t);
 }
-function toggleTheme() { setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); }
-
 // ── User ──────────────────────────────────────────────────────────────────────
 function setUser(u) {
   const initials = u.name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
@@ -443,10 +441,6 @@ function fmtDate(d) {
 }
 
 function isoDate(iso) { return iso.split('T')[0]; }
-
-function esc(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
 
 boot();
 
