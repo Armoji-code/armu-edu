@@ -514,12 +514,12 @@ function clearAttachment() {
 
 /* ── Send ── */
 async function sendMsg() {
-  if (activeIdx < 0) return;
-  var conv = conversations[activeIdx];  // capture ref before await; immune to index drift
-  if (!conv) return;
+  if (activeIdx < 0) { console.log('[sendMsg] abort: activeIdx<0'); return; }
+  var conv = conversations[activeIdx];
+  if (!conv) { console.log('[sendMsg] abort: no conv at', activeIdx); return; }
   var input = document.getElementById('composeInput');
   var content = input ? input.value.trim() : '';
-  if (!content && !attachedFile) return;
+  if (!content && !attachedFile) { console.log('[sendMsg] abort: empty'); return; }
   var btn = document.getElementById('sendBtn');
   if (btn) btn.disabled = true;
   var payload = {recipient_id: conv.otherId, content: content};
@@ -528,18 +528,19 @@ async function sendMsg() {
   if (input) input.value = '';
   cancelReply();
   clearAttachment();
+  console.log('[sendMsg] posting payload', payload);
   var res = await fetch('/api/messages/personal', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload),
-  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+  }).then(function(r){ console.log('[sendMsg] HTTP status', r.status); return r.json(); }).catch(function(e){ console.log('[sendMsg] fetch error', e); return null; });
   if (btn) btn.disabled = false;
+  console.log('[sendMsg] res=', res, '| threadMsgs el=', document.getElementById('threadMsgs'));
   if (res && !res.error) {
-    // Add to local state immediately; socket event will be deduplicated
     var already = conv.messages.some(function(m){ return m.id === res.id; });
     if (!already) conv.messages.push(res);
-    // Move conv to front using its object reference, not a stale index
     var existIdx = conversations.indexOf(conv);
+    console.log('[sendMsg] conv existIdx=', existIdx, 'msgs now=', conv.messages.length);
     if (existIdx !== 0) {
       if (existIdx > 0) conversations.splice(existIdx, 1);
       conversations.unshift(conv);
@@ -548,6 +549,9 @@ async function sendMsg() {
     activeOtherId = conv.otherId;
     renderConvList();
     renderMsgsList(true);
+    console.log('[sendMsg] done — threadMsgs children=', document.getElementById('threadMsgs') && document.getElementById('threadMsgs').children.length);
+  } else {
+    console.log('[sendMsg] skipping update — res falsy or has error');
   }
 }
 
