@@ -353,6 +353,9 @@ def admin_users(user):
     return jsonify([u.to_dict() for u in users])
 
 
+_VALID_ROLES = {"student", "teacher", "librarian", "admin"}
+
+
 @blueprint.route("/admin/users", methods=["POST"])
 @login_required(roles=["admin"])
 def admin_create_user(user):
@@ -366,6 +369,10 @@ def admin_create_user(user):
 
     if not name or not email or not password:
         return err("name, email, and password required", 400)
+    if role not in _VALID_ROLES:
+        return err(f"role must be one of: {', '.join(sorted(_VALID_ROLES))}", 400)
+    if class_id and not Class.query.filter_by(id=class_id, school_id=school.id).first():
+        return err("class not found in this school", 404)
     if User.query.filter_by(email=email).first():
         return err("email already in use", 409)
 
@@ -391,9 +398,14 @@ def admin_update_user(user, uid):
             return err("email already in use", 409)
         target.email = new_email
     if "role" in data:
+        if data["role"] not in _VALID_ROLES:
+            return err(f"role must be one of: {', '.join(sorted(_VALID_ROLES))}", 400)
         target.role = data["role"]
     if "class_id" in data:
-        target.class_id = data["class_id"] or None
+        new_class_id = data["class_id"] or None
+        if new_class_id and not Class.query.filter_by(id=new_class_id, school_id=school.id).first():
+            return err("class not found in this school", 404)
+        target.class_id = new_class_id
     if "password" in data and str(data["password"]).strip():
         target.set_password(str(data["password"]).strip())
     if "can_change_password" in data:
@@ -541,7 +553,8 @@ def admin_flagged_messages(user):
 def admin_update_flag(user, flag_id):
     school = _school(user)
     flag = FlaggedMessage.query.get_or_404(flag_id)
-    if flag.message.sender.school_id != school.id:
+    sender = flag.message.sender if flag.message else None
+    if not sender or sender.school_id != school.id:
         return err("forbidden", 403)
     data = request.get_json(silent=True) or {}
     if "status" in data and data["status"] in ("pending", "dismissed", "actioned"):
