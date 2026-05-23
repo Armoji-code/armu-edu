@@ -159,6 +159,15 @@ def admin_get_settings(user):
         "turn_username":               s.get("turn_username", cfg.get("TURN_USERNAME", "")),
         "turn_credential_set":         bool(s.get("turn_credential", cfg.get("TURN_CREDENTIAL", ""))),
         "message_scan_enabled":        bool(s.get("message_scan_enabled", False)),
+        # SMTP / email
+        "smtp": {
+            "host":         s.get("smtp", {}).get("host", ""),
+            "port":         s.get("smtp", {}).get("port", 587),
+            "username":     s.get("smtp", {}).get("username", ""),
+            "password_set": bool(s.get("smtp", {}).get("password", "")),
+            "from_email":   s.get("smtp", {}).get("from_email", ""),
+            "use_tls":      bool(s.get("smtp", {}).get("use_tls", True)),
+        },
     })
 
 
@@ -212,9 +221,38 @@ def admin_update_settings(user):
     if "turn_credential" in data and str(data["turn_credential"]).strip():
         settings["turn_credential"] = str(data["turn_credential"]).strip()
 
+    # SMTP
+    if "smtp" in data and isinstance(data["smtp"], dict):
+        smtp_in = data["smtp"]
+        smtp = dict(settings.get("smtp", {}))
+        for key in ("host", "username", "from_email"):
+            if key in smtp_in:
+                smtp[key] = str(smtp_in[key]).strip()
+        if "port" in smtp_in:
+            try:
+                smtp["port"] = max(1, min(65535, int(smtp_in["port"])))
+            except (TypeError, ValueError):
+                pass
+        if "password" in smtp_in and str(smtp_in["password"]).strip():
+            smtp["password"] = str(smtp_in["password"]).strip()
+        if "use_tls" in smtp_in:
+            smtp["use_tls"] = bool(smtp_in["use_tls"])
+        settings["smtp"] = smtp
+
     school.settings = settings
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@blueprint.route("/admin/settings/smtp/test", methods=["POST"])
+@login_required(roles=["admin"])
+def test_smtp(user):
+    try:
+        from mailer import send_test_email
+        send_test_email(user.email)
+        return jsonify({"ok": True, "sent_to": user.email})
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
 
 @blueprint.route("/admin/branding", methods=["GET"])

@@ -2,7 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
-from models.user import User
+from models.user import User, PasswordResetToken
 from models.school import School, Class, Subject
 from models.academic import Assignment, Grade, SchedulePeriod
 from models.conduct import ConductEvent

@@ -162,6 +162,47 @@
 
   .error.visible { display: block; }
 
+  .success {
+    display: none;
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: rgba(61,214,140,0.1);
+    border: 1px solid rgba(61,214,140,0.25);
+    border-radius: var(--radius-sm);
+    color: var(--g1);
+    font-size: 13px;
+    text-align: center;
+  }
+  .success.visible { display: block; }
+
+  .forgot-link {
+    display: block;
+    margin-top: 12px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text3);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    transition: color var(--transition);
+  }
+  .forgot-link:hover { color: var(--text2); }
+
+  .back-link {
+    display: block;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text3);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    transition: color var(--transition);
+  }
+  .back-link:hover { color: var(--text2); }
+
   .theme-toggle {
     position: fixed;
     top: 20px;
@@ -230,6 +271,40 @@
     </div>
     <button type="submit" class="btn-login" id="submitBtn">Sign in</button>
     <div class="error" id="errorMsg"></div>
+    <button type="button" class="forgot-link" onclick="showForgot()">Forgot password?</button>
+  </form>
+
+  <!-- Step 1: Enter email to receive code -->
+  <form id="forgotForm" onsubmit="handleForgot(event)" style="display:none">
+    <div style="margin-bottom:18px;font-size:13px;color:var(--text2);">Enter your account email and we'll send you a reset code.</div>
+    <div class="field">
+      <label for="forgotEmail">Email</label>
+      <input type="email" id="forgotEmail" placeholder="your@school.com" autocomplete="email" required>
+    </div>
+    <button type="submit" class="btn-login" id="forgotBtn">Send reset code</button>
+    <div class="error" id="forgotErr"></div>
+    <button type="button" class="back-link" onclick="showLogin()">← Back to sign in</button>
+  </form>
+
+  <!-- Step 2: Enter code + new password -->
+  <form id="resetForm" onsubmit="handleReset(event)" style="display:none">
+    <div style="margin-bottom:18px;font-size:13px;color:var(--text2);">Check your email for the 6-digit code and enter it below.</div>
+    <div class="field">
+      <label for="resetCode">Reset code</label>
+      <input type="text" id="resetCode" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code" required>
+    </div>
+    <div class="field">
+      <label for="newPassword">New password</label>
+      <input type="password" id="newPassword" placeholder="Minimum 8 characters" autocomplete="new-password" required>
+    </div>
+    <div class="field">
+      <label for="confirmPassword">Confirm password</label>
+      <input type="password" id="confirmPassword" placeholder="Repeat new password" autocomplete="new-password" required>
+    </div>
+    <button type="submit" class="btn-login" id="resetBtn">Reset password</button>
+    <div class="error" id="resetErr"></div>
+    <div class="success" id="resetOk"></div>
+    <button type="button" class="back-link" onclick="showForgot()">← Change email</button>
   </form>
 </div>
 
@@ -341,6 +416,104 @@
     const el = document.getElementById('errorMsg');
     el.textContent = msg;
     el.classList.add('visible');
+  }
+
+  function showLogin() {
+    document.getElementById('loginForm').style.display = '';
+    document.getElementById('forgotForm').style.display = 'none';
+    document.getElementById('resetForm').style.display = 'none';
+  }
+
+  function showForgot() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('forgotForm').style.display = '';
+    document.getElementById('resetForm').style.display = 'none';
+    document.getElementById('forgotErr').classList.remove('visible');
+  }
+
+  function showReset() {
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('forgotForm').style.display = 'none';
+    document.getElementById('resetForm').style.display = '';
+    document.getElementById('resetErr').classList.remove('visible');
+    document.getElementById('resetOk').classList.remove('visible');
+  }
+
+  let _forgotEmail = '';
+
+  async function handleForgot(e) {
+    e.preventDefault();
+    const btn = document.getElementById('forgotBtn');
+    const errEl = document.getElementById('forgotErr');
+    const email = document.getElementById('forgotEmail').value.trim();
+    errEl.classList.remove('visible');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+    try {
+      const res = await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        errEl.textContent = data.error || 'Failed to send code.';
+        errEl.classList.add('visible');
+      } else {
+        _forgotEmail = email;
+        showReset();
+      }
+    } catch {
+      errEl.textContent = 'Could not reach the server.';
+      errEl.classList.add('visible');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Send reset code';
+    }
+  }
+
+  async function handleReset(e) {
+    e.preventDefault();
+    const btn = document.getElementById('resetBtn');
+    const errEl = document.getElementById('resetErr');
+    const okEl  = document.getElementById('resetOk');
+    const code    = document.getElementById('resetCode').value.trim();
+    const newPw   = document.getElementById('newPassword').value;
+    const confirm = document.getElementById('confirmPassword').value;
+    errEl.classList.remove('visible');
+    okEl.classList.remove('visible');
+    if (newPw !== confirm) {
+      errEl.textContent = 'Passwords do not match.';
+      errEl.classList.add('visible');
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Resetting…';
+    try {
+      const res = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: _forgotEmail, code, new_password: newPw }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        errEl.textContent = data.error || 'Reset failed. Check your code and try again.';
+        errEl.classList.add('visible');
+      } else {
+        okEl.textContent = 'Password reset! You can now sign in with your new password.';
+        okEl.classList.add('visible');
+        btn.disabled = true;
+        setTimeout(() => showLogin(), 2500);
+      }
+    } catch {
+      errEl.textContent = 'Could not reach the server.';
+      errEl.classList.add('visible');
+    } finally {
+      if (!document.getElementById('resetOk').classList.contains('visible')) {
+        btn.disabled = false;
+        btn.textContent = 'Reset password';
+      }
+    }
   }
 </script>
 </body>

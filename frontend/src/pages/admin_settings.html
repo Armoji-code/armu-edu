@@ -263,6 +263,7 @@ function updateThumb(thumb, inp) {
 
 function renderAll(s) {
   settings = s;
+  const smtp = s.smtp || {};
   const c = document.getElementById('mainContent');
   c.innerHTML = `
     <!-- School Name -->
@@ -439,6 +440,53 @@ function renderAll(s) {
       <div style="font-size:12px;color:var(--text3);margin-top:10px;">Install <code style="font-family:monospace;background:var(--bg3);padding:1px 5px;border-radius:4px">coturn</code> on your server for self-hosted TURN. See the README for a minimal config.</div>
     </div>
 
+    <!-- Email / SMTP -->
+    <div class="section" id="section-smtp">
+      <div class="section-head">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(var(--g2-rgb),0.15),rgba(var(--g1-rgb),0.15))">
+          <svg class="icon icon-18" style="color:var(--g2)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        </div>
+        <div><div class="section-title">Email (SMTP)</div><div class="section-desc">Required for forgot-password emails. Leave blank to disable email.</div></div>
+      </div>
+      <div class="ai-params-grid">
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">SMTP Host</div>
+          <input class="field-input" id="smtp_host" type="text" value="${escAttr(smtp.host||'')}" placeholder="smtp.gmail.com">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Port</div>
+          <input class="field-input" id="smtp_port" type="number" value="${smtp.port||587}" placeholder="587">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Username</div>
+          <input class="field-input" id="smtp_username" type="text" value="${escAttr(smtp.username||'')}" placeholder="you@school.com">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">Password</div>
+          <input class="field-input" id="smtp_password" type="password" placeholder="${smtp.password_set?'Saved — enter new to replace':'App password or SMTP password'}">
+        </div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-label">From Email (optional)</div>
+          <input class="field-input" id="smtp_from_email" type="text" value="${escAttr(smtp.from_email||'')}" placeholder="noreply@school.com">
+        </div>
+        <div class="field-row" style="margin-bottom:0;padding-top:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <label class="toggle">
+              <input type="checkbox" id="smtp_use_tls" ${smtp.use_tls!==false?'checked':''}>
+              <div class="toggle-track"></div>
+              <div class="toggle-thumb"></div>
+            </label>
+            <span style="font-size:13px;color:var(--text)">Use STARTTLS</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">Use port 465 for SSL, 587 for STARTTLS (recommended), 25 for plain.</div>
+        </div>
+      </div>
+      <div style="margin-top:14px">
+        <button class="btn btn-secondary" id="smtpTestBtn" onclick="testSmtp()">Send test email to ${escAttr(s._admin_email||'')}</button>
+        <span id="smtpTestMsg" style="font-size:12px;color:var(--text3);margin-left:10px"></span>
+      </div>
+    </div>
+
     <!-- Save bar -->
     <div class="save-bar">
       <button class="btn btn-primary" id="saveBtn" onclick="save()">
@@ -580,10 +628,19 @@ async function save() {
     tutor_system_prompt:         document.getElementById('tutor_system_prompt').value,
     turn_url:                    document.getElementById('turn_url')?.value.trim() || '',
     turn_username:               document.getElementById('turn_username')?.value.trim() || '',
+    smtp: {
+      host:       document.getElementById('smtp_host')?.value.trim() || '',
+      port:       parseInt(document.getElementById('smtp_port')?.value || '587', 10),
+      username:   document.getElementById('smtp_username')?.value.trim() || '',
+      from_email: document.getElementById('smtp_from_email')?.value.trim() || '',
+      use_tls:    document.getElementById('smtp_use_tls')?.checked ?? true,
+    },
   };
   if (apiKey) payload.ai_api_key = apiKey;
   const turnCred = document.getElementById('turn_credential')?.value.trim() || '';
   if (turnCred) payload.turn_credential = turnCred;
+  const smtpPw = document.getElementById('smtp_password')?.value.trim() || '';
+  if (smtpPw) payload.smtp.password = smtpPw;
   const ok = await fetch('/api/admin/settings', {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
@@ -602,6 +659,23 @@ async function save() {
   }
 }
 
+async function testSmtp() {
+  const btn = document.getElementById('smtpTestBtn');
+  const msg = document.getElementById('smtpTestMsg');
+  btn.disabled = true;
+  msg.style.color = 'var(--text3)';
+  msg.textContent = 'Sending…';
+  const res = await fetch('/api/admin/settings/smtp/test', { method: 'POST' }).then(r => r.json()).catch(() => ({ error: 'Request failed' }));
+  btn.disabled = false;
+  if (res.ok) {
+    msg.style.color = 'var(--g1)';
+    msg.textContent = 'Test email sent!';
+  } else {
+    msg.style.color = '#f87171';
+    msg.textContent = res.error || 'Failed';
+  }
+}
+
 async function boot() {
   const me = await fetch('/api/auth/me').then(r => r.json()).catch(() => null);
   if (!me || me.error || me.role !== 'admin') { location.href = '/login'; return; }
@@ -613,6 +687,7 @@ async function boot() {
     document.getElementById('mainContent').innerHTML = '<div style="padding:48px;text-align:center;color:var(--text3);">Failed to load settings.</div>';
     return;
   }
+  s._admin_email = me.email;
   renderAll(s);
 }
 boot();

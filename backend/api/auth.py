@@ -2,7 +2,7 @@ from flask import request, jsonify, session
 from api import blueprint
 from auth import login_required
 from models import db
-from models.user import User
+from models.user import User, PasswordResetToken
 from models.school import School
 
 @blueprint.route("/branding", methods=["GET"])
@@ -108,5 +108,59 @@ def save_user_appearance(user):
 
     prefs["appearance"] = {"colors": colors, "font": font}
     user.preferences = prefs
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@blueprint.route("/auth/forgot-password", methods=["POST"])
+def forgot_password():
+    data = request.get_json(silent=True) or {}
+    email = data.get("email", "").strip().lower()
+    if not email:
+        return jsonify({"error": "email required"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"ok": True})  # don't reveal whether email exists
+
+    # Invalidate prior tokens
+    PasswordResetToken.query.filter_by(user_id=user.id, used=False).update({"used": True})
+    db.session.flush()
+
+    token_obj, code = PasswordResetToken.generate(user.id)
+    db.session.add(token_obj)
+    db.session.commit()
+
+    try:
+        from mailer import send_reset_email
+        send_reset_email(user.email, code, user.name)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+
+    return jsonify({"ok": True})
+
+
+@blueprint.route("/auth/reset-password", methods=["POST"])
+def reset_password():
+    data = request.get_json(silent=True) or {}
+    email  = data.get("email", "").strip().lower()
+    code   = data.get("code", "").strip()
+    new_pw = data.get("new_password", "")
+
+    if not email or not code or not new_pw:
+        return jsonify({"error": "email, code, and new_password required"}), 400
+    if len(new_pw) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        return jsonify({"error": "Invalid code"}), 400
+
+    token_obj = PasswordResetToken.verify(user.id, code)
+    if not token_obj:
+        return jsonify({"error": "Invalid or expired code"}), 400
+
+    token_obj.used = True
+    user.set_password(new_pw)
     db.session.commit()
     return jsonify({"ok": True})

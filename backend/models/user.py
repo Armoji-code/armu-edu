@@ -1,6 +1,7 @@
 from models import db
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+import secrets, hashlib
 
 class User(db.Model):
     __tablename__ = "users"
@@ -40,3 +41,34 @@ class User(db.Model):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "can_change_password": self.can_change_password,
         }
+
+
+class PasswordResetToken(db.Model):
+    __tablename__ = "password_reset_tokens"
+
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    token_hash = db.Column(db.String(64), nullable=False)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    used       = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True),
+                           default=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User", backref="reset_tokens")
+
+    @staticmethod
+    def generate(user_id: int, ttl_minutes: int = 15):
+        code = f"{secrets.randbelow(1000000):06d}"
+        token_hash = hashlib.sha256(code.encode()).hexdigest()
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
+        obj = PasswordResetToken(user_id=user_id, token_hash=token_hash,
+                                 expires_at=expires_at)
+        return obj, code
+
+    @staticmethod
+    def verify(user_id: int, code: str):
+        token_hash = hashlib.sha256(code.encode()).hexdigest()
+        now = datetime.now(timezone.utc)
+        return PasswordResetToken.query.filter_by(
+            user_id=user_id, token_hash=token_hash, used=False
+        ).filter(PasswordResetToken.expires_at > now).first()
