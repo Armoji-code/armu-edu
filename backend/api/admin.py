@@ -266,8 +266,11 @@ def test_smtp(user):
         from mailer import send_test_email
         send_test_email(user.email)
         return jsonify({"ok": True, "sent_to": user.email})
+    except ValueError as exc:
+        return err(str(exc), 400)
     except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
+        current_app.logger.exception("SMTP test failed")
+        return err(f"{type(exc).__name__}: {exc}", 500)
 
 
 @blueprint.route("/admin/branding", methods=["GET"])

@@ -134,8 +134,12 @@ def forgot_password():
     try:
         from mailer import send_reset_email
         send_reset_email(user.email, code, user.name)
-    except Exception as exc:
-        return jsonify({"error": str(exc)}), 500
+    except ValueError as exc:
+        return err(str(exc), 500)
+    except Exception:
+        from flask import current_app
+        current_app.logger.exception("Failed to send password reset email to %s", user.email)
+        return err("Failed to send reset email — contact your administrator.", 500)
 
     return ok()
 
