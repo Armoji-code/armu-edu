@@ -15,6 +15,7 @@ def list_personal(user):
         .filter(
             Message.group_id == None,
             (Message.sender_id == user.id) | (Message.recipient_id == user.id),
+            Message.is_deleted != True,
         )
         .order_by(Message.created_at.desc())
         .all()
