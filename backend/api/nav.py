@@ -69,6 +69,12 @@ _DEFAULTS = {
             {"label": "Navigation",  "icon": "ic-menu",       "path": "/admin/nav"},
             {"label": "Terminal",    "icon": "ic-terminal",   "path": "/admin/terminal"},
         ]},
+        {"label": "Personal", "items": [
+            {"label": "Messages",    "icon": "ic-messages",   "path": "/messages"},
+            {"label": "Whiteboard",  "icon": "ic-whiteboard", "path": "/whiteboard"},
+            {"label": "Meeting",     "icon": "ic-meeting",    "path": "/meeting"},
+            {"label": "My Settings", "icon": "ic-settings",   "path": "/settings"},
+        ]},
     ],
 }
 
