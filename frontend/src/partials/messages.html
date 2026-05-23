@@ -9,17 +9,41 @@
 </div>
 
 <div class="msg-body">
+
+  <!-- Conversation list -->
   <div class="conv-panel">
-    <div class="conv-panel-head">Conversations</div>
+    <div class="conv-panel-head" style="display:flex;align-items:center;justify-content:space-between;">
+      <span>Conversations</span>
+      <button onclick="openPicker()" title="New message" style="background:none;border:none;cursor:pointer;color:var(--g1);display:flex;align-items:center;padding:2px;">
+        <svg class="icon icon-18"><use href="#ic-plus"/></svg>
+      </button>
+    </div>
+    <div style="padding:8px 12px;">
+      <input id="convSearch" type="text" placeholder="Search…" oninput="filterConvs(this.value)"
+        style="width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:12px;font-family:inherit;outline:none;box-sizing:border-box;">
+    </div>
     <div class="conv-list" id="convList">
       <div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>
     </div>
   </div>
+
+  <!-- Thread panel -->
   <div class="thread-panel" id="threadPanel">
     <div class="no-conv" id="noConv">
       <svg class="icon" style="width:40px;height:40px;opacity:0.25;"><use href="#ic-messages"/></svg>
-      <span style="font-size:13px;">Select a conversation</span>
+      <span style="font-size:13px;">Select a conversation or start a new one</span>
     </div>
+  </div>
+</div>
+
+<!-- User picker modal -->
+<div id="pickerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:360px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;gap:14px;">
+    <div style="font-size:15px;font-weight:600;">New Message</div>
+    <input id="pickerSearch" type="text" placeholder="Search people…" oninput="filterPicker(this.value)" autofocus
+      style="padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;outline:none;">
+    <div id="pickerList" style="overflow-y:auto;max-height:320px;display:flex;flex-direction:column;gap:2px;"></div>
+    <button onclick="closePicker()" style="align-self:flex-end;padding:6px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:13px;">Cancel</button>
   </div>
 </div>
 
@@ -30,104 +54,116 @@
   if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
 })();
 
-let myId = null;
-let conversations = [];
-let activeIdx = -1;
+var myId = null;
+var conversations = [];
+var activeIdx = -1;
+var allUsers = [];
+var _convFilter = '';
 
 function initials(name) {
   if (!name) return '?';
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  return name.split(' ').map(function(w){ return w[0]; }).join('').slice(0,2).toUpperCase();
 }
 
 function fmtTime(iso) {
   if (!iso) return '';
-  const d = new Date(iso);
-  const now = new Date();
+  var d = new Date(iso), now = new Date();
   if (d.toDateString() === now.toDateString())
     return d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:false});
   return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
 }
 
 function buildConversations(messages) {
-  const map = {};
-  for (const m of messages) {
-    const otherId   = m.sender_id === myId ? m.recipient_id : m.sender_id;
-    const otherName = m.sender_id === myId
-      ? (m.recipient_name || 'User #' + otherId)
-      : (m.sender_name    || 'User #' + otherId);
-    if (!map[otherId]) map[otherId] = {otherId, otherName, messages: []};
+  var map = {};
+  for (var i = 0; i < messages.length; i++) {
+    var m = messages[i];
+    var otherId   = m.sender_id === myId ? m.recipient_id : m.sender_id;
+    var otherName = m.sender_id === myId ? (m.recipient_name || 'User #' + otherId) : (m.sender_name || 'User #' + otherId);
+    if (!map[otherId]) map[otherId] = {otherId: otherId, otherName: otherName, messages: []};
     map[otherId].messages.push(m);
     if (!map[otherId].otherName || map[otherId].otherName.startsWith('User #'))
       map[otherId].otherName = otherName;
   }
-  for (const c of Object.values(map))
-    c.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  return Object.values(map).sort((a, b) => {
-    const aLast = a.messages[a.messages.length - 1]?.created_at || '';
-    const bLast = b.messages[b.messages.length - 1]?.created_at || '';
+  var convs = Object.values(map);
+  convs.forEach(function(c){
+    c.messages.sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
+  });
+  convs.sort(function(a,b){
+    var aLast = a.messages[a.messages.length-1]?.created_at || '';
+    var bLast = b.messages[b.messages.length-1]?.created_at || '';
     return bLast.localeCompare(aLast);
   });
+  return convs;
+}
+
+function filterConvs(q) {
+  _convFilter = q.toLowerCase();
+  renderConvList();
 }
 
 function renderConvList() {
-  const el = document.getElementById('convList');
+  var el = document.getElementById('convList');
   if (!el) return;
-  if (!conversations.length) {
-    el.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px;">No messages yet.</div>';
+  var visible = _convFilter
+    ? conversations.filter(function(c){ return c.otherName.toLowerCase().includes(_convFilter); })
+    : conversations;
+  if (!visible.length) {
+    el.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px;">' + (_convFilter ? 'No results.' : 'No messages yet. Press + to start one.') + '</div>';
     return;
   }
-  el.innerHTML = conversations.map((c, i) => {
-    const last    = c.messages[c.messages.length - 1];
-    const preview = last ? (last.sender_id === myId ? 'You: ' : '') + last.content : '';
-    const unread  = c.messages.some(m => m.sender_id !== myId && !m.is_read);
-    return `<div class="conv-item${i === activeIdx ? ' active' : ''}" onclick="openConv(${i})">
-      <div class="avatar-sm">${initials(c.otherName)}</div>
-      <div style="flex:1;min-width:0;">
-        <div class="conv-name">${c.otherName}</div>
-        <div class="conv-preview">${preview}</div>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
-        <div class="conv-time">${fmtTime(last?.created_at)}</div>
-        ${unread ? '<div class="unread-dot"></div>' : ''}
-      </div>
-    </div>`;
+  el.innerHTML = visible.map(function(c){
+    var realIdx = conversations.indexOf(c);
+    var last    = c.messages[c.messages.length - 1];
+    var preview = last ? (last.sender_id === myId ? 'You: ' : '') + last.content : '';
+    var unread  = c.messages.some(function(m){ return m.sender_id !== myId && !m.is_read; });
+    return '<div class="conv-item' + (realIdx === activeIdx ? ' active' : '') + '" onclick="openConv(' + realIdx + ')">'
+      + '<div class="avatar-sm">' + initials(c.otherName) + '</div>'
+      + '<div style="flex:1;min-width:0;">'
+      +   '<div class="conv-name">' + esc(c.otherName) + '</div>'
+      +   '<div class="conv-preview">' + esc(preview.slice(0,60)) + '</div>'
+      + '</div>'
+      + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+      +   '<div class="conv-time">' + fmtTime(last?.created_at) + '</div>'
+      +   (unread ? '<div class="unread-dot"></div>' : '')
+      + '</div>'
+      + '</div>';
   }).join('');
 }
 
 function renderThread(conv) {
-  const panel = document.getElementById('threadPanel');
+  var panel = document.getElementById('threadPanel');
   if (!panel) return;
-  panel.innerHTML = `
-    <div class="thread-head">
-      <div class="avatar-sm">${initials(conv.otherName)}</div>
-      <div class="thread-head-name">${conv.otherName}</div>
-    </div>
-    <div class="thread-msgs" id="threadMsgs">
-      ${conv.messages.length === 0
+  panel.innerHTML = '<div class="thread-head">'
+    + '<div class="avatar-sm">' + initials(conv.otherName) + '</div>'
+    + '<div class="thread-head-name">' + esc(conv.otherName) + '</div>'
+    + '</div>'
+    + '<div class="thread-msgs" id="threadMsgs">'
+    + (conv.messages.length === 0
         ? '<div class="thread-empty">No messages yet. Say hello!</div>'
-        : conv.messages.map(m => {
-            const mine = m.sender_id === myId;
-            return `<div class="msg-bubble ${mine ? 'mine' : 'theirs'}">
-              <div class="bubble-text">${m.content}</div>
-              <div class="bubble-time">${fmtTime(m.created_at)}</div>
-            </div>`;
-          }).join('')}
-    </div>
-    <div class="thread-compose">
-      <textarea class="compose-input" id="composeInput" placeholder="Type a message…" rows="1"></textarea>
-      <button class="send-btn" id="sendBtn" onclick="sendMsg()">
-        <svg class="icon icon-18"><use href="#ic-send"/></svg>
-      </button>
-    </div>`;
+        : conv.messages.map(function(m){
+            var mine = m.sender_id === myId;
+            return '<div class="msg-bubble ' + (mine ? 'mine' : 'theirs') + '">'
+              + '<div class="bubble-text">' + esc(m.content) + '</div>'
+              + '<div class="bubble-time">' + fmtTime(m.created_at) + '</div>'
+              + '</div>';
+          }).join(''))
+    + '</div>'
+    + '<div class="thread-compose">'
+    + '<textarea class="compose-input" id="composeInput" placeholder="Type a message…" rows="1"></textarea>'
+    + '<button class="send-btn" id="sendBtn" onclick="sendMsg()">'
+    +   '<svg class="icon icon-18"><use href="#ic-send"/></svg>'
+    + '</button>'
+    + '</div>';
 
-  const msgs = document.getElementById('threadMsgs');
+  var msgs = document.getElementById('threadMsgs');
   if (msgs) msgs.scrollTop = msgs.scrollHeight;
 
-  const input = document.getElementById('composeInput');
+  var input = document.getElementById('composeInput');
   if (input) {
-    input.addEventListener('keydown', e => {
+    input.addEventListener('keydown', function(e){
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
     });
+    input.focus();
   }
 }
 
@@ -137,20 +173,30 @@ function openConv(i) {
   renderThread(conversations[i]);
 }
 
+function openConvWithUser(userId, userName) {
+  // Find existing conversation or create empty one
+  var idx = conversations.findIndex(function(c){ return c.otherId === userId; });
+  if (idx === -1) {
+    conversations.unshift({otherId: userId, otherName: userName, messages: []});
+    idx = 0;
+  }
+  openConv(idx);
+}
+
 async function sendMsg() {
   if (activeIdx < 0) return;
-  const input = document.getElementById('composeInput');
-  const content = input?.value.trim();
+  var input = document.getElementById('composeInput');
+  var content = input ? input.value.trim() : '';
   if (!content) return;
-  const btn = document.getElementById('sendBtn');
+  var btn = document.getElementById('sendBtn');
   if (btn) btn.disabled = true;
   input.value = '';
-  const conv = conversations[activeIdx];
-  const res = await fetch('/api/messages/personal', {
+  var conv = conversations[activeIdx];
+  var res = await fetch('/api/messages/personal', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({recipient_id: conv.otherId, content}),
-  }).then(r => r.json()).catch(() => null);
+    body: JSON.stringify({recipient_id: conv.otherId, content: content}),
+  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
   if (btn) btn.disabled = false;
   if (res && !res.error) {
     conv.messages.push(res);
@@ -162,16 +208,72 @@ async function sendMsg() {
   }
 }
 
-window.openConv = openConv;
-window.sendMsg  = sendMsg;
+/* ── User picker ── */
+function openPicker() {
+  document.getElementById('pickerModal').style.display = 'flex';
+  var inp = document.getElementById('pickerSearch');
+  if (inp) { inp.value = ''; inp.focus(); }
+  renderPickerList('');
+}
+
+function closePicker() {
+  document.getElementById('pickerModal').style.display = 'none';
+}
+
+function filterPicker(q) {
+  renderPickerList(q.toLowerCase());
+}
+
+function renderPickerList(q) {
+  var list = document.getElementById('pickerList');
+  if (!list) return;
+  var filtered = q ? allUsers.filter(function(u){ return (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q); }) : allUsers;
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px;">No users found.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(function(u){
+    return '<div onclick="pickUser(' + u.id + ',\'' + esc(u.name) + '\')" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'
+      + '<div class="avatar-sm" style="flex-shrink:0;">' + initials(u.name) + '</div>'
+      + '<div>'
+      +   '<div style="font-size:13px;font-weight:500;color:var(--text);">' + esc(u.name) + '</div>'
+      +   '<div style="font-size:11px;color:var(--text3);">' + esc(u.email) + '</div>'
+      + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+function pickUser(id, name) {
+  closePicker();
+  openConvWithUser(id, name);
+}
+
+// Close picker on backdrop click
+document.getElementById('pickerModal').addEventListener('click', function(e){
+  if (e.target === this) closePicker();
+});
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+window.openConv    = openConv;
+window.sendMsg     = sendMsg;
+window.openPicker  = openPicker;
+window.closePicker = closePicker;
+window.filterPicker= filterPicker;
+window.filterConvs = filterConvs;
+window.pickUser    = pickUser;
 
 async function boot() {
-  const [me, messages] = await Promise.all([
-    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
-    fetch('/api/messages/personal').then(r => r.json()).catch(() => []),
+  var [me, messages, users] = await Promise.all([
+    fetch('/api/auth/me').then(function(r){ return r.json(); }).catch(function(){ return null; }),
+    fetch('/api/messages/personal').then(function(r){ return r.json(); }).catch(function(){ return []; }),
+    fetch('/api/users/classmates').then(function(r){ return r.json(); }).catch(function(){ return []; }),
   ]);
   if (!me || me.error) { location.href = '/login'; return; }
   myId = me.id;
+  allUsers = Array.isArray(users) ? users : [];
   conversations = buildConversations(Array.isArray(messages) ? messages : []);
   renderConvList();
 }
