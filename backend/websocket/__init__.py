@@ -1,5 +1,6 @@
 import json
 from app import socketio
+from flask import session
 from flask_socketio import join_room, emit
 
 # In-memory cache per room for fast collaborative sync
@@ -9,6 +10,20 @@ _board_states = {}
 def _is_persistent(room):
     """Meeting boards are ephemeral; personal and group boards are saved to DB."""
     return not room.startswith('meeting_')
+
+
+def _check_room_access(room):
+    uid = str(session.get('user_id', ''))
+    if not uid:
+        return False
+    if room.startswith('personal_'):
+        return uid == room[len('personal_'):]
+    if room.startswith('group_'):
+        return True  # secret-link model; knowing the code is the credential
+    if room.startswith('meeting_'):
+        from websocket.meeting import _rooms
+        return uid in _rooms.get(room[len('meeting_'):], {})
+    return False
 
 
 def _load_room(room):
@@ -84,6 +99,9 @@ def on_user_join(data):
 @socketio.on("wb_join")
 def on_wb_join(data):
     room = data.get("room", "global")
+    if not _check_room_access(room):
+        emit("wb_error", {"error": "unauthorized"})
+        return
     join_room(room)
     emit("wb_sync", {"strokes": _load_room(room)})
 
@@ -91,6 +109,8 @@ def on_wb_join(data):
 @socketio.on("wb_stroke")
 def on_wb_stroke(data):
     room = data.get("room", "global")
+    if not _check_room_access(room):
+        return
     stroke = data.get("stroke")
     if stroke:
         _board_states.setdefault(room, []).append(stroke)
@@ -101,6 +121,8 @@ def on_wb_stroke(data):
 @socketio.on("wb_clear")
 def on_wb_clear(data):
     room = data.get("room", "global")
+    if not _check_room_access(room):
+        return
     _board_states[room] = []
     _clear_room_db(room)
     emit("wb_cleared", {}, to=room)
@@ -109,6 +131,8 @@ def on_wb_clear(data):
 @socketio.on("wb_update_stroke")
 def on_wb_update_stroke(data):
     room = data.get("room", "global")
+    if not _check_room_access(room):
+        return
     stroke = data.get("stroke")
     if stroke and stroke.get("id"):
         board = _board_states.get(room, [])
@@ -123,6 +147,8 @@ def on_wb_update_stroke(data):
 @socketio.on("wb_delete_stroke")
 def on_wb_delete_stroke(data):
     room = data.get("room", "global")
+    if not _check_room_access(room):
+        return
     sid = data.get("id")
     if sid:
         _board_states[room] = [s for s in _board_states.get(room, []) if s.get("id") != sid]
