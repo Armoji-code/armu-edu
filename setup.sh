@@ -254,7 +254,10 @@ hr
 printf "  ${BOLD}5. Database${W}\n"
 hr
 inf "Running database migrations…"
-(cd "$BACKEND" && FLASK_APP=app.py "$FLASK" db upgrade 2>&1 | grep -v UserWarning | grep -v "app = app_factory" || true)
+if ! (cd "$BACKEND" && FLASK_APP=app.py "$FLASK" db upgrade 2>&1 | grep -v "UserWarning\|app = app_factory"); then
+    err "Database migration failed. Check the output above."
+    exit 1
+fi
 ok "Database ready."
 
 # ── Admin account ─────────────────────────────────────────────────────────────

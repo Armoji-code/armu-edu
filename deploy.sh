@@ -63,7 +63,9 @@ fi
 
 # Ensure DB is up to date
 inf "Running database migrations…"
-sudo -u "$RUN_USER" bash -c "cd '$BACKEND' && '$VENV/bin/flask' --app app db upgrade 2>&1" | grep -v UserWarning || true
+if ! sudo -u "$RUN_USER" bash -c "cd '$BACKEND' && '$VENV/bin/flask' --app app db upgrade 2>&1" | grep -v "UserWarning\|app = app_factory"; then
+    die "Database migration failed. Check the output above."
+fi
 ok "Database ready."
 
 # ── Update CORS_ORIGINS in .env ───────────────────────────────────────────────
@@ -97,14 +99,14 @@ else
     die "No supported package manager found (apt or pacman required)."
 fi
 
-inf "Installing nginx and certbot…"
+inf "Installing nginx, certbot, and git…"
 if [[ "$PKG_MANAGER" == "apt" ]]; then
     apt-get update -qq
-    apt-get install -y -qq nginx certbot python3-certbot-nginx
+    apt-get install -y -qq nginx certbot python3-certbot-nginx git python3-venv python3-pip
 else
-    pacman -Sy --noconfirm --needed nginx certbot certbot-nginx
+    pacman -Sy --noconfirm --needed nginx certbot certbot-nginx git
 fi
-ok "nginx and certbot installed."
+ok "Packages installed."
 
 # Arch uses /etc/nginx/conf.d/ instead of sites-available/sites-enabled
 if [[ "$PKG_MANAGER" == "apt" ]]; then
@@ -164,9 +166,11 @@ hr
 inf "Requesting Let's Encrypt certificate for $DOMAIN…"
 inf "(Make sure your domain's DNS A record points to this server's IP first!)"
 printf "\n"
+trap 'systemctl start nginx 2>/dev/null; exit 1' ERR
 systemctl stop nginx
 certbot certonly --standalone -d "$DOMAIN" \
     --non-interactive --agree-tos -m "$EMAIL"
+trap - ERR
 ok "SSL certificate obtained."
 
 # Rewrite nginx config with SSL
