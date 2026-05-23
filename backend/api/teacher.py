@@ -284,8 +284,15 @@ def log_conduct(user):
 
     if subject_id not in _teacher_subject_ids(user):
         return err("forbidden", 403)
+    if not student_id:
+        return err("student_id required", 400)
     if points is None:
         return err("points required", 400)
+
+    subject = Subject.query.get(subject_id)
+    student = User.query.filter_by(id=student_id, class_id=subject.class_id, role="student").first()
+    if not student:
+        return err("student not found in this class", 404)
 
     ev = ConductEvent(
         student_id=student_id,
