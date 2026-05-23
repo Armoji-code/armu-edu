@@ -36,29 +36,162 @@
   </div>
 </div>
 
-<!-- User picker modal -->
+<!-- New message picker modal -->
 <div id="pickerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;align-items:center;justify-content:center;">
   <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:360px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;gap:14px;">
     <div style="font-size:15px;font-weight:600;">New Message</div>
-    <input id="pickerSearch" type="text" placeholder="Search people…" oninput="filterPicker(this.value)" autofocus
+    <input id="pickerSearch" type="text" placeholder="Search people…" oninput="filterPicker(this.value)"
       style="padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;outline:none;">
     <div id="pickerList" style="overflow-y:auto;max-height:320px;display:flex;flex-direction:column;gap:2px;"></div>
     <button onclick="closePicker()" style="align-self:flex-end;padding:6px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:13px;">Cancel</button>
   </div>
 </div>
 
+<!-- Forward picker modal -->
+<div id="fwdModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:360px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;gap:14px;">
+    <div style="font-size:15px;font-weight:600;">Forward to…</div>
+    <input id="fwdSearch" type="text" placeholder="Search people…" oninput="filterFwdPicker(this.value)"
+      style="padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;outline:none;">
+    <div id="fwdList" style="overflow-y:auto;max-height:320px;display:flex;flex-direction:column;gap:2px;"></div>
+    <button onclick="closeFwdPicker()" style="align-self:flex-end;padding:6px 16px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:13px;">Cancel</button>
+  </div>
+</div>
+
+<!-- Emoji picker popup -->
+<div id="emojiPicker" style="display:none;position:fixed;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;z-index:400;box-shadow:0 4px 20px rgba(0,0,0,0.35);">
+  <div style="display:flex;gap:2px;">
+    <span class="ep-em" onclick="doReact('👍')">👍</span>
+    <span class="ep-em" onclick="doReact('❤️')">❤️</span>
+    <span class="ep-em" onclick="doReact('😂')">😂</span>
+    <span class="ep-em" onclick="doReact('😮')">😮</span>
+    <span class="ep-em" onclick="doReact('😢')">😢</span>
+    <span class="ep-em" onclick="doReact('😡')">😡</span>
+  </div>
+</div>
+
+<style>
+.ep-em { font-size:20px; cursor:pointer; padding:3px 5px; border-radius:5px; }
+.ep-em:hover { background:var(--bg3); }
+
+.msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 1px 6px;
+}
+.msg-row.mine { flex-direction: row-reverse; }
+
+.msg-bubble-col {
+  display: flex;
+  flex-direction: column;
+  max-width: 66%;
+}
+.msg-row.mine .msg-bubble-col { align-items: flex-end; }
+.msg-row.theirs .msg-bubble-col { align-items: flex-start; }
+
+.msg-actions {
+  display: none;
+  flex-direction: row;
+  gap: 1px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.msg-row:hover .msg-actions { display: flex; }
+
+.bab {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text3);
+  cursor: pointer;
+  padding: 4px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.1s, background 0.1s;
+}
+.bab:hover { color: var(--text); background: var(--bg2); }
+.bab.danger:hover { color: #f87171; }
+
+.reply-quote {
+  border-left: 3px solid var(--g1);
+  padding: 4px 8px;
+  margin-bottom: 5px;
+  background: rgba(0,0,0,0.12);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.reply-quote-author { font-weight: 600; color: var(--g1); margin-bottom: 1px; font-size: 11px; }
+.reply-quote-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+
+.bubble-meta {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 3px;
+  padding: 0 2px;
+}
+.msg-row.mine .bubble-meta { text-align: right; }
+.bubble-edited { font-style: italic; }
+
+.bubble-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  transition: background 0.1s;
+}
+.reaction-chip.reacted { border-color: var(--g1); background: rgba(99,179,237,0.1); }
+.reaction-chip:hover { background: var(--bg2); }
+
+.bubble-deleted { font-style: italic; color: var(--text3) !important; }
+
+.compose-reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text2);
+}
+.crb-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.crb-close {
+  background: none; border: none; color: var(--text3); cursor: pointer;
+  padding: 2px; display: flex; align-items: center;
+}
+.crb-close:hover { color: var(--text); }
+</style>
+
 <script>
 (function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  const btn = document.getElementById('themeBtn');
+  var t = localStorage.getItem('theme') || 'dark';
+  var btn = document.getElementById('themeBtn');
   if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
 })();
 
-var myId = null;
+var myId         = null;
 var conversations = [];
-var activeIdx = -1;
-var allUsers = [];
-var _convFilter = '';
+var activeIdx    = -1;
+var allUsers     = [];
+var _convFilter  = '';
+var activeReply  = null;   // {id, senderName, content}
+var _fwdContent  = '';
+var _epMsgId     = null;
 
 function initials(name) {
   if (!name) return '?';
@@ -73,12 +206,17 @@ function fmtTime(iso) {
   return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
 }
 
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Conversations ── */
 function buildConversations(messages) {
   var map = {};
   for (var i = 0; i < messages.length; i++) {
     var m = messages[i];
     var otherId   = m.sender_id === myId ? m.recipient_id : m.sender_id;
-    var otherName = m.sender_id === myId ? (m.recipient_name || 'User #' + otherId) : (m.sender_name || 'User #' + otherId);
+    var otherName = m.sender_id === myId ? (m.recipient_name || 'User #'+otherId) : (m.sender_name || 'User #'+otherId);
     if (!map[otherId]) map[otherId] = {otherId: otherId, otherName: otherName, messages: []};
     map[otherId].messages.push(m);
     if (!map[otherId].otherName || map[otherId].otherName.startsWith('User #'))
@@ -89,17 +227,14 @@ function buildConversations(messages) {
     c.messages.sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
   });
   convs.sort(function(a,b){
-    var aLast = a.messages[a.messages.length-1]?.created_at || '';
-    var bLast = b.messages[b.messages.length-1]?.created_at || '';
+    var aLast = a.messages.length ? a.messages[a.messages.length-1].created_at : '';
+    var bLast = b.messages.length ? b.messages[b.messages.length-1].created_at : '';
     return bLast.localeCompare(aLast);
   });
   return convs;
 }
 
-function filterConvs(q) {
-  _convFilter = q.toLowerCase();
-  renderConvList();
-}
+function filterConvs(q) { _convFilter = q.toLowerCase(); renderConvList(); }
 
 function renderConvList() {
   var el = document.getElementById('convList');
@@ -108,51 +243,125 @@ function renderConvList() {
     ? conversations.filter(function(c){ return c.otherName.toLowerCase().includes(_convFilter); })
     : conversations;
   if (!visible.length) {
-    el.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px;">' + (_convFilter ? 'No results.' : 'No messages yet. Press + to start one.') + '</div>';
+    el.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--text3);font-size:13px;">'
+      + (_convFilter ? 'No results.' : 'No messages yet. Press + to start one.') + '</div>';
     return;
   }
   el.innerHTML = visible.map(function(c){
     var realIdx = conversations.indexOf(c);
-    var last    = c.messages[c.messages.length - 1];
-    var preview = last ? (last.sender_id === myId ? 'You: ' : '') + last.content : '';
+    var last    = c.messages.length ? c.messages[c.messages.length-1] : null;
+    var preview = last
+      ? (last.is_deleted ? '[deleted]' : (last.sender_id === myId ? 'You: ' : '') + (last.content||'').slice(0,60))
+      : '';
     var unread  = c.messages.some(function(m){ return m.sender_id !== myId && !m.is_read; });
-    return '<div class="conv-item' + (realIdx === activeIdx ? ' active' : '') + '" onclick="openConv(' + realIdx + ')">'
-      + '<div class="avatar-sm">' + initials(c.otherName) + '</div>'
+    return '<div class="conv-item'+(realIdx === activeIdx ? ' active' : '')+'" onclick="openConv('+realIdx+')">'
+      + '<div class="avatar-sm">'+initials(c.otherName)+'</div>'
       + '<div style="flex:1;min-width:0;">'
-      +   '<div class="conv-name">' + esc(c.otherName) + '</div>'
-      +   '<div class="conv-preview">' + esc(preview.slice(0,60)) + '</div>'
+      +   '<div class="conv-name">'+esc(c.otherName)+'</div>'
+      +   '<div class="conv-preview">'+esc(preview)+'</div>'
       + '</div>'
       + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
-      +   '<div class="conv-time">' + fmtTime(last?.created_at) + '</div>'
+      +   '<div class="conv-time">'+fmtTime(last ? last.created_at : '')+'</div>'
       +   (unread ? '<div class="unread-dot"></div>' : '')
       + '</div>'
       + '</div>';
   }).join('');
 }
 
+/* ── Message rendering ── */
+function renderMsg(m) {
+  var mine    = m.sender_id === myId;
+  var deleted = m.is_deleted;
+
+  var quoteHtml = '';
+  if (m.reply_to) {
+    var rt = m.reply_to;
+    quoteHtml = '<div class="reply-quote">'
+      + '<div class="reply-quote-author">'+esc(rt.sender_name)+'</div>'
+      + '<div class="reply-quote-text">'+esc(rt.content)+'</div>'
+      + '</div>';
+  }
+
+  var contentHtml = deleted
+    ? '<div class="bubble-text bubble-deleted">[Message deleted]</div>'
+    : '<div class="bubble-text">'+esc(m.content)+'</div>';
+
+  var metaHtml = '<div class="bubble-meta">'
+    + fmtTime(m.created_at)
+    + (m.edited_at ? ' <span class="bubble-edited">(edited)</span>' : '')
+    + '</div>';
+
+  var reactHtml = '';
+  if (m.reactions && m.reactions.length) {
+    reactHtml = '<div class="bubble-reactions">'
+      + m.reactions.map(function(r){
+          var iReacted = r.user_ids && r.user_ids.indexOf(myId) >= 0;
+          return '<span class="reaction-chip'+(iReacted?' reacted':'')+'" onclick="toggleReact('+m.id+',\''+r.emoji+'\')">'+r.emoji+' '+r.count+'</span>';
+        }).join('')
+      + '</div>';
+  }
+
+  var btns = '';
+  if (!deleted) {
+    if (mine) {
+      btns += '<button class="bab" onclick="editMsg('+m.id+')" title="Edit"><svg class="icon icon-14"><use href="#ic-pen"/></svg></button>';
+      btns += '<button class="bab danger" onclick="deleteMsg('+m.id+')" title="Delete"><svg class="icon icon-14"><use href="#ic-trash"/></svg></button>';
+    }
+    btns += '<button class="bab" onclick="replyTo('+m.id+')" title="Reply"><svg class="icon icon-14"><use href="#ic-reply"/></svg></button>';
+    btns += '<button class="bab" onclick="forwardMsg('+m.id+')" title="Forward"><svg class="icon icon-14"><use href="#ic-plane"/></svg></button>';
+    btns += '<button class="bab" onclick="openEmojiPicker('+m.id+',this)" title="React"><svg class="icon icon-14"><use href="#ic-emoji"/></svg></button>';
+    if (!mine) {
+      btns += '<button class="bab danger" onclick="reportMsg('+m.id+')" title="Report"><svg class="icon icon-14"><use href="#ic-flag"/></svg></button>';
+    }
+  }
+
+  return '<div class="msg-row '+(mine?'mine':'theirs')+'" id="mw-'+m.id+'">'
+    + '<div class="msg-actions">'+btns+'</div>'
+    + '<div class="msg-bubble-col">'
+    +   '<div class="msg-bubble '+(mine?'mine':'theirs')+'">'
+    +     quoteHtml + contentHtml + metaHtml
+    +   '</div>'
+    +   reactHtml
+    + '</div>'
+    + '</div>';
+}
+
+function renderMsgsList(scrollBottom) {
+  var conv = conversations[activeIdx];
+  if (!conv) return;
+  var el = document.getElementById('threadMsgs');
+  if (!el) return;
+  var saved = el.scrollTop;
+  el.innerHTML = conv.messages.length === 0
+    ? '<div class="thread-empty">No messages yet. Say hello!</div>'
+    : conv.messages.map(renderMsg).join('');
+  el.scrollTop = scrollBottom ? el.scrollHeight : saved;
+}
+
 function renderThread(conv) {
   var panel = document.getElementById('threadPanel');
   if (!panel) return;
-  panel.innerHTML = '<div class="thread-head">'
-    + '<div class="avatar-sm">' + initials(conv.otherName) + '</div>'
-    + '<div class="thread-head-name">' + esc(conv.otherName) + '</div>'
+  activeReply = null;
+  panel.innerHTML =
+    '<div class="thread-head">'
+    + '<div class="avatar-sm">'+initials(conv.otherName)+'</div>'
+    + '<div class="thread-head-name">'+esc(conv.otherName)+'</div>'
     + '</div>'
     + '<div class="thread-msgs" id="threadMsgs">'
     + (conv.messages.length === 0
         ? '<div class="thread-empty">No messages yet. Say hello!</div>'
-        : conv.messages.map(function(m){
-            var mine = m.sender_id === myId;
-            return '<div class="msg-bubble ' + (mine ? 'mine' : 'theirs') + '">'
-              + '<div class="bubble-text">' + esc(m.content) + '</div>'
-              + '<div class="bubble-time">' + fmtTime(m.created_at) + '</div>'
-              + '</div>';
-          }).join(''))
+        : conv.messages.map(renderMsg).join(''))
+    + '</div>'
+    + '<div id="replyBar" style="display:none" class="compose-reply-bar">'
+    +   '<svg class="icon icon-14" style="flex-shrink:0;color:var(--g1)"><use href="#ic-reply"/></svg>'
+    +   '<span class="crb-text" id="replyBarText"></span>'
+    +   '<button class="crb-close" onclick="cancelReply()" title="Cancel reply"><svg class="icon icon-14"><use href="#ic-x"/></svg></button>'
     + '</div>'
     + '<div class="thread-compose">'
-    + '<textarea class="compose-input" id="composeInput" placeholder="Type a message…" rows="1"></textarea>'
-    + '<button class="send-btn" id="sendBtn" onclick="sendMsg()">'
-    +   '<svg class="icon icon-18"><use href="#ic-send"/></svg>'
-    + '</button>'
+    +   '<textarea class="compose-input" id="composeInput" placeholder="Type a message…" rows="1"></textarea>'
+    +   '<button class="send-btn" id="sendBtn" onclick="sendMsg()">'
+    +     '<svg class="icon icon-18"><use href="#ic-send"/></svg>'
+    +   '</button>'
     + '</div>';
 
   var msgs = document.getElementById('threadMsgs');
@@ -162,6 +371,7 @@ function renderThread(conv) {
   if (input) {
     input.addEventListener('keydown', function(e){
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+      if (e.key === 'Escape') { cancelReply(); }
     });
     input.focus();
   }
@@ -169,12 +379,12 @@ function renderThread(conv) {
 
 function openConv(i) {
   activeIdx = i;
+  closeEmojiPicker();
   renderConvList();
   renderThread(conversations[i]);
 }
 
 function openConvWithUser(userId, userName) {
-  // Find existing conversation or create empty one
   var idx = conversations.findIndex(function(c){ return c.otherId === userId; });
   if (idx === -1) {
     conversations.unshift({otherId: userId, otherName: userName, messages: []});
@@ -183,6 +393,7 @@ function openConvWithUser(userId, userName) {
   openConv(idx);
 }
 
+/* ── Send ── */
 async function sendMsg() {
   if (activeIdx < 0) return;
   var input = document.getElementById('composeInput');
@@ -190,57 +401,270 @@ async function sendMsg() {
   if (!content) return;
   var btn = document.getElementById('sendBtn');
   if (btn) btn.disabled = true;
+  var payload = {recipient_id: conversations[activeIdx].otherId, content: content};
+  if (activeReply) payload.reply_to_id = activeReply.id;
   input.value = '';
-  var conv = conversations[activeIdx];
+  cancelReply();
   var res = await fetch('/api/messages/personal', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({recipient_id: conv.otherId, content: content}),
+    body: JSON.stringify(payload),
   }).then(function(r){ return r.json(); }).catch(function(){ return null; });
   if (btn) btn.disabled = false;
   if (res && !res.error) {
+    var conv = conversations[activeIdx];
     conv.messages.push(res);
     conversations.splice(activeIdx, 1);
     conversations.unshift(conv);
     activeIdx = 0;
     renderConvList();
-    renderThread(conv);
+    renderMsgsList(true);
   }
 }
 
-/* ── User picker ── */
+/* ── Edit ── */
+function editMsg(id) {
+  var conv = conversations[activeIdx];
+  if (!conv) return;
+  var m = conv.messages.find(function(x){ return x.id === id; });
+  if (!m || m.is_deleted) return;
+  var row = document.getElementById('mw-'+id);
+  if (!row) return;
+  var bubble = row.querySelector('.msg-bubble');
+  if (!bubble) return;
+  bubble.innerHTML =
+    '<textarea id="ei-'+id+'" style="width:100%;min-height:56px;background:var(--bg3);border:1px solid var(--g1);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;padding:6px 8px;resize:vertical;outline:none;box-sizing:border-box;">'+esc(m.content)+'</textarea>'
+    + '<div style="display:flex;gap:6px;margin-top:5px;justify-content:flex-end;">'
+    +   '<button onclick="cancelEdit('+id+')" style="padding:4px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer;font-size:12px;">Cancel</button>'
+    +   '<button onclick="saveEdit('+id+')" style="padding:4px 10px;border-radius:var(--radius-sm);border:none;background:var(--g1);color:#fff;cursor:pointer;font-size:12px;">Save</button>'
+    + '</div>';
+  var ta = document.getElementById('ei-'+id);
+  if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+}
+
+async function saveEdit(id) {
+  var ta = document.getElementById('ei-'+id);
+  var content = ta ? ta.value.trim() : '';
+  if (!content) return;
+  var res = await fetch('/api/messages/personal/'+id, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({content: content}),
+  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+  if (res && !res.error) {
+    var conv = conversations[activeIdx];
+    var idx = conv.messages.findIndex(function(x){ return x.id === id; });
+    if (idx >= 0) conv.messages[idx] = res;
+    renderMsgsList(false);
+    renderConvList();
+  }
+}
+
+function cancelEdit(id) { renderMsgsList(false); }
+
+/* ── Delete ── */
+async function deleteMsg(id) {
+  if (!confirm('Delete this message?')) return;
+  var res = await fetch('/api/messages/personal/'+id, {method:'DELETE'})
+    .then(function(r){ return r.json(); }).catch(function(){ return null; });
+  if (res && res.ok) {
+    var conv = conversations[activeIdx];
+    var m = conv.messages.find(function(x){ return x.id === id; });
+    if (m) { m.is_deleted = true; m.content = ''; }
+    renderMsgsList(false);
+    renderConvList();
+  }
+}
+
+/* ── Reply ── */
+function replyTo(id) {
+  var conv = conversations[activeIdx];
+  if (!conv) return;
+  var m = conv.messages.find(function(x){ return x.id === id; });
+  if (!m || m.is_deleted) return;
+  var senderName = m.sender_id === myId ? 'You' : (m.sender_name || 'Unknown');
+  activeReply = {id: m.id, senderName: senderName, content: m.content};
+  var bar = document.getElementById('replyBar');
+  var txt = document.getElementById('replyBarText');
+  if (bar) bar.style.display = 'flex';
+  if (txt) txt.textContent = 'Replying to ' + senderName + ': ' + m.content.slice(0, 60);
+  var input = document.getElementById('composeInput');
+  if (input) input.focus();
+}
+
+function cancelReply() {
+  activeReply = null;
+  var bar = document.getElementById('replyBar');
+  if (bar) bar.style.display = 'none';
+}
+
+/* ── Forward ── */
+function forwardMsg(id) {
+  var conv = conversations[activeIdx];
+  if (!conv) return;
+  var m = conv.messages.find(function(x){ return x.id === id; });
+  if (!m || m.is_deleted) return;
+  _fwdContent = m.content;
+  openFwdPicker();
+}
+
+function openFwdPicker() {
+  document.getElementById('fwdModal').style.display = 'flex';
+  var inp = document.getElementById('fwdSearch');
+  if (inp) { inp.value = ''; inp.focus(); }
+  renderFwdList(allUsers);
+}
+
+function closeFwdPicker() { document.getElementById('fwdModal').style.display = 'none'; }
+
+function filterFwdPicker(q) {
+  var filtered = q ? allUsers.filter(function(u){ return (u.name||'').toLowerCase().includes(q.toLowerCase()); }) : allUsers;
+  renderFwdList(filtered);
+}
+
+function renderFwdList(users) {
+  var list = document.getElementById('fwdList');
+  if (!list) return;
+  if (!users.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px;">No users found.</div>';
+    return;
+  }
+  list.innerHTML = users.map(function(u){
+    return '<div class="fwd-item" data-uid="'+u.id+'" data-uname="'+esc(u.name)+'" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'
+      + '<div class="avatar-sm" style="flex-shrink:0;">'+initials(u.name)+'</div>'
+      + '<div style="font-size:13px;font-weight:500;color:var(--text);">'+esc(u.name)+'</div>'
+      + '</div>';
+  }).join('');
+  list.querySelectorAll('.fwd-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      pickFwd(parseInt(this.dataset.uid), this.dataset.uname);
+    });
+  });
+}
+
+async function pickFwd(userId, userName) {
+  closeFwdPicker();
+  if (!_fwdContent) return;
+  var res = await fetch('/api/messages/personal', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({recipient_id: userId, content: _fwdContent}),
+  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+  if (res && !res.error) {
+    var idx = conversations.findIndex(function(c){ return c.otherId === userId; });
+    if (idx >= 0) {
+      conversations[idx].messages.push(res);
+      if (idx === activeIdx) renderMsgsList(true);
+    } else {
+      conversations.unshift({otherId: userId, otherName: userName, messages: [res]});
+    }
+    renderConvList();
+  }
+}
+
+/* ── React ── */
+function openEmojiPicker(id, btn) {
+  _epMsgId = id;
+  var picker = document.getElementById('emojiPicker');
+  if (!picker) return;
+  picker.style.display = 'block';
+  picker.style.visibility = 'hidden';
+  var rect = btn.getBoundingClientRect();
+  var ph = picker.offsetHeight;
+  var pw = picker.offsetWidth;
+  var top = rect.top - ph - 8;
+  if (top < 4) top = rect.bottom + 8;
+  var left = Math.min(rect.left, window.innerWidth - pw - 8);
+  picker.style.top  = top + 'px';
+  picker.style.left = left + 'px';
+  picker.style.visibility = '';
+}
+
+function closeEmojiPicker() {
+  var picker = document.getElementById('emojiPicker');
+  if (picker) picker.style.display = 'none';
+  _epMsgId = null;
+}
+
+async function doReact(emoji) {
+  var id = _epMsgId;
+  closeEmojiPicker();
+  if (!id) return;
+  await toggleReact(id, emoji);
+}
+
+async function toggleReact(id, emoji) {
+  var res = await fetch('/api/messages/'+id+'/react', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({emoji: emoji}),
+  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+  if (res && !res.error) {
+    var conv = conversations[activeIdx];
+    if (conv) {
+      var idx = conv.messages.findIndex(function(x){ return x.id === id; });
+      if (idx >= 0) conv.messages[idx] = res;
+    }
+    renderMsgsList(false);
+  }
+}
+
+/* ── Report ── */
+async function reportMsg(id) {
+  if (!confirm('Report this message to admins?')) return;
+  var res = await fetch('/api/messages/'+id+'/report', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({}),
+  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+  if (res && res.ok) {
+    var row = document.getElementById('mw-'+id);
+    if (row) {
+      var note = document.createElement('div');
+      note.style.cssText = 'font-size:11px;color:var(--g1);text-align:center;padding:2px 0;';
+      note.textContent = 'Reported';
+      row.appendChild(note);
+      setTimeout(function(){ if (note.parentNode) note.parentNode.removeChild(note); }, 2000);
+    }
+  }
+}
+
+/* ── New conversation picker ── */
 function openPicker() {
   document.getElementById('pickerModal').style.display = 'flex';
   var inp = document.getElementById('pickerSearch');
   if (inp) { inp.value = ''; inp.focus(); }
-  renderPickerList('');
+  renderPickerList(allUsers);
 }
 
-function closePicker() {
-  document.getElementById('pickerModal').style.display = 'none';
-}
+function closePicker() { document.getElementById('pickerModal').style.display = 'none'; }
 
 function filterPicker(q) {
-  renderPickerList(q.toLowerCase());
+  var filtered = q ? allUsers.filter(function(u){ return (u.name||'').toLowerCase().includes(q.toLowerCase()) || (u.email||'').toLowerCase().includes(q.toLowerCase()); }) : allUsers;
+  renderPickerList(filtered);
 }
 
-function renderPickerList(q) {
+function renderPickerList(users) {
   var list = document.getElementById('pickerList');
   if (!list) return;
-  var filtered = q ? allUsers.filter(function(u){ return (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q); }) : allUsers;
-  if (!filtered.length) {
+  if (!users.length) {
     list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text3);font-size:13px;">No users found.</div>';
     return;
   }
-  list.innerHTML = filtered.map(function(u){
-    return '<div onclick="pickUser(' + u.id + ',\'' + esc(u.name) + '\')" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'
-      + '<div class="avatar-sm" style="flex-shrink:0;">' + initials(u.name) + '</div>'
+  list.innerHTML = users.map(function(u){
+    return '<div class="pk-item" data-uid="'+u.id+'" data-uname="'+esc(u.name)+'" style="display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:background 0.1s;" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'
+      + '<div class="avatar-sm" style="flex-shrink:0;">'+initials(u.name)+'</div>'
       + '<div>'
-      +   '<div style="font-size:13px;font-weight:500;color:var(--text);">' + esc(u.name) + '</div>'
-      +   '<div style="font-size:11px;color:var(--text3);">' + esc(u.email) + '</div>'
+      +   '<div style="font-size:13px;font-weight:500;color:var(--text);">'+esc(u.name)+'</div>'
+      +   '<div style="font-size:11px;color:var(--text3);">'+esc(u.email||'')+'</div>'
       + '</div>'
       + '</div>';
   }).join('');
+  list.querySelectorAll('.pk-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      pickUser(parseInt(this.dataset.uid), this.dataset.uname);
+    });
+  });
 }
 
 function pickUser(id, name) {
@@ -248,32 +672,52 @@ function pickUser(id, name) {
   openConvWithUser(id, name);
 }
 
-// Close picker on backdrop click
-document.getElementById('pickerModal').addEventListener('click', function(e){
-  if (e.target === this) closePicker();
-});
+/* ── Close on backdrop / outside click ── */
+document.getElementById('pickerModal').addEventListener('click', function(e){ if(e.target===this) closePicker(); });
+document.getElementById('fwdModal').addEventListener('click', function(e){ if(e.target===this) closeFwdPicker(); });
 
-function esc(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+document.addEventListener('click', function(e){
+  var picker = document.getElementById('emojiPicker');
+  if (!picker || picker.style.display !== 'block') return;
+  if (picker.contains(e.target)) return;
+  if (e.target.closest && e.target.closest('[title="React"]')) return;
+  closeEmojiPicker();
+}, true);
 
-window.openConv    = openConv;
-window.sendMsg     = sendMsg;
-window.openPicker  = openPicker;
-window.closePicker = closePicker;
-window.filterPicker= filterPicker;
-window.filterConvs = filterConvs;
-window.pickUser    = pickUser;
+/* ── Exports ── */
+window.openConv        = openConv;
+window.sendMsg         = sendMsg;
+window.openPicker      = openPicker;
+window.closePicker     = closePicker;
+window.filterPicker    = filterPicker;
+window.filterConvs     = filterConvs;
+window.pickUser        = pickUser;
+window.editMsg         = editMsg;
+window.saveEdit        = saveEdit;
+window.cancelEdit      = cancelEdit;
+window.deleteMsg       = deleteMsg;
+window.replyTo         = replyTo;
+window.cancelReply     = cancelReply;
+window.forwardMsg      = forwardMsg;
+window.closeFwdPicker  = closeFwdPicker;
+window.filterFwdPicker = filterFwdPicker;
+window.pickFwd         = pickFwd;
+window.openEmojiPicker = openEmojiPicker;
+window.closeEmojiPicker= closeEmojiPicker;
+window.doReact         = doReact;
+window.toggleReact     = toggleReact;
+window.reportMsg       = reportMsg;
 
 async function boot() {
-  var [me, messages, users] = await Promise.all([
+  var results = await Promise.all([
     fetch('/api/auth/me').then(function(r){ return r.json(); }).catch(function(){ return null; }),
     fetch('/api/messages/personal').then(function(r){ return r.json(); }).catch(function(){ return []; }),
     fetch('/api/users/classmates').then(function(r){ return r.json(); }).catch(function(){ return []; }),
   ]);
+  var me = results[0], messages = results[1], users = results[2];
   if (!me || me.error) { location.href = '/login'; return; }
   myId = me.id;
-  allUsers = Array.isArray(users) ? users : [];
+  allUsers = (Array.isArray(users) ? users : []).filter(function(u){ return u.id !== myId; });
   conversations = buildConversations(Array.isArray(messages) ? messages : []);
   renderConvList();
 }

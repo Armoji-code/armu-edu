@@ -24,33 +24,70 @@ class Group(db.Model):
 class Message(db.Model):
     __tablename__ = "messages"
 
-    id = db.Column(db.Integer, primary_key=True)
-    sender_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    id           = db.Column(db.Integer, primary_key=True)
+    sender_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     recipient_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
-    group_id = db.Column(db.Integer, db.ForeignKey("groups.id"), nullable=True)
-    content = db.Column(db.Text, nullable=False)
-    file_url = db.Column(db.String(500), nullable=True)
-    file_name = db.Column(db.String(200), nullable=True)
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    group_id     = db.Column(db.Integer, db.ForeignKey("groups.id"), nullable=True)
+    content      = db.Column(db.Text, nullable=False)
+    file_url     = db.Column(db.String(500), nullable=True)
+    file_name    = db.Column(db.String(200), nullable=True)
+    is_read      = db.Column(db.Boolean, default=False)
+    is_deleted   = db.Column(db.Boolean, default=False)
+    edited_at    = db.Column(db.DateTime, nullable=True)
+    reply_to_id  = db.Column(db.Integer, db.ForeignKey("messages.id"), nullable=True)
+    created_at   = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    sender = db.relationship("User", foreign_keys=[sender_id])
+    sender    = db.relationship("User", foreign_keys=[sender_id])
     recipient = db.relationship("User", foreign_keys=[recipient_id])
-    group = db.relationship("Group")
+    group     = db.relationship("Group")
+    reply_to  = db.relationship("Message", remote_side="Message.id", foreign_keys=[reply_to_id])
+    reactions = db.relationship("MessageReaction", backref="message_obj", lazy="select",
+                                cascade="all, delete-orphan")
 
     def to_dict(self):
+        from collections import defaultdict
+        reaction_map = defaultdict(list)
+        for r in self.reactions:
+            reaction_map[r.emoji].append(r.user_id)
+
+        reply = None
+        if self.reply_to:
+            rt = self.reply_to
+            reply = {
+                "id":          rt.id,
+                "sender_name": rt.sender.name if rt.sender else "?",
+                "content":     "[deleted]" if rt.is_deleted else (rt.content or "")[:120],
+            }
+
         return {
-            "id": self.id,
-            "sender_id": self.sender_id,
-            "sender_name": self.sender.name if self.sender else None,
+            "id":           self.id,
+            "sender_id":    self.sender_id,
+            "sender_name":  self.sender.name if self.sender else None,
             "recipient_id": self.recipient_id,
-            "group_id": self.group_id,
-            "content": self.content,
-            "file_url": self.file_url,
-            "file_name": self.file_name,
-            "is_read": self.is_read,
-            "created_at": self.created_at.isoformat(),
+            "recipient_name": self.recipient.name if self.recipient else None,
+            "group_id":     self.group_id,
+            "content":      "" if self.is_deleted else self.content,
+            "is_deleted":   self.is_deleted,
+            "edited_at":    self.edited_at.isoformat() if self.edited_at else None,
+            "reply_to_id":  self.reply_to_id,
+            "reply_to":     reply,
+            "file_url":     self.file_url,
+            "file_name":    self.file_name,
+            "is_read":      self.is_read,
+            "created_at":   self.created_at.isoformat(),
+            "reactions":    [{"emoji": e, "count": len(uids), "user_ids": uids}
+                             for e, uids in reaction_map.items()],
         }
+
+
+class MessageReaction(db.Model):
+    __tablename__ = "message_reactions"
+    __table_args__ = (db.UniqueConstraint("message_id", "user_id", "emoji"),)
+
+    id         = db.Column(db.Integer, primary_key=True)
+    message_id = db.Column(db.Integer, db.ForeignKey("messages.id"), nullable=False)
+    user_id    = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    emoji      = db.Column(db.String(10), nullable=False)
 
 
 class FlaggedMessage(db.Model):
