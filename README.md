@@ -1,4 +1,4 @@
-# Armu · v0.6
+# Armu · v0.7
 
 <p align="center">
   <img src="docs/login_laptop.png" alt="Armu login" width="680"/>
@@ -254,64 +254,4 @@ For additional protection, also:
 
 ## Changelog
 
-### v0.6
-- **AI message moderation** — admins can enable a silent background scan on all messages (personal and group); a local `llama3.2:3b` model classifies each message and flags anything with severity ≥ 0.5 without alerting the sender
-- **Flagged Messages panel** — new dedicated admin tab (Admin → Flagged) with a full review UI: severity bar, AI reason, sender → recipient, Dismiss / Action buttons, and Pending / Dismissed / Actioned filter tabs
-- **Sidebar count badge** — the Flagged nav item shows a live badge with the number of pending flags; refreshes on every navigation
-- **Infinite whiteboard** — canvas replaced with a pan/zoom infinite canvas (scroll to zoom, hand tool to pan, `H`/`Space` shortcuts); zoom capped at 4×; `0` key resets the view
-- **Whiteboard selection tool** — rubber-band select any mix of strokes and images; move, resize, or delete the selection; images are individually resizable by drag
-- **Whiteboard export area** — click-and-drag to define an export rectangle; exports only that region as PNG
-- **Whiteboard palette** — added black and white swatches alongside the accent colours
-- **Custom navigation** — admins can fully rearrange, rename, and reorder the sidebar nav for each role (student / teacher / librarian) from Admin → Navigation
-
-### v0.5
-- **Web terminal** — admins can open a full shell session directly in the browser (Admin → Terminal); PTY-based over WebSocket, xterm.js frontend with full color theme and resize support
-- **In-app updates** — Admin → Settings → Software Update checks GitHub for new versions and applies them with one click (git pull + pip install + db migrate + auto-restart)
-- **Logo size slider** — adjustable logo height (16–94 px) in Admin → Settings → Customize
-- **Production deployment** — `deploy.sh` sets up nginx, Let's Encrypt HTTPS, and a systemd service; supports Ubuntu/Debian and Arch/CachyOS automatically
-- **First-run admin account** — `setup.sh` always creates an admin account; demo accounts are now opt-in (default N)
-- **Bug fix:** `seed.py` was missing `admin@test.com` despite claiming to create it
-- **Bug fix:** settings save bar position (fixed layout, no gap, scrolling intact)
-
-### v0.4
-- **School branding** — admins can upload a custom school logo (shown in the sidebar); a persistent "Use Default" button resets it to the Armu logo at any time
-- **Accent colour theming** — primary, secondary, and tertiary accent colours are fully configurable in Admin → Settings; colour pickers with live inline preview; all UI elements (tabs, highlights, AI overview panels, filter pills, calendar dots, borders, shadows) respond to changes via CSS variables
-- **Full theme propagation** — replaced every hardcoded `rgba(61,214,140,…)` / `rgba(56,189,248,…)` value across all pages and partials with `rgba(var(--g1-rgb),…)` / `rgba(var(--g2-rgb),…)` so custom colours apply everywhere instantly
-- **Settings save bar fix** — "Save Changes" bar is now `position:fixed` at the viewport bottom with no gap and no layout shift; page scrolling unaffected
-
-### v0.3.1
-- **LAN access** — server now binds to `0.0.0.0` by default; other devices on the same WiFi can reach it at the host machine's local IP
-- **`/admin` and `/teacher` routes** — visiting either root path now loads the correct dashboard instead of an error page
-- **Profile sign-out** — added a Sign out button to the profile page for all roles (was only available in Settings before)
-- **Admin users page** — fixed infinite loading caused by a missing modal; add/edit user modal now works correctly
-- **Assignment modal** — fixed "New Assignment" button doing nothing (modal HTML was missing)
-- **Page layout** — removed a rogue `max-width: 680px` on `.content` that was squishing every page to 680px wide
-- **Page revisit loading forever** — navigating away and back to any page no longer gets stuck; router now rewrites `const`/`let` → `var` so scripts are safely re-runnable
-- **onclick handlers** — fixed all buttons across the app broken by an earlier IIFE-wrapping approach; functions are now properly exposed to the global scope
-- **Teacher quick-links** — AI-generated action chips and nav links no longer use dead `/teacher/X` paths; cache busted so stale links are immediately replaced
-- **`/admin` and `/teacher` sidebar links** — all internal links updated to use short paths (`/classes`, `/assignments`, `/conduct`, etc.)
-- **Profile sidebar corruption** — navigating to the profile page as admin or librarian no longer overwrites the sidebar with stale hardcoded HTML
-- **Security section** — README now documents database encryption status and links to OS-level disk encryption guides
-
-### v0.3
-- **In-call whiteboard** — whiteboard icon in the call topbar opens the full collaborative whiteboard in a left-side tab panel (replaces video grid while open); tab bar design makes it straightforward to add more in-call tools later
-- **Participants toggle** — dedicated button in the call topbar hides/shows the participants sidebar
-- **Assignment creation fixed** — the "New Assignment" modal was missing from the HTML; restored with all fields (title, description, subject, type, due date)
-- **Page layout fixed** — a settings-specific CSS rule (`max-width: 680px` on `.content`) was cascading globally, squishing every page; removed
-- **Page revisit fixed** — navigating away and back to a page caused infinite loading because `const`/`let` re-declarations threw `SyntaxError`; the router now rewrites them to `var` before injection so scripts are safely re-runnable
-- **onclick handlers fixed** — an earlier IIFE-wrapping approach scoped all partial functions locally, breaking every button across the app; reverted in favour of the `const`→`var` approach which keeps functions in global scope
-
-### v0.2
-- Real-time collaborative whiteboard (canvas, shapes, text tool, eraser)
-- WebRTC video meetings (camera, mic, screen share, multi-peer)
-- Direct messaging between users
-- Group study rooms with shared AI chat sessions
-- Teacher assignment management and grade sheet
-- Admin performance monitoring dashboard
-- Notification system with real-time SocketIO delivery
-
-### v0.1
-- Initial release: student dashboard, AI tutor, homework/tests, schedule, grades, calendar, leaderboard, library, activities, conduct log
-- Multi-role auth (student / teacher / admin / librarian)
-- Multi-provider AI (Ollama / OpenAI / Anthropic)
-- APScheduler deadline reminders and weekly AI digest
+See [CHANGELOG.md](CHANGELOG.md) for the full version history.
