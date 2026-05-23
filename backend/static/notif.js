@@ -146,6 +146,7 @@
   function connectSocketIO() {
     if (typeof io === 'undefined') return;
     const socket = io({ transports: ['websocket', 'polling'] });
+    window._armuSock = socket;
     socket.on('connect', () => {
       if (myUserId) socket.emit('user_join', { user_id: myUserId });
     });

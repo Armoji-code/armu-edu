@@ -189,14 +189,15 @@
   if (btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
 })();
 
-var myId         = null;
-var conversations = [];
-var activeIdx    = -1;
-var allUsers     = [];
-var _convFilter  = '';
-var activeReply  = null;   // {id, senderName, content}
-var _fwdContent  = '';
-var _epMsgId     = null;
+var myId          = null;
+var conversations  = [];
+var activeIdx     = -1;
+var activeOtherId = -1;
+var allUsers      = [];
+var _convFilter   = '';
+var activeReply   = null;
+var _fwdContent   = '';
+var _epMsgId      = null;
 
 function initials(name) {
   if (!name) return '?';
@@ -384,7 +385,18 @@ function renderThread(conv) {
 
 function openConv(i) {
   activeIdx = i;
+  activeOtherId = conversations[i] ? conversations[i].otherId : -1;
   closeEmojiPicker();
+  // Mark received messages as read locally + server
+  var conv = conversations[i];
+  if (conv && activeOtherId > 0) {
+    conv.messages.forEach(function(m){ if (m.sender_id !== myId) m.is_read = true; });
+    fetch('/api/messages/personal/read', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({other_id: activeOtherId}),
+    });
+  }
   renderConvList();
   renderThread(conversations[i]);
 }
@@ -725,6 +737,38 @@ async function boot() {
   allUsers = (Array.isArray(users) ? users : []).filter(function(u){ return u.id !== myId; });
   conversations = buildConversations(Array.isArray(messages) ? messages : []);
   renderConvList();
+
+  // Real-time incoming messages
+  if (window._armuSock) {
+    window._armuSock.off('message:new');
+    window._armuSock.on('message:new', function(msg) {
+      var otherId = msg.sender_id === myId ? msg.recipient_id : msg.sender_id;
+      var otherName = msg.sender_id === myId
+        ? (msg.recipient_name || 'User #'+otherId)
+        : (msg.sender_name || 'User #'+otherId);
+      var idx = conversations.findIndex(function(c){ return c.otherId === otherId; });
+      if (idx === -1) {
+        conversations.unshift({otherId: otherId, otherName: otherName, messages: [msg]});
+      } else {
+        conversations[idx].messages.push(msg);
+        var conv = conversations.splice(idx, 1)[0];
+        conversations.unshift(conv);
+      }
+      // Re-sync activeIdx by otherId
+      if (activeOtherId > 0) {
+        activeIdx = conversations.findIndex(function(c){ return c.otherId === activeOtherId; });
+      }
+      renderConvList();
+      if (otherId === activeOtherId) {
+        renderMsgsList(true);
+        // Mark as read since we're viewing this conversation
+        fetch('/api/messages/personal/read', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({other_id: otherId}),
+        });
+      }
+    });
+  }
 }
 
 boot();

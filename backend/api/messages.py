@@ -5,6 +5,7 @@ from auth import login_required
 from models import db
 from models.social import Message, Group, MessageReaction, FlaggedMessage
 from ai.moderation import scan_async
+from app import socketio
 
 
 @blueprint.route("/messages/personal", methods=["GET"])
@@ -41,7 +42,25 @@ def send_personal(user):
     db.session.add(msg)
     db.session.commit()
     scan_async(msg.id, current_app._get_current_object())
+    socketio.emit("message:new", msg.to_dict(), to=f"user_{recipient_id}")
     return jsonify(msg.to_dict()), 201
+
+
+@blueprint.route("/messages/personal/read", methods=["POST"])
+@login_required()
+def mark_personal_read(user):
+    data = request.get_json(silent=True) or {}
+    other_id = data.get("other_id")
+    if not other_id:
+        return jsonify({"error": "other_id required"}), 400
+    Message.query.filter(
+        Message.sender_id == int(other_id),
+        Message.recipient_id == user.id,
+        Message.is_read == False,
+        Message.is_deleted != True,
+    ).update({"is_read": True})
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 @blueprint.route("/messages/personal/<int:msg_id>", methods=["PATCH"])
@@ -122,6 +141,7 @@ def list_group_messages(user, group_id):
     messages = (
         Message.query
         .filter_by(group_id=group_id)
+        .filter(Message.is_deleted != True)
         .order_by(Message.created_at)
         .all()
     )
@@ -142,4 +162,8 @@ def send_group_message(user, group_id):
     db.session.add(msg)
     db.session.commit()
     scan_async(msg.id, current_app._get_current_object())
+    payload = {"group_id": group_id, "message": msg.to_dict()}
+    for member in group.members:
+        if member.id != user.id:
+            socketio.emit("group_message:new", payload, to=f"user_{member.id}")
     return jsonify(msg.to_dict()), 201

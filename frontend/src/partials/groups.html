@@ -1,98 +1,206 @@
-
 <div class="topbar">
-<svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-groups"></use></svg>
-<span class="topbar-title">Groups</span>
-<div class="topbar-right">
-<div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
-<svg class="icon icon-18"><use href="#ic-moon"></use></svg>
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-groups"/></svg>
+  <span class="topbar-title">Groups</span>
+  <div class="topbar-right">
+    <div class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+      <svg class="icon icon-18"><use href="#ic-moon"/></svg>
+    </div>
+  </div>
 </div>
-</div>
-</div>
+
 <div class="content">
-<div class="section-header">
-<div class="section-title">My Groups</div>
-<button class="create-btn" onclick="openCreateModal()">
-<svg class="icon icon-14"><use href="#ic-plus"></use></svg>
-        New Group
+  <div class="section-header">
+    <div class="section-title">My Groups</div>
+    <button class="create-btn" onclick="openCreateModal()">
+      <svg class="icon icon-14"><use href="#ic-plus"/></svg>
+      New Group
+    </button>
+  </div>
+  <div class="groups-grid" id="groups-grid"></div>
+</div>
+
+<!-- Create group modal -->
+<div class="modal-backdrop" id="createModal" style="display:none;" onclick="closeCreateModal(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Create a new group</div>
+    <div class="field">
+      <label>Group name</label>
+      <input type="text" id="groupNameInput" placeholder="e.g. Biology Study Group" maxlength="100" autocomplete="off">
+    </div>
+    <div class="modal-err" id="createErr"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeCreateModal()">Cancel</button>
+      <button class="modal-submit" id="createSubmit" onclick="createGroup()">Create Group</button>
+    </div>
+  </div>
+</div>
+
+<!-- Group detail panel -->
+<div class="detail-backdrop" id="detailBackdrop" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="detail-head">
+    <div class="group-icon" style="width:34px;height:34px;flex-shrink:0;">
+      <svg class="icon icon-16" style="color:var(--g1)"><use href="#ic-groups"/></svg>
+    </div>
+    <div class="detail-head-name" id="detailName">—</div>
+    <button class="crb-close" onclick="closeDetail()"><svg class="icon icon-16"><use href="#ic-x"/></svg></button>
+  </div>
+
+  <!-- Tabs -->
+  <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;">
+    <button id="tabMembers" class="grp-tab active" onclick="switchGrpTab('members')">Members</button>
+    <button id="tabChat"    class="grp-tab"        onclick="switchGrpTab('chat')">Chat</button>
+  </div>
+
+  <!-- Members tab -->
+  <div id="paneMembers" class="detail-body" style="flex:1;overflow-y:auto;">
+    <div class="detail-section">
+      <div class="detail-label">Members</div>
+      <div id="detailMembers"></div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Add Member</div>
+      <div class="add-member-form">
+        <input class="add-member-input" id="addMemberInput" type="email" placeholder="Email address…" autocomplete="off">
+        <button class="add-member-btn" id="addMemberBtn" onclick="addMember()">Add</button>
+      </div>
+      <div class="add-err" id="addMemberErr"></div>
+    </div>
+    <div class="detail-section" style="padding-top:8px;">
+      <button class="act-btn danger" style="width:100%;" onclick="leaveGroup()">
+        <svg class="icon icon-14"><use href="#ic-logout"/></svg> Leave Group
       </button>
+    </div>
+  </div>
+
+  <!-- Chat tab -->
+  <div id="paneChat" class="detail-body" style="display:none;flex:1;flex-direction:column;min-height:0;">
+    <div id="grpMsgs" style="flex:1;overflow-y:auto;padding:8px 0;display:flex;flex-direction:column;gap:4px;">
+      <div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>
+    </div>
+    <div class="thread-compose" style="border-top:1px solid var(--border);">
+      <textarea class="compose-input" id="grpComposeInput" placeholder="Message the group…" rows="1"></textarea>
+      <button class="send-btn" onclick="sendGroupMsg()">
+        <svg class="icon icon-18"><use href="#ic-send"/></svg>
+      </button>
+    </div>
+  </div>
 </div>
-<div class="groups-grid" id="groups-grid"></div>
-</div>
+
+<style>
+.grp-tab {
+  flex: 1;
+  padding: 10px;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.1s, border-color 0.1s;
+}
+.grp-tab.active { color: var(--g1); border-bottom-color: var(--g1); }
+.grp-tab:hover:not(.active) { color: var(--text); }
+
+.grp-bubble {
+  max-width: 80%;
+  padding: 7px 11px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+.grp-bubble.mine {
+  background: var(--g1);
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.grp-bubble.theirs {
+  background: var(--bg3);
+  color: var(--text);
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+.grp-bubble-meta { font-size: 10px; color: var(--text3); margin-top: 2px; }
+.grp-bubble-wrap { display: flex; flex-direction: column; max-width: 80%; }
+.grp-bubble-wrap.mine  { align-items: flex-end;   align-self: flex-end; }
+.grp-bubble-wrap.theirs { align-items: flex-start; align-self: flex-start; }
+.grp-sender { font-size: 10px; color: var(--g1); margin-bottom: 2px; font-weight: 600; }
+</style>
 
 <script>
-
-
-(function(){
-  const t = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', t);
-  const btn = document.getElementById('themeBtn');
-  if(btn) btn.querySelector('use').setAttribute('href', t === 'dark' ? '#ic-sun' : '#ic-moon');
-})();
-
-function toggleTheme() {
-  const html = document.documentElement;
-  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  document.getElementById('themeBtn').querySelector('use').setAttribute('href', next === 'dark' ? '#ic-sun' : '#ic-moon');
-}
-
-let groups = [];
-let activeGroupId = null;
+var grpGroups      = [];
+var grpActiveId    = null;
+var grpMyId        = null;
+var grpMessages    = [];
+var grpActiveTab   = 'members';
 
 function initials(name) {
-  return (name || '?').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+  if (!name) return '?';
+  return name.split(' ').map(function(w){ return w[0]; }).join('').slice(0,2).toUpperCase();
+}
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  var d = new Date(iso), now = new Date();
+  if (d.toDateString() === now.toDateString())
+    return d.toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit', hour12:false});
+  return d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+}
+
+function escG(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function renderGroups() {
-  const el = document.getElementById('groups-grid');
-  if (!groups.length) {
-    el.innerHTML = `<div class="empty" style="grid-column:1/-1;">
-      <svg class="icon"><use href="#ic-groups"/></svg>
-      <p>You're not in any groups yet.</p>
-      <button class="create-btn" onclick="openCreateModal()">
-        <svg class="icon icon-14"><use href="#ic-plus"/></svg> Create your first group
-      </button>
-    </div>`;
+  var el = document.getElementById('groups-grid');
+  if (!el) return;
+  if (!grpGroups.length) {
+    el.innerHTML = '<div class="empty" style="grid-column:1/-1;">'
+      + '<svg class="icon"><use href="#ic-groups"/></svg>'
+      + '<p>You\'re not in any groups yet.</p>'
+      + '<button class="create-btn" onclick="openCreateModal()">'
+      + '<svg class="icon icon-14"><use href="#ic-plus"/></svg> Create your first group'
+      + '</button></div>';
     return;
   }
-  el.innerHTML = groups.map(g => {
-    const shown = g.members.slice(0, 4);
-    const overflow = g.member_count - shown.length;
-    const pips = shown.map(m =>
-      `<div class="member-pip" title="${m.name}">${initials(m.name)}</div>`
-    ).join('') + (overflow > 0 ? `<div class="member-pip member-overflow">+${overflow}</div>` : '');
-    return `<div class="group-card" onclick="openDetail(${g.id})">
-      <div class="group-card-head">
-        <div class="group-icon">
-          <svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-groups"/></svg>
-        </div>
-        <div>
-          <div class="group-name">${g.name}</div>
-          <div class="group-meta">${g.member_count} member${g.member_count !== 1 ? 's' : ''}</div>
-        </div>
-      </div>
-      <div class="member-stack">${pips}</div>
-    </div>`;
+  el.innerHTML = grpGroups.map(function(g){
+    var shown = g.members.slice(0, 4);
+    var overflow = g.member_count - shown.length;
+    var pips = shown.map(function(m){
+      return '<div class="member-pip" title="'+escG(m.name)+'">'+initials(m.name)+'</div>';
+    }).join('') + (overflow > 0 ? '<div class="member-pip member-overflow">+'+overflow+'</div>' : '');
+    return '<div class="group-card" onclick="openDetail('+g.id+')">'
+      + '<div class="group-card-head">'
+      +   '<div class="group-icon"><svg class="icon icon-18" style="color:var(--g1)"><use href="#ic-groups"/></svg></div>'
+      +   '<div>'
+      +     '<div class="group-name">'+escG(g.name)+'</div>'
+      +     '<div class="group-meta">'+g.member_count+' member'+(g.member_count !== 1 ? 's' : '')+'</div>'
+      +   '</div>'
+      + '</div>'
+      + '<div class="member-stack">'+pips+'</div>'
+      + '</div>';
   }).join('');
 }
 
 function openDetail(id) {
-  activeGroupId = id;
-  const g = groups.find(x => x.id === id);
+  grpActiveId = id;
+  var g = grpGroups.find(function(x){ return x.id === id; });
   if (!g) return;
   document.getElementById('detailName').textContent = g.name;
-  document.getElementById('detailMembers').innerHTML = g.members.map(m =>
-    `<div class="member-row">
-      <div class="member-av${m.is_me ? ' me' : ''}">${initials(m.name)}</div>
-      <div>
-        <div class="member-name">${m.name}${m.is_me ? ' <span style="font-size:10px;color:var(--text3);">(you)</span>' : ''}</div>
-        <div class="member-email">${m.email}</div>
-      </div>
-    </div>`
-  ).join('');
+  document.getElementById('detailMembers').innerHTML = g.members.map(function(m){
+    return '<div class="member-row">'
+      + '<div class="member-av'+(m.is_me ? ' me' : '')+'">'+initials(m.name)+'</div>'
+      + '<div>'
+      +   '<div class="member-name">'+escG(m.name)+(m.is_me ? ' <span style="font-size:10px;color:var(--text3);">(you)</span>' : '')+'</div>'
+      +   '<div class="member-email">'+escG(m.email)+'</div>'
+      + '</div></div>';
+  }).join('');
   document.getElementById('addMemberInput').value = '';
   document.getElementById('addMemberErr').textContent = '';
+  switchGrpTab('members');
   document.getElementById('detailBackdrop').classList.add('open');
   document.getElementById('detailPanel').classList.add('open');
 }
@@ -100,15 +208,76 @@ function openDetail(id) {
 function closeDetail() {
   document.getElementById('detailBackdrop').classList.remove('open');
   document.getElementById('detailPanel').classList.remove('open');
-  activeGroupId = null;
+  grpActiveId = null;
 }
 
+function switchGrpTab(tab) {
+  grpActiveTab = tab;
+  document.getElementById('tabMembers').className = 'grp-tab' + (tab === 'members' ? ' active' : '');
+  document.getElementById('tabChat').className    = 'grp-tab' + (tab === 'chat'    ? ' active' : '');
+  document.getElementById('paneMembers').style.display = tab === 'members' ? 'block' : 'none';
+  document.getElementById('paneChat').style.display    = tab === 'chat'    ? 'flex'  : 'none';
+  if (tab === 'chat') loadGroupMessages(grpActiveId);
+}
+
+/* ── Group chat ── */
+async function loadGroupMessages(groupId) {
+  if (!groupId) return;
+  var el = document.getElementById('grpMsgs');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>';
+  var msgs = await fetch('/api/messages/groups/'+groupId)
+    .then(function(r){ return r.json(); }).catch(function(){ return []; });
+  grpMessages = Array.isArray(msgs) ? msgs : [];
+  renderGroupMessages();
+}
+
+function renderGroupMessages() {
+  var el = document.getElementById('grpMsgs');
+  if (!el) return;
+  if (!grpMessages.length) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">No messages yet. Say something!</div>';
+    return;
+  }
+  var saved = el.scrollTop;
+  var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  el.innerHTML = grpMessages.map(function(m){
+    var mine = m.sender_id === grpMyId;
+    return '<div class="grp-bubble-wrap '+(mine?'mine':'theirs')+'">'
+      + (!mine ? '<div class="grp-sender">'+escG(m.sender_name||'?')+'</div>' : '')
+      + '<div class="grp-bubble '+(mine?'mine':'theirs')+'">'+escG(m.content)+'</div>'
+      + '<div class="grp-bubble-meta">'+fmtTime(m.created_at)+'</div>'
+      + '</div>';
+  }).join('');
+  el.scrollTop = atBottom ? el.scrollHeight : saved;
+}
+
+async function sendGroupMsg() {
+  if (!grpActiveId) return;
+  var input = document.getElementById('grpComposeInput');
+  var content = input ? input.value.trim() : '';
+  if (!content) return;
+  input.value = '';
+  var res = await fetch('/api/messages/groups/'+grpActiveId, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({content: content}),
+  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
+  if (res && !res.error) {
+    grpMessages.push(res);
+    renderGroupMessages();
+    var el = document.getElementById('grpMsgs');
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+}
+
+/* ── Create / join ── */
 function openCreateModal() {
   document.getElementById('groupNameInput').value = '';
   document.getElementById('createErr').textContent = '';
   document.getElementById('createSubmit').disabled = false;
   document.getElementById('createModal').style.display = 'flex';
-  setTimeout(() => document.getElementById('groupNameInput').focus(), 50);
+  setTimeout(function(){ var inp = document.getElementById('groupNameInput'); if(inp) inp.focus(); }, 50);
 }
 
 function closeCreateModal(e) {
@@ -116,94 +285,117 @@ function closeCreateModal(e) {
   document.getElementById('createModal').style.display = 'none';
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') {
-    closeDetail();
-    document.getElementById('createModal').style.display = 'none';
-  }
-});
-
-document.getElementById('groupNameInput').addEventListener('keydown', e => {
+document.getElementById('groupNameInput').addEventListener('keydown', function(e){
   if (e.key === 'Enter') createGroup();
 });
 
 async function createGroup() {
-  const name = document.getElementById('groupNameInput').value.trim();
+  var name = document.getElementById('groupNameInput').value.trim();
   if (!name) { document.getElementById('createErr').textContent = 'Enter a group name.'; return; }
-  const btn = document.getElementById('createSubmit');
+  var btn = document.getElementById('createSubmit');
   btn.disabled = true;
-  const res = await fetch('/api/groups', {
+  var res = await fetch('/api/groups', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name}),
-  }).then(r => r.json()).catch(() => null);
-
+    body: JSON.stringify({name: name}),
+  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
   btn.disabled = false;
   if (!res || res.error) {
-    document.getElementById('createErr').textContent = res?.error || 'Failed to create group.';
+    document.getElementById('createErr').textContent = res && res.error ? res.error : 'Failed to create group.';
     return;
   }
-  groups.unshift(res);
+  grpGroups.unshift(res);
   renderGroups();
   document.getElementById('createModal').style.display = 'none';
   openDetail(res.id);
 }
 
 async function addMember() {
-  if (!activeGroupId) return;
-  const input = document.getElementById('addMemberInput');
-  const email = input.value.trim();
+  if (!grpActiveId) return;
+  var input = document.getElementById('addMemberInput');
+  var email = input.value.trim();
   if (!email) return;
-  const btn = document.getElementById('addMemberBtn');
+  var btn = document.getElementById('addMemberBtn');
   btn.disabled = true;
-  const res = await fetch('/api/groups/' + activeGroupId + '/members', {
+  var res = await fetch('/api/groups/'+grpActiveId+'/members', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({email}),
-  }).then(r => r.json()).catch(() => null);
-
+    body: JSON.stringify({email: email}),
+  }).then(function(r){ return r.json(); }).catch(function(){ return null; });
   btn.disabled = false;
   if (!res || res.error) {
-    document.getElementById('addMemberErr').textContent = res?.error || 'Failed to add member.';
+    document.getElementById('addMemberErr').textContent = res && res.error ? res.error : 'Failed to add member.';
     return;
   }
-  // Update local state
-  const idx = groups.findIndex(g => g.id === activeGroupId);
-  if (idx >= 0) groups[idx] = res;
+  var idx = grpGroups.findIndex(function(g){ return g.id === grpActiveId; });
+  if (idx >= 0) grpGroups[idx] = res;
   document.getElementById('addMemberErr').textContent = '';
   input.value = '';
   renderGroups();
-  openDetail(activeGroupId);
+  openDetail(grpActiveId);
 }
 
 async function leaveGroup() {
-  if (!activeGroupId) return;
+  if (!grpActiveId) return;
   if (!confirm('Leave this group?')) return;
-  const res = await fetch('/api/groups/' + activeGroupId + '/leave', {method: 'DELETE'})
-    .then(r => r.json()).catch(() => null);
+  var res = await fetch('/api/groups/'+grpActiveId+'/leave', {method:'DELETE'})
+    .then(function(r){ return r.json(); }).catch(function(){ return null; });
   if (!res || res.error) return;
-  groups = groups.filter(g => g.id !== activeGroupId);
+  grpGroups = grpGroups.filter(function(g){ return g.id !== grpActiveId; });
   closeDetail();
   renderGroups();
 }
 
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') {
+    closeDetail();
+    document.getElementById('createModal').style.display = 'none';
+  }
+});
+
+/* ── Keyboard shortcut for group compose ── */
+var grpComposeEl = document.getElementById('grpComposeInput');
+if (grpComposeEl) {
+  grpComposeEl.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendGroupMsg(); }
+  });
+}
+
+/* ── Real-time group messages ── */
+if (window._armuSock) {
+  window._armuSock.off('group_message:new');
+  window._armuSock.on('group_message:new', function(data){
+    if (data.group_id === grpActiveId && grpActiveTab === 'chat') {
+      grpMessages.push(data.message);
+      renderGroupMessages();
+      var el = document.getElementById('grpMsgs');
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+  });
+}
+
+/* ── Exports ── */
+window.openCreateModal = openCreateModal;
+window.closeCreateModal = closeCreateModal;
+window.openDetail      = openDetail;
+window.closeDetail     = closeDetail;
+window.switchGrpTab    = switchGrpTab;
+window.createGroup     = createGroup;
+window.addMember       = addMember;
+window.leaveGroup      = leaveGroup;
+window.sendGroupMsg    = sendGroupMsg;
+
 async function boot() {
-  const [me, groupsData] = await Promise.all([
-    fetch('/api/auth/me').then(r => r.json()).catch(() => null),
-    fetch('/api/groups').then(r => r.json()).catch(() => []),
+  var results = await Promise.all([
+    fetch('/api/auth/me').then(function(r){ return r.json(); }).catch(function(){ return null; }),
+    fetch('/api/groups').then(function(r){ return r.json(); }).catch(function(){ return []; }),
   ]);
-
+  var me = results[0], groupsData = results[1];
   if (!me || me.error) { location.href = '/login'; return; }
-
-  
-  
-  if (me.class_name) 
-
-  groups = Array.isArray(groupsData) ? groupsData : [];
+  grpMyId = me.id;
+  grpGroups = Array.isArray(groupsData) ? groupsData : [];
   renderGroups();
 }
 
 boot();
-
-
 </script>
