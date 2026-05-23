@@ -14,6 +14,7 @@ class Config:
         f"sqlite:///{os.path.join(BASE_DIR, '..', 'armu.db')}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    MAX_CONTENT_LENGTH = 10 * 1024 * 1024  # 10 MB hard limit on uploads
 
     DEBUG        = os.environ.get("FLASK_DEBUG", "0") == "1"
     CORS_ORIGINS = [o.strip() for o in os.environ.get("CORS_ORIGINS", "http://localhost:5000").split(",")]

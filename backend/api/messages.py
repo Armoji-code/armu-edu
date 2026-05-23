@@ -1,11 +1,40 @@
+import os
+import uuid
 from datetime import datetime, timezone
 from flask import request, jsonify, current_app
+from werkzeug.utils import secure_filename
 from api import blueprint
 from auth import login_required
 from models import db
 from models.social import Message, Group, MessageReaction, FlaggedMessage
 from ai.moderation import scan_async
 from app import socketio
+
+_ALLOWED_EXT = {
+    'jpg', 'jpeg', 'png', 'gif', 'webp',
+    'pdf', 'txt', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'zip',
+}
+_UPLOAD_DIR = os.path.join(os.path.dirname(__file__), '..', 'static', 'uploads', 'messages')
+
+
+@blueprint.route("/messages/upload", methods=["POST"])
+@login_required()
+def upload_message_file(user):
+    if 'file' not in request.files:
+        return jsonify({"error": "no file"}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({"error": "no file"}), 400
+    ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+    if ext not in _ALLOWED_EXT:
+        return jsonify({"error": f"file type .{ext} not allowed"}), 400
+    os.makedirs(_UPLOAD_DIR, exist_ok=True)
+    save_name = f"{uuid.uuid4().hex}.{ext}"
+    f.save(os.path.join(_UPLOAD_DIR, save_name))
+    return jsonify({
+        "url":  f"/static/uploads/messages/{save_name}",
+        "name": secure_filename(f.filename) or save_name,
+    }), 201
 
 
 @blueprint.route("/messages/personal", methods=["GET"])
@@ -31,13 +60,17 @@ def send_personal(user):
     recipient_id = data.get("recipient_id")
     content      = data.get("content", "").strip()
     reply_to_id  = data.get("reply_to_id")
-    if not recipient_id or not content:
-        return jsonify({"error": "recipient_id and content required"}), 400
+    file_url     = data.get("file_url", "").strip()
+    file_name    = data.get("file_name", "").strip()
+    if not recipient_id or (not content and not file_url):
+        return jsonify({"error": "recipient_id and content or file required"}), 400
     msg = Message(
         sender_id=user.id,
         recipient_id=recipient_id,
         content=content,
         reply_to_id=reply_to_id or None,
+        file_url=file_url or None,
+        file_name=file_name or None,
     )
     db.session.add(msg)
     db.session.commit()

@@ -180,6 +180,44 @@
   padding: 2px; display: flex; align-items: center;
 }
 .crb-close:hover { color: var(--text); }
+
+.compose-attach-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text2);
+}
+.attach-preview-img {
+  width: 40px; height: 40px; object-fit: cover;
+  border-radius: 6px; border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.attach-preview-icon {
+  width: 40px; height: 40px; display: flex; align-items: center;
+  justify-content: center; background: var(--bg2);
+  border-radius: 6px; border: 1px solid var(--border); flex-shrink: 0;
+  color: var(--text3);
+}
+.compose-file-btn {
+  background: none; border: none; color: var(--text3); cursor: pointer;
+  padding: 6px; display: flex; align-items: center; flex-shrink: 0;
+  border-radius: 6px; transition: color 0.1s, background 0.1s;
+}
+.compose-file-btn:hover { color: var(--text); background: var(--bg3); }
+
+.msg-attach { margin-top: 5px; }
+.msg-attach img { max-width: 240px; max-height: 240px; border-radius: 8px; cursor: pointer; display: block; }
+.msg-attach-file {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 10px; background: rgba(0,0,0,0.15);
+  border-radius: 8px; margin-top: 5px; font-size: 12px;
+}
+.msg-attach-file a { color: inherit; text-decoration: none; }
+.msg-attach-file a:hover { text-decoration: underline; }
 </style>
 
 <script>
@@ -198,6 +236,7 @@ var _convFilter   = '';
 var activeReply   = null;
 var _fwdContent   = '';
 var _epMsgId      = null;
+var attachedFile  = null;  // {url, name} after upload
 
 function initials(name) {
   if (!name) return '?';
@@ -290,7 +329,19 @@ function renderMsg(m) {
 
   var contentHtml = deleted
     ? '<div class="bubble-text bubble-deleted">[Message deleted]</div>'
-    : '<div class="bubble-text">'+esc(m.content)+'</div>';
+    : (m.content ? '<div class="bubble-text">'+esc(m.content)+'</div>' : '');
+
+  if (!deleted && m.file_url && m.file_name) {
+    var isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(m.file_name);
+    if (isImg) {
+      contentHtml += '<div class="msg-attach"><img src="'+esc(m.file_url)+'" alt="'+esc(m.file_name)+'" onclick="window.open(\''+esc(m.file_url)+'\')" loading="lazy"/></div>';
+    } else {
+      contentHtml += '<div class="msg-attach-file">'
+        + '<svg class="icon icon-15"><use href="#ic-paperclip"/></svg>'
+        + '<a href="'+esc(m.file_url)+'" download="'+esc(m.file_name)+'">'+esc(m.file_name)+'</a>'
+        + '</div>';
+    }
+  }
 
   var metaHtml = '<div class="bubble-meta">'
     + fmtTime(m.created_at)
@@ -347,7 +398,8 @@ function renderMsgsList(scrollBottom) {
 function renderThread(conv) {
   var panel = document.getElementById('threadPanel');
   if (!panel) return;
-  activeReply = null;
+  activeReply  = null;
+  attachedFile = null;
   panel.innerHTML =
     '<div class="thread-head">'
     + '<div class="avatar-sm">'+initials(conv.otherName)+'</div>'
@@ -363,7 +415,16 @@ function renderThread(conv) {
     +   '<span class="crb-text" id="replyBarText"></span>'
     +   '<button class="crb-close" onclick="cancelReply()" title="Cancel reply"><svg class="icon icon-14"><use href="#ic-x"/></svg></button>'
     + '</div>'
+    + '<div id="attachBar" style="display:none" class="compose-attach-bar">'
+    +   '<div id="attachThumb"></div>'
+    +   '<span id="attachName" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>'
+    +   '<button class="crb-close" onclick="clearAttachment()" title="Remove attachment"><svg class="icon icon-14"><use href="#ic-x"/></svg></button>'
+    + '</div>'
     + '<div class="thread-compose">'
+    +   '<input type="file" id="fileInput" style="display:none" accept="image/*,.pdf,.txt,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip" onchange="handleFileSelect(this)">'
+    +   '<button class="compose-file-btn" onclick="document.getElementById(\'fileInput\').click()" title="Attach file">'
+    +     '<svg class="icon icon-18"><use href="#ic-paperclip"/></svg>'
+    +   '</button>'
     +   '<textarea class="compose-input" id="composeInput" placeholder="Type a message…" rows="1"></textarea>'
     +   '<button class="send-btn" id="sendBtn" onclick="sendMsg()">'
     +     '<svg class="icon icon-18"><use href="#ic-send"/></svg>'
@@ -410,18 +471,61 @@ function openConvWithUser(userId, userName) {
   openConv(idx);
 }
 
+/* ── File attachment ── */
+async function handleFileSelect(input) {
+  var file = input ? input.files[0] : null;
+  if (!file) return;
+  input.value = '';
+  // Show loading state
+  var bar = document.getElementById('attachBar');
+  var thumb = document.getElementById('attachThumb');
+  var nameEl = document.getElementById('attachName');
+  if (bar) bar.style.display = 'flex';
+  if (thumb) thumb.innerHTML = '<div class="attach-preview-icon"><svg class="icon icon-16"><use href="#ic-refresh"/></svg></div>';
+  if (nameEl) nameEl.textContent = 'Uploading ' + file.name + '…';
+
+  var fd = new FormData();
+  fd.append('file', file);
+  var res = await fetch('/api/messages/upload', {method:'POST', body:fd})
+    .then(function(r){ return r.json(); }).catch(function(){ return null; });
+
+  if (!res || res.error) {
+    clearAttachment();
+    alert(res ? res.error : 'Upload failed. Check file type and size (max 10 MB).');
+    return;
+  }
+  attachedFile = {url: res.url, name: res.name};
+  var isImg = /\.(jpg|jpeg|png|gif|webp)$/i.test(res.name);
+  if (thumb) {
+    thumb.innerHTML = isImg
+      ? '<img class="attach-preview-img" src="'+esc(res.url)+'" alt="preview"/>'
+      : '<div class="attach-preview-icon"><svg class="icon icon-18"><use href="#ic-paperclip"/></svg></div>';
+  }
+  if (nameEl) nameEl.textContent = res.name;
+}
+
+function clearAttachment() {
+  attachedFile = null;
+  var bar = document.getElementById('attachBar');
+  if (bar) bar.style.display = 'none';
+  var fi = document.getElementById('fileInput');
+  if (fi) fi.value = '';
+}
+
 /* ── Send ── */
 async function sendMsg() {
   if (activeIdx < 0) return;
   var input = document.getElementById('composeInput');
   var content = input ? input.value.trim() : '';
-  if (!content) return;
+  if (!content && !attachedFile) return;
   var btn = document.getElementById('sendBtn');
   if (btn) btn.disabled = true;
   var payload = {recipient_id: conversations[activeIdx].otherId, content: content};
   if (activeReply) payload.reply_to_id = activeReply.id;
-  input.value = '';
+  if (attachedFile) { payload.file_url = attachedFile.url; payload.file_name = attachedFile.name; }
+  if (input) input.value = '';
   cancelReply();
+  clearAttachment();
   var res = await fetch('/api/messages/personal', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -719,11 +823,13 @@ window.forwardMsg      = forwardMsg;
 window.closeFwdPicker  = closeFwdPicker;
 window.filterFwdPicker = filterFwdPicker;
 window.pickFwd         = pickFwd;
-window.openEmojiPicker = openEmojiPicker;
-window.closeEmojiPicker= closeEmojiPicker;
-window.doReact         = doReact;
-window.toggleReact     = toggleReact;
-window.reportMsg       = reportMsg;
+window.openEmojiPicker  = openEmojiPicker;
+window.closeEmojiPicker = closeEmojiPicker;
+window.doReact          = doReact;
+window.toggleReact      = toggleReact;
+window.reportMsg        = reportMsg;
+window.handleFileSelect = handleFileSelect;
+window.clearAttachment  = clearAttachment;
 
 async function boot() {
   var results = await Promise.all([
