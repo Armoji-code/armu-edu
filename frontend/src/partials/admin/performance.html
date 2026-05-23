@@ -278,52 +278,64 @@ function timeTo(iso) {
 
 function render(d) {
   // Record history and redraw graph
-  pushHistory(d.cpu.percent, d.ram.percent, d.disk.percent);
+  pushHistory(d.cpu?.percent ?? 0, d.ram?.percent ?? 0, d.disk?.percent ?? 0);
   drawHistory();
 
   // CPU overall
-  setGauge('cpu-bar', 'cpu-pct', d.cpu.percent, 'fill-green');
-  document.getElementById('cpu-sub').textContent =
-    d.cpu.cores + ' cores' + (d.cpu.freq_mhz ? ' · ' + (d.cpu.freq_mhz / 1000).toFixed(2) + ' GHz' : '');
+  if (d.cpu) {
+    setGauge('cpu-bar', 'cpu-pct', d.cpu.percent, 'fill-green');
+    document.getElementById('cpu-sub').textContent =
+      d.cpu.cores + ' cores' + (d.cpu.freq_mhz ? ' · ' + (d.cpu.freq_mhz / 1000).toFixed(2) + ' GHz' : '');
 
-  // Per-core bars
-  const grid = document.getElementById('core-grid');
-  const cores = d.cpu.per_core || [];
-  if (grid.children.length !== cores.length) {
-    grid.innerHTML = cores.map((_, i) => `
-      <div class="core-cell">
-        <div class="core-bar-wrap">
-          <div class="core-bar-fill" id="core-${i}" style="height:0%"></div>
-        </div>
-        <div class="core-label">C${i}</div>
-        <div class="core-val" id="core-val-${i}">0%</div>
-      </div>`).join('');
+    // Per-core bars
+    const grid = document.getElementById('core-grid');
+    const cores = d.cpu.per_core || [];
+    if (grid.children.length !== cores.length) {
+      grid.innerHTML = cores.map((_, i) => `
+        <div class="core-cell">
+          <div class="core-bar-wrap">
+            <div class="core-bar-fill" id="core-${i}" style="height:0%"></div>
+          </div>
+          <div class="core-label">C${i}</div>
+          <div class="core-val" id="core-val-${i}">0%</div>
+        </div>`).join('');
+    }
+    cores.forEach((pct, i) => {
+      const bar = document.getElementById(`core-${i}`);
+      const val = document.getElementById(`core-val-${i}`);
+      if (!bar || !val) return;
+      const col = pct >= 85 ? '#f87171' : pct >= 60 ? '#fbbf24' : 'var(--g1)';
+      bar.style.height = Math.max(pct, 2) + '%';
+      bar.style.background = col;
+      val.textContent = Math.round(pct) + '%';
+    });
+  } else {
+    document.getElementById('cpu-sub').textContent = 'Unavailable';
   }
-  cores.forEach((pct, i) => {
-    const bar = document.getElementById(`core-${i}`);
-    const val = document.getElementById(`core-val-${i}`);
-    if (!bar || !val) return;
-    const col = pct >= 85 ? '#f87171' : pct >= 60 ? '#fbbf24' : 'var(--g1)';
-    bar.style.height = Math.max(pct, 2) + '%';
-    bar.style.background = col;
-    val.textContent = Math.round(pct) + '%';
-  });
 
   // RAM
-  setGauge('ram-bar', 'ram-pct', d.ram.percent, 'fill-blue');
-  document.getElementById('ram-sub').textContent  = d.ram.total_gb + ' GB total';
-  document.getElementById('ram-used').textContent  = d.ram.used_gb;
-  document.getElementById('ram-free').textContent  = d.ram.avail_gb;
-  document.getElementById('ram-total').textContent = d.ram.total_gb;
+  if (d.ram) {
+    setGauge('ram-bar', 'ram-pct', d.ram.percent, 'fill-blue');
+    document.getElementById('ram-sub').textContent   = d.ram.total_gb + ' GB total';
+    document.getElementById('ram-used').textContent  = d.ram.used_gb;
+    document.getElementById('ram-free').textContent  = d.ram.avail_gb;
+    document.getElementById('ram-total').textContent = d.ram.total_gb;
+  } else {
+    document.getElementById('ram-sub').textContent = 'Unavailable';
+  }
 
   // Disk
-  setGauge('disk-bar', 'disk-pct', d.disk.percent, 'fill-purple');
-  document.getElementById('disk-used').textContent  = d.disk.used_gb;
-  document.getElementById('disk-free').textContent  = d.disk.free_gb;
-  document.getElementById('disk-total').textContent = d.disk.total_gb;
+  if (d.disk) {
+    setGauge('disk-bar', 'disk-pct', d.disk.percent, 'fill-purple');
+    document.getElementById('disk-used').textContent  = d.disk.used_gb;
+    document.getElementById('disk-free').textContent  = d.disk.free_gb;
+    document.getElementById('disk-total').textContent = d.disk.total_gb;
+  } else {
+    document.getElementById('disk-sub').textContent = 'Unavailable';
+  }
 
   // Flask process
-  document.getElementById('proc-mem').textContent = d.process_mem_mb;
+  document.getElementById('proc-mem').textContent = d.process_mem_mb ?? '—';
 
   // Ollama
   const pill = document.getElementById('ollama-status');

@@ -22,24 +22,54 @@ def _school(user):
 @login_required(roles=["admin"])
 def admin_performance(user):
     # CPU
-    cpu_pct      = psutil.cpu_percent(interval=None)
-    cpu_per_core = psutil.cpu_percent(interval=None, percpu=True)
-    cpu_cores    = psutil.cpu_count(logical=True)
-    cpu_freq     = psutil.cpu_freq()
+    cpu = None
+    try:
+        cpu_freq = psutil.cpu_freq()
+        cpu = {
+            "percent":  psutil.cpu_percent(interval=None),
+            "per_core": psutil.cpu_percent(interval=None, percpu=True),
+            "cores":    psutil.cpu_count(logical=True),
+            "freq_mhz": round(cpu_freq.current, 0) if cpu_freq else None,
+        }
+    except Exception:
+        pass
 
     # RAM
-    ram = psutil.virtual_memory()
+    ram = None
+    try:
+        m = psutil.virtual_memory()
+        ram = {
+            "total_gb": round(m.total     / 1024**3, 2),
+            "used_gb":  round(m.used      / 1024**3, 2),
+            "avail_gb": round(m.available / 1024**3, 2),
+            "percent":  m.percent,
+        }
+    except Exception:
+        pass
 
     # Disk (root mount)
-    disk = psutil.disk_usage("/")
+    disk = None
+    try:
+        d = psutil.disk_usage("/")
+        disk = {
+            "total_gb": round(d.total / 1024**3, 1),
+            "used_gb":  round(d.used  / 1024**3, 1),
+            "free_gb":  round(d.free  / 1024**3, 1),
+            "percent":  d.percent,
+        }
+    except Exception:
+        pass
 
     # Flask process memory
-    proc = psutil.Process(os.getpid())
-    proc_mem_mb = round(proc.memory_info().rss / 1024 / 1024, 1)
+    proc_mem_mb = None
+    try:
+        proc_mem_mb = round(psutil.Process(os.getpid()).memory_info().rss / 1024 / 1024, 1)
+    except Exception:
+        pass
 
     # Ollama — running models
-    ollama_url = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
-    ollama_ok  = False
+    ollama_url    = current_app.config.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    ollama_ok     = False
     ollama_models = []
     try:
         resp = _requests.get(f"{ollama_url}/api/ps", timeout=3)
@@ -56,24 +86,9 @@ def admin_performance(user):
         pass
 
     return jsonify({
-        "cpu": {
-            "percent":      cpu_pct,
-            "per_core":     cpu_per_core,
-            "cores":        cpu_cores,
-            "freq_mhz":     round(cpu_freq.current, 0) if cpu_freq else None,
-        },
-        "ram": {
-            "total_gb":  round(ram.total     / 1024**3, 2),
-            "used_gb":   round(ram.used      / 1024**3, 2),
-            "avail_gb":  round(ram.available / 1024**3, 2),
-            "percent":   ram.percent,
-        },
-        "disk": {
-            "total_gb": round(disk.total / 1024**3, 1),
-            "used_gb":  round(disk.used  / 1024**3, 1),
-            "free_gb":  round(disk.free  / 1024**3, 1),
-            "percent":  disk.percent,
-        },
+        "cpu":            cpu,
+        "ram":            ram,
+        "disk":           disk,
         "process_mem_mb": proc_mem_mb,
         "ollama": {
             "reachable": ollama_ok,
