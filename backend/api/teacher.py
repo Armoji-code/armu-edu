@@ -175,9 +175,9 @@ def create_assignment(user):
 @blueprint.route("/teacher/assignments/<int:assignment_id>", methods=["PATCH"])
 @login_required(roles=["teacher"])
 def update_assignment(user, assignment_id):
-    a, err = _owns_assignment(user, assignment_id)
-    if err:
-        return err
+    a, e = _owns_assignment(user, assignment_id)
+    if e:
+        return e
     data = request.get_json(silent=True) or {}
     if "title" in data:
         a.title = data["title"].strip()
@@ -197,9 +197,9 @@ def update_assignment(user, assignment_id):
 @blueprint.route("/teacher/assignments/<int:assignment_id>", methods=["DELETE"])
 @login_required(roles=["teacher"])
 def delete_assignment(user, assignment_id):
-    a, err = _owns_assignment(user, assignment_id)
-    if err:
-        return err
+    a, e = _owns_assignment(user, assignment_id)
+    if e:
+        return e
     Grade.query.filter_by(assignment_id=a.id).delete()
     db.session.delete(a)
     db.session.commit()
@@ -211,9 +211,9 @@ def delete_assignment(user, assignment_id):
 @blueprint.route("/teacher/assignments/<int:assignment_id>/grades", methods=["GET"])
 @login_required(roles=["teacher"])
 def assignment_grades(user, assignment_id):
-    a, err = _owns_assignment(user, assignment_id)
-    if err:
-        return err
+    a, e = _owns_assignment(user, assignment_id)
+    if e:
+        return e
 
     students = a.subject.klass.students
     grades_map = {g.student_id: g for g in a.grades}
@@ -247,9 +247,9 @@ def set_grade(user):
     if not (0 <= score <= 100):
         return err("score must be 0–100", 400)
 
-    a, err = _owns_assignment(user, assignment_id)
-    if err:
-        return err
+    a, e = _owns_assignment(user, assignment_id)
+    if e:
+        return e
 
     # Verify student is in this class
     student_ids = {s.id for s in a.subject.klass.students}
@@ -288,6 +288,12 @@ def log_conduct(user):
         return err("student_id required", 400)
     if points is None:
         return err("points required", 400)
+    try:
+        points = int(points)
+    except (TypeError, ValueError):
+        return err("points must be an integer", 400)
+    if not (-100 <= points <= 100):
+        return err("points must be between -100 and 100", 400)
 
     subject = Subject.query.get(subject_id)
     student = User.query.filter_by(id=student_id, class_id=subject.class_id, role="student").first()
@@ -298,7 +304,7 @@ def log_conduct(user):
         student_id=student_id,
         teacher_id=user.id,
         subject_id=subject_id,
-        points=int(points),
+        points=points,
         category=category,
         reason=reason,
     )
@@ -463,9 +469,9 @@ def teacher_announce(user):
 @blueprint.route("/teacher/assignments/<int:assignment_id>/grades/export", methods=["GET"])
 @login_required(roles=["teacher"])
 def export_grades_csv(user, assignment_id):
-    a, err = _owns_assignment(user, assignment_id)
-    if err:
-        return err
+    a, e = _owns_assignment(user, assignment_id)
+    if e:
+        return e
 
     students = a.subject.klass.students
     grades_map = {g.student_id: g.score for g in a.grades}

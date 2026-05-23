@@ -90,8 +90,8 @@ def on_connect():
 
 @socketio.on("user_join")
 def on_user_join(data):
-    """Client sends their user_id so we can push notifications to them."""
-    uid = data.get("user_id")
+    """Join the notification room for the current session user."""
+    uid = str(session.get("user_id", ""))
     if uid:
         join_room(f"user_{uid}")
 
