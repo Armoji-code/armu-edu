@@ -49,6 +49,11 @@ def list_meetings(user):
     ])
 
 
+def _teacher_class_ids(teacher_id):
+    from models.school import Subject
+    return {s.class_id for s in Subject.query.filter_by(teacher_id=teacher_id).all()}
+
+
 @blueprint.route("/meetings", methods=["POST"])
 @login_required()
 def create_meeting(user):
@@ -56,8 +61,9 @@ def create_meeting(user):
     title    = data.get("title", "").strip() or "Meeting"
     class_id = data.get("class_id") or None
 
-    # Students can only create meetings within their own class
     if user.role == "student" and class_id and class_id != user.class_id:
+        return err("forbidden", 403)
+    if user.role == "teacher" and class_id and class_id not in _teacher_class_ids(user.id):
         return err("forbidden", 403)
 
     m = Meeting(title=title, host_id=user.id, class_id=class_id)
@@ -70,8 +76,13 @@ def create_meeting(user):
 @login_required()
 def end_meeting(user, mid):
     m = Meeting.query.get_or_404(mid)
-    if m.host_id != user.id and user.role not in ("admin", "teacher"):
-        return err("forbidden", 403)
+    if m.host_id != user.id:
+        if user.role == "admin":
+            pass  # admins can end any meeting
+        elif user.role == "teacher" and m.class_id in _teacher_class_ids(user.id):
+            pass  # teachers can force-end meetings in their own classes
+        else:
+            return err("forbidden", 403)
     m.is_active = False
     m.ended_at  = datetime.now(timezone.utc)
     db.session.commit()
