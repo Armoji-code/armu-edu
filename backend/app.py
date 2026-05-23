@@ -35,6 +35,13 @@ def create_app(config=Config):
     import websocket.meeting
     import websocket.terminal
 
+    @app.route("/sw.js")
+    def service_worker():
+        resp = send_from_directory(STATIC_DIR, "sw.js")
+        resp.headers["Service-Worker-Allowed"] = "/"
+        resp.headers["Cache-Control"] = "no-cache"
+        return resp
+
     @app.route("/login")
     def login_page():
         return send_from_directory(FRONTEND_DIR, "login.html")

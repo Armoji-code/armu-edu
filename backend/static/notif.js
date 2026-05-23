@@ -38,9 +38,11 @@
   let unread = 0;
   let dropdownOpen = false;
   let myUserId = null;
+  let _swReg = null;
+  let _pushEnabled = false;
 
   // ── DOM refs (set after inject) ───────────────────────────────────────────
-  let bellBtn, badge, dropdown, list;
+  let bellBtn, badge, dropdown, list, pushBar;
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function timeAgo(iso) {
@@ -169,6 +171,95 @@
     setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 5000);
   }
 
+  // ── Push notifications ────────────────────────────────────────────────────
+  function _urlB64ToUint8(b64) {
+    const pad = '='.repeat((4 - b64.length % 4) % 4);
+    const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'));
+    return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+  }
+
+  function _renderPushBar() {
+    if (!pushBar) return;
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      pushBar.style.display = 'none';
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      pushBar.innerHTML = '<span style="font-size:11px;color:var(--text3);">Push blocked in browser settings</span>';
+      pushBar.style.display = 'flex';
+      return;
+    }
+    if (_pushEnabled) {
+      pushBar.innerHTML = `
+        <span style="font-size:11px;color:var(--g1,#3dd68c);">Push notifications on</span>
+        <button id="notifPushOff" style="margin-left:auto;font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;padding:0;">Turn off</button>`;
+      pushBar.style.display = 'flex';
+      const offBtn = pushBar.querySelector('#notifPushOff');
+      if (offBtn) offBtn.addEventListener('click', disablePush);
+    } else {
+      pushBar.innerHTML = `
+        <span style="font-size:11px;color:var(--text2);">Get notified even when the tab is closed</span>
+        <button id="notifPushOn" style="margin-left:auto;font-size:11px;color:var(--g1,#3dd68c);background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;">Enable</button>`;
+      pushBar.style.display = 'flex';
+      const onBtn = pushBar.querySelector('#notifPushOn');
+      if (onBtn) onBtn.addEventListener('click', enablePush);
+    }
+  }
+
+  async function setupPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    try {
+      _swReg = await navigator.serviceWorker.register('/sw.js');
+      const sub = await _swReg.pushManager.getSubscription();
+      if (sub) {
+        _pushEnabled = true;
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sub.toJSON()),
+        }).catch(() => {});
+      }
+      _renderPushBar();
+    } catch (_) {}
+  }
+
+  async function enablePush() {
+    if (!_swReg) return;
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { _renderPushBar(); return; }
+      const keyResp = await fetch('/api/push/vapid-public-key').then(r => r.json());
+      const sub = await _swReg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: _urlB64ToUint8(keyResp.public_key),
+      });
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub.toJSON()),
+      });
+      _pushEnabled = true;
+      _renderPushBar();
+    } catch (_) { _renderPushBar(); }
+  }
+
+  async function disablePush() {
+    if (!_swReg) return;
+    try {
+      const sub = await _swReg.pushManager.getSubscription();
+      if (sub) {
+        await fetch('/api/push/unsubscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        }).catch(() => {});
+        await sub.unsubscribe();
+      }
+      _pushEnabled = false;
+      _renderPushBar();
+    } catch (_) {}
+  }
+
   // ── Inject bell into topbar ───────────────────────────────────────────────
   function inject() {
     const topbarRight = document.querySelector('.topbar-right');
@@ -190,6 +281,7 @@
           <span class="notif-header-title">Notifications</span>
           <button class="notif-read-all" id="notifReadAll">Mark all read</button>
         </div>
+        <div id="notifPushBar" style="display:none;align-items:center;padding:7px 16px;border-bottom:1px solid var(--border,rgba(255,255,255,0.08));gap:8px;"></div>
         <div class="notif-list" id="notifList">
           <div class="notif-empty">Loading…</div>
         </div>
@@ -202,6 +294,7 @@
     badge    = wrap.querySelector('#notifBadge');
     dropdown = wrap.querySelector('#notifDropdown');
     list     = wrap.querySelector('#notifList');
+    pushBar  = wrap.querySelector('#notifPushBar');
 
     bellBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleDropdown(); });
     wrap.querySelector('#notifReadAll').addEventListener('click', (e) => { e.stopPropagation(); markAllRead(); });
@@ -265,6 +358,7 @@
 
     await fetchNotifications();
     connectSocketIO();
+    setupPush();
     if (myRole === 'student') applyTabVisibility();
 
     // Refresh every 60s as fallback

@@ -14,3 +14,4 @@ from models.daily_digest import DailyDigest
 from models.sent_reminder import SentReminder
 from models.meeting import Meeting
 from models.nav_config import NavConfig
+from models.push import PushSubscription
