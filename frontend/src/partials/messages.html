@@ -515,12 +515,14 @@ function clearAttachment() {
 /* ── Send ── */
 async function sendMsg() {
   if (activeIdx < 0) return;
+  var conv = conversations[activeIdx];  // capture ref before await; immune to index drift
+  if (!conv) return;
   var input = document.getElementById('composeInput');
   var content = input ? input.value.trim() : '';
   if (!content && !attachedFile) return;
   var btn = document.getElementById('sendBtn');
   if (btn) btn.disabled = true;
-  var payload = {recipient_id: conversations[activeIdx].otherId, content: content};
+  var payload = {recipient_id: conv.otherId, content: content};
   if (activeReply) payload.reply_to_id = activeReply.id;
   if (attachedFile) { payload.file_url = attachedFile.url; payload.file_name = attachedFile.name; }
   if (input) input.value = '';
@@ -532,11 +534,20 @@ async function sendMsg() {
     body: JSON.stringify(payload),
   }).then(function(r){ return r.json(); }).catch(function(){ return null; });
   if (btn) btn.disabled = false;
-  // UI update is handled by the message:new socket event the backend
-  // now emits to both sender and recipient rooms.
-  if (res && res.error) {
-    var inp = document.getElementById('composeInput');
-    if (inp) inp.value = content;  // restore input on error
+  if (res && !res.error) {
+    // Add to local state immediately; socket event will be deduplicated
+    var already = conv.messages.some(function(m){ return m.id === res.id; });
+    if (!already) conv.messages.push(res);
+    // Move conv to front using its object reference, not a stale index
+    var existIdx = conversations.indexOf(conv);
+    if (existIdx !== 0) {
+      if (existIdx > 0) conversations.splice(existIdx, 1);
+      conversations.unshift(conv);
+    }
+    activeIdx = 0;
+    activeOtherId = conv.otherId;
+    renderConvList();
+    renderMsgsList(true);
   }
 }
 
