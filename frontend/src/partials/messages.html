@@ -77,32 +77,42 @@
 .msg-row {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
   padding: 1px 6px;
 }
-.msg-row.mine { flex-direction: row-reverse; }
+.msg-row.mine { justify-content: flex-end; }
 
 .msg-bubble-col {
   display: flex;
   flex-direction: column;
   max-width: 66%;
+  position: relative;
 }
 .msg-row.mine .msg-bubble-col { align-items: flex-end; }
 .msg-row.theirs .msg-bubble-col { align-items: flex-start; }
 
 .msg-actions {
   display: none;
+  position: absolute;
+  bottom: 0;
   flex-direction: row;
   gap: 1px;
   align-items: center;
-  flex-shrink: 0;
+  z-index: 10;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 2px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  white-space: nowrap;
 }
-.msg-row:hover .msg-actions { display: flex; }
+.msg-row.mine .msg-actions    { right: calc(100% + 6px); }
+.msg-row.theirs .msg-actions  { left:  calc(100% + 6px); }
+.msg-row:hover .msg-actions   { display: flex; }
 
 .bab {
-  background: var(--bg3);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  background: none;
+  border: none;
+  border-radius: 5px;
   color: var(--text3);
   cursor: pointer;
   padding: 4px 5px;
@@ -111,8 +121,8 @@
   justify-content: center;
   transition: color 0.1s, background 0.1s;
 }
-.bab:hover { color: var(--text); background: var(--bg2); }
-.bab.danger:hover { color: #f87171; }
+.bab:hover { color: var(--text); background: var(--bg3); }
+.bab.danger:hover { color: #f87171; background: rgba(248,113,113,0.08); }
 
 .reply-quote {
   border-left: 3px solid var(--g1);
@@ -316,8 +326,8 @@ function renderMsg(m) {
   }
 
   return '<div class="msg-row '+(mine?'mine':'theirs')+'" id="mw-'+m.id+'">'
-    + '<div class="msg-actions">'+btns+'</div>'
     + '<div class="msg-bubble-col">'
+    +   '<div class="msg-actions">'+btns+'</div>'
     +   '<div class="msg-bubble '+(mine?'mine':'theirs')+'">'
     +     quoteHtml + contentHtml + metaHtml
     +   '</div>'
