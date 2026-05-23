@@ -74,6 +74,19 @@ def on_meeting_signal(data):
         emit("meeting:signal", {"from": uid, "data": signal}, to=target["sid"])
 
 
+@socketio.on("meeting:chat")
+def on_meeting_chat(data):
+    room_code = data.get("room_code", "").strip()
+    text      = str(data.get("text", "")).strip()[:2000]
+    uid, name = _name()
+    if not room_code or not uid or not text:
+        return
+    if room_code not in _rooms or uid not in _rooms[room_code]:
+        return
+    emit("meeting:chat", {"uid": uid, "name": name, "text": text},
+         to=f"meeting_{room_code}")
+
+
 @socketio.on("disconnect")
 def on_meeting_disconnect():
     uid, _ = _name()
