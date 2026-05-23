@@ -1,5 +1,5 @@
 import os
-from flask import Flask, send_from_directory, abort
+from flask import Flask, send_from_directory, abort, jsonify
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from config import Config
@@ -61,6 +61,11 @@ def create_app(config=Config):
         if path.startswith(("api/", "static/", "partials/")):
             abort(404)
         return send_from_directory(FRONTEND_DIR, "app.html")
+
+    @app.errorhandler(413)
+    def too_large(_e):
+        limit_mb = app.config.get("MAX_CONTENT_LENGTH", 10 * 1024 * 1024) // (1024 * 1024)
+        return jsonify({"error": f"File too large — maximum size is {limit_mb} MB"}), 413
 
     import os
     if not app.debug or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
