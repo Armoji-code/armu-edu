@@ -63,9 +63,11 @@ fi
 
 # Ensure DB is up to date
 inf "Running database migrations…"
-if ! sudo -u "$RUN_USER" bash -c "cd '$BACKEND' && '$VENV/bin/flask' --app app db upgrade 2>&1" | grep -v "UserWarning\|app = app_factory"; then
+MIGRATE_OUT=$(sudo -u "$RUN_USER" bash -c "cd '$BACKEND' && '$VENV/bin/flask' --app app db upgrade 2>&1") || {
+    echo "$MIGRATE_OUT" | grep -v "UserWarning\|app = app_factory" || true
     die "Database migration failed. Check the output above."
-fi
+}
+echo "$MIGRATE_OUT" | grep -v "UserWarning\|app = app_factory" || true
 ok "Database ready."
 
 # ── Update CORS_ORIGINS in .env ───────────────────────────────────────────────

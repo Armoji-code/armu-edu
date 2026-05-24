@@ -173,7 +173,8 @@ case "$PROVIDER_CHOICE" in
             printf "  ${Y}!${W} Ollama is not installed or not in PATH.\n"
             printf "    Install it from ${B}https://ollama.com${W} then run:\n\n"
             printf "      ollama pull ${TUTOR_MODEL}\n"
-            [[ "$TRACK_MODEL" != "$TUTOR_MODEL" ]] && printf "      ollama pull ${TRACK_MODEL}\n"
+            [[ "$ADV_MODEL" != "$TUTOR_MODEL" ]] && printf "      ollama pull ${ADV_MODEL}\n"
+            [[ "$TRACK_MODEL" != "$TUTOR_MODEL" && "$TRACK_MODEL" != "$ADV_MODEL" ]] && printf "      ollama pull ${TRACK_MODEL}\n"
             printf "\n"
         else
             ok "Ollama found: $(ollama --version 2>/dev/null | head -1)"
@@ -181,6 +182,7 @@ case "$PROVIDER_CHOICE" in
 
             MODELS_TO_PULL=("$TRACK_MODEL")
             [[ "$TUTOR_MODEL" != "$TRACK_MODEL" ]] && MODELS_TO_PULL+=("$TUTOR_MODEL")
+            [[ "$ADV_MODEL" != "$TRACK_MODEL" && "$ADV_MODEL" != "$TUTOR_MODEL" ]] && MODELS_TO_PULL+=("$ADV_MODEL")
 
             ask "Pull selected models now? This may take a while. [Y/n]:"
             read -r PULL_NOW
@@ -208,15 +210,11 @@ if [[ "$PROVIDER" == "openai" || "$PROVIDER" == "anthropic" ]]; then
         echo "# Written by setup.sh"
         [[ -n "${API_KEY:-}" ]] && echo "AI_API_KEY=${API_KEY}"
         [[ -n "${BASE_URL:-}" ]] && echo "AI_API_BASE_URL=${BASE_URL}"
+        echo "OLLAMA_TUTOR_MODEL=${TUTOR_MODEL}"
+        echo "OLLAMA_ADVANCED_MODEL=${ADV_MODEL}"
+        echo "OLLAMA_TRACKER_MODEL=${TRACK_MODEL}"
     } >> "$ENV_FILE"
 fi
-
-# Write model names for all providers
-{
-    echo "TUTOR_MODEL=${TUTOR_MODEL}"
-    echo "ADV_MODEL=${ADV_MODEL}"
-    echo "TRACKER_MODEL=${TRACK_MODEL}"
-} >> "$ENV_FILE"
 
 # ── TURN server (optional) ───────────────────────────────────────────────────
 printf "\n"
@@ -254,10 +252,12 @@ hr
 printf "  ${BOLD}5. Database${W}\n"
 hr
 inf "Running database migrations…"
-if ! (cd "$BACKEND" && FLASK_APP=app.py "$FLASK" db upgrade 2>&1 | grep -v "UserWarning\|app = app_factory"); then
+MIGRATE_OUT=$(cd "$BACKEND" && FLASK_APP=app.py "$FLASK" db upgrade 2>&1) || {
+    echo "$MIGRATE_OUT" | grep -v "UserWarning\|app = app_factory" || true
     err "Database migration failed. Check the output above."
     exit 1
-fi
+}
+echo "$MIGRATE_OUT" | grep -v "UserWarning\|app = app_factory" || true
 ok "Database ready."
 
 # ── Admin account ─────────────────────────────────────────────────────────────
