@@ -54,6 +54,20 @@ hr
 printf "  ${BOLD}1. App setup${W}\n"
 hr
 
+# Detect package manager early — needed before setup.sh runs venv creation
+inf "Detecting package manager…"
+if command -v apt-get &>/dev/null; then
+    PKG_MANAGER="apt"
+    inf "Found apt (Debian/Ubuntu) — installing Python build tools…"
+    apt-get update -qq
+    apt-get install -y -qq python3-venv python3-pip
+elif command -v pacman &>/dev/null; then
+    PKG_MANAGER="pacman"
+    inf "Found pacman (Arch/CachyOS)"
+else
+    die "No supported package manager found (apt or pacman required)."
+fi
+
 if [[ ! -f "$ENV_FILE" ]]; then
     inf "Running setup.sh first…"
     sudo -u "$RUN_USER" bash "$SCRIPT_DIR/setup.sh"
@@ -90,21 +104,9 @@ hr
 printf "  ${BOLD}3. nginx + certbot${W}\n"
 hr
 
-inf "Detecting package manager…"
-if command -v apt-get &>/dev/null; then
-    PKG_MANAGER="apt"
-    inf "Found apt (Debian/Ubuntu)"
-elif command -v pacman &>/dev/null; then
-    PKG_MANAGER="pacman"
-    inf "Found pacman (Arch/CachyOS)"
-else
-    die "No supported package manager found (apt or pacman required)."
-fi
-
 inf "Installing nginx, certbot, and git…"
 if [[ "$PKG_MANAGER" == "apt" ]]; then
-    apt-get update -qq
-    apt-get install -y -qq nginx certbot python3-certbot-nginx git python3-venv python3-pip
+    apt-get install -y -qq nginx certbot python3-certbot-nginx git
 else
     pacman -Sy --noconfirm --needed nginx certbot certbot-nginx git
 fi
@@ -171,7 +173,9 @@ printf "\n"
 trap 'systemctl start nginx 2>/dev/null; exit 1' ERR
 systemctl stop nginx
 certbot certonly --standalone -d "$DOMAIN" \
-    --non-interactive --agree-tos -m "$EMAIL"
+    --non-interactive --agree-tos -m "$EMAIL" \
+    --pre-hook "systemctl stop nginx" \
+    --post-hook "systemctl start nginx"
 trap - ERR
 ok "SSL certificate obtained."
 

@@ -61,7 +61,12 @@ if [[ -d "$VENV" ]]; then
     inf "Virtual environment already exists — skipping creation."
 else
     inf "Creating virtual environment…"
-    "$PYTHON" -m venv "$VENV"
+    if ! "$PYTHON" -m venv "$VENV" 2>/dev/null; then
+        err "Failed to create virtual environment."
+        err "On Debian/Ubuntu, install the missing package first:"
+        err "  sudo apt-get install python3-venv"
+        exit 1
+    fi
     ok "Virtual environment created at .venv/"
 fi
 
