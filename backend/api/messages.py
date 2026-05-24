@@ -191,14 +191,21 @@ def list_group_messages(user, group_id):
     group = Group.query.get_or_404(group_id)
     if user not in group.members:
         return err("forbidden", 403)
-    messages = (
-        Message.query
-        .filter_by(group_id=group_id)
-        .filter(Message.is_deleted != True)
-        .order_by(Message.created_at)
-        .all()
-    )
-    return jsonify([m.to_dict() for m in messages])
+
+    PAGE = 100
+    before_id = request.args.get("before", type=int)
+
+    q = (Message.query
+         .filter_by(group_id=group_id)
+         .filter(Message.is_deleted != True))
+    if before_id:
+        q = q.filter(Message.id < before_id)
+
+    messages = q.order_by(Message.id.desc()).limit(PAGE + 1).all()
+    has_more  = len(messages) > PAGE
+    messages  = list(reversed(messages[:PAGE]))
+
+    return jsonify({"messages": [m.to_dict() for m in messages], "has_more": has_more})
 
 
 @blueprint.route("/messages/groups/<int:group_id>", methods=["POST"])

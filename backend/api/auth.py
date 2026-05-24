@@ -123,8 +123,8 @@ def forgot_password():
     if not user:
         return ok()  # don't reveal whether email exists
 
-    # Invalidate prior tokens
-    PasswordResetToken.query.filter_by(user_id=user.id, used=False).update({"used": True})
+    # Invalidate and purge prior tokens for this user
+    PasswordResetToken.query.filter_by(user_id=user.id).delete()
     db.session.flush()
 
     token_obj, code = PasswordResetToken.generate(user.id)

@@ -161,6 +161,13 @@ def librarian_checkout(user):
     due = datetime.fromisoformat(due_str)
     c = BookCheckout(book_id=book_id, user_id=user_id, due_date=due)
     db.session.add(c)
+    db.session.flush()  # write within transaction so count query sees it
+
+    active = BookCheckout.query.filter_by(book_id=book_id, returned_at=None).count()
+    if active > book.total_copies:
+        db.session.rollback()
+        return err("No copies available", 400)
+
     db.session.commit()
     return jsonify(_loan_dict(c)), 201
 

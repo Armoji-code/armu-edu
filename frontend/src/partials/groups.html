@@ -221,27 +221,42 @@ function switchGrpTab(tab) {
 }
 
 /* ── Group chat ── */
-async function loadGroupMessages(groupId) {
+var grpHasMore = false;
+var grpOldestId = null;
+
+async function loadGroupMessages(groupId, before) {
   if (!groupId) return;
   var el = document.getElementById('grpMsgs');
   if (!el) return;
-  el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>';
-  var msgs = await fetch('/api/messages/groups/'+groupId)
-    .then(function(r){ return r.json(); }).catch(function(){ return []; });
-  grpMessages = Array.isArray(msgs) ? msgs : [];
+  if (!before) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Loading…</div>';
+    grpMessages = [];
+    grpOldestId = null;
+  }
+  var url = '/api/messages/groups/'+groupId+(before ? '?before='+before : '');
+  var data = await fetch(url).then(function(r){ return r.json(); }).catch(function(){ return {}; });
+  var page = Array.isArray(data.messages) ? data.messages : (Array.isArray(data) ? data : []);
+  grpHasMore = !!data.has_more;
+  grpMessages = before ? page.concat(grpMessages) : page;
+  if (page.length) grpOldestId = page[0].id;
   renderGroupMessages();
 }
 
 function renderGroupMessages() {
   var el = document.getElementById('grpMsgs');
   if (!el) return;
+  var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  var loadMoreBtn = grpHasMore
+    ? '<div style="text-align:center;padding:8px 0">'
+      + '<button onclick="loadGroupMessages(grpActiveId,grpOldestId)" '
+      + 'style="font-size:12px;padding:4px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);cursor:pointer">'
+      + 'Load older messages</button></div>'
+    : '';
   if (!grpMessages.length) {
-    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">No messages yet. Say something!</div>';
+    el.innerHTML = loadMoreBtn + '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">No messages yet. Say something!</div>';
     return;
   }
-  var saved = el.scrollTop;
-  var atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
-  el.innerHTML = grpMessages.map(function(m){
+  el.innerHTML = loadMoreBtn + grpMessages.map(function(m){
     var mine = m.sender_id === grpMyId;
     return '<div class="grp-bubble-wrap '+(mine?'mine':'theirs')+'">'
       + (!mine ? '<div class="grp-sender">'+escG(m.sender_name||'?')+'</div>' : '')
@@ -249,7 +264,7 @@ function renderGroupMessages() {
       + '<div class="grp-bubble-meta">'+fmtTime(m.created_at)+'</div>'
       + '</div>';
   }).join('');
-  el.scrollTop = atBottom ? el.scrollHeight : saved;
+  if (atBottom) el.scrollTop = el.scrollHeight;
 }
 
 async function sendGroupMsg() {
