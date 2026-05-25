@@ -227,6 +227,7 @@ def chat(user, session_id):
                 full_response.append(token)
                 yield token
         except Exception as e:
+            print(f"[AI chat error] {type(e).__name__}: {e}", flush=True)
             yield f"\n\n{_ai_error_msg(e)}"
         finally:
             if full_response:
