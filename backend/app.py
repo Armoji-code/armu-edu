@@ -78,7 +78,9 @@ def create_app(config=Config):
 
 if __name__ == "__main__":
     app = create_app()
-    debug = os.environ.get("FLASK_DEBUG", "0") == "1"
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host=host, port=port, debug=debug, allow_unsafe_werkzeug=True)
+    from gevent import pywsgi
+    from geventwebsocket.handler import WebSocketHandler
+    server = pywsgi.WSGIServer((host, port), app, handler_class=WebSocketHandler)
+    server.serve_forever()
