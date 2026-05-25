@@ -81,7 +81,7 @@ def _ollama_payload(model, messages, stream, temperature, top_p, images):
 def _stream_ollama(model, messages, temperature, top_p, images, base_url):
     resp = requests.post(f"{base_url}/api/chat",
                          json=_ollama_payload(model, messages, True, temperature, top_p, images),
-                         stream=True, timeout=120)
+                         stream=True, timeout=600)
     resp.raise_for_status()
     for line in resp.iter_lines():
         if not line:
@@ -100,7 +100,7 @@ def _stream_ollama(model, messages, temperature, top_p, images, base_url):
 def _complete_ollama(model, messages, temperature, top_p, base_url):
     resp = requests.post(f"{base_url}/api/chat",
                          json=_ollama_payload(model, messages, False, temperature, top_p, None),
-                         timeout=120)
+                         timeout=600)
     resp.raise_for_status()
     return resp.json().get("message", {}).get("content", "")
 
