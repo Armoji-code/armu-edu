@@ -1,3 +1,5 @@
+from gevent import monkey; monkey.patch_all()
+
 import os
 from flask import Flask, send_from_directory, abort, jsonify
 from flask_socketio import SocketIO
@@ -9,7 +11,7 @@ STATIC_DIR   = os.path.join(os.path.dirname(__file__), 'static')
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'src', 'pages')
 PARTIALS_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'src', 'partials')
 
-socketio = SocketIO()
+socketio = SocketIO(async_mode='gevent_websocket')
 migrate  = Migrate()
 
 def create_app(config=Config):
