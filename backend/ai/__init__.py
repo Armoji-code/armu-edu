@@ -73,7 +73,8 @@ def _ollama_payload(model, messages, stream, temperature, top_p, images):
     if options:
         payload["options"] = options
     if images:
-        payload["messages"] = messages[:-1] + [{**messages[-1], "images": images}]
+        clean = [img.split(",", 1)[-1] if "," in img else img for img in images]
+        payload["messages"] = messages[:-1] + [{**messages[-1], "images": clean}]
     return payload
 
 
