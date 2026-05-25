@@ -11,7 +11,7 @@ STATIC_DIR   = os.path.join(os.path.dirname(__file__), 'static')
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'src', 'pages')
 PARTIALS_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend', 'src', 'partials')
 
-socketio = SocketIO(async_mode='gevent_websocket')
+socketio = SocketIO(async_mode='gevent')
 migrate  = Migrate()
 
 def create_app(config=Config):
