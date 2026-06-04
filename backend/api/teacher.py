@@ -11,6 +11,22 @@ from datetime import datetime, timezone
 import io, csv
 
 
+def _notify(user_id, title, body="", type="info", link=None):
+    from app import socketio as _socketio
+    n = Notification(user_id=user_id, title=title, body=body, type=type, link=link)
+    db.session.add(n)
+    db.session.flush()
+    try:
+        _socketio.emit("notification", n.to_dict(), room=f"user_{user_id}")
+    except Exception:
+        pass
+    try:
+        from api.push import send_web_push
+        send_web_push(current_app._get_current_object(), user_id, title, body, link or "/")
+    except Exception:
+        pass
+
+
 def _teacher_subjects(teacher):
     return Subject.query.filter_by(teacher_id=teacher.id).all()
 
@@ -172,6 +188,20 @@ def create_assignment(user):
         return err("title required", 400)
     db.session.add(a)
     db.session.commit()
+
+    subj = Subject.query.get(subject_id)
+    if subj and subj.klass:
+        type_label = {"homework": "Homework", "test": "Test", "project": "Project"}.get(a_type, "Assignment")
+        due_str = due_date.strftime("%-d %b")
+        for st in subj.klass.students:
+            _notify(
+                st.id,
+                title=f"New {type_label}: {a.title}",
+                body=f"{subj.name} · Due {due_str}",
+                type="deadline",
+                link="/homework" if a_type == "homework" else "/tests",
+            )
+
     return jsonify({"id": a.id, "title": a.title}), 201
 
 
@@ -260,6 +290,7 @@ def set_grade(user):
         return err("student not in class", 403)
 
     existing = Grade.query.filter_by(assignment_id=assignment_id, student_id=student_id).first()
+    is_new = existing is None
     if existing:
         existing.score = score
     else:
@@ -270,6 +301,17 @@ def set_grade(user):
             quarter=quarter,
         ))
     db.session.commit()
+
+    letter = "A" if score >= 90 else "B" if score >= 80 else "C" if score >= 70 else "D" if score >= 60 else "F"
+    action = "posted" if is_new else "updated"
+    _notify(
+        student_id,
+        title=f"Grade {action}: {a.title}",
+        body=f"{int(score)}/100 ({letter}) · {a.subject.name if a.subject else ''}",
+        type="grade",
+        link="/grades",
+    )
+
     return ok()
 
 
@@ -313,6 +355,16 @@ def log_conduct(user):
     )
     db.session.add(ev)
     db.session.commit()
+
+    sign = "+" if points > 0 else ""
+    _notify(
+        student_id,
+        title=f"Conduct: {sign}{points} points",
+        body=reason or f"{category.capitalize()} · {subject.name if subject else ''}",
+        type="info",
+        link="/conduct",
+    )
+
     return jsonify({"id": ev.id}), 201
 
 
@@ -462,6 +514,11 @@ def teacher_announce(user):
         db.session.add(n)
         db.session.flush()
         socketio.emit("notification", n.to_dict(), room=f"user_{st.id}")
+        try:
+            from api.push import send_web_push
+            send_web_push(current_app._get_current_object(), st.id, title, body_text, "/homework")
+        except Exception:
+            pass
         notif_ids.append(n.id)
     db.session.commit()
     return jsonify({"sent": len(notif_ids)}), 201
