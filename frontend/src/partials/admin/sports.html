@@ -1,0 +1,415 @@
+<style>
+  .split{display:flex;height:calc(100vh - 57px);overflow:hidden;}
+  .panel-left{width:280px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column;}
+  .panel-right{flex:1;overflow-y:auto;padding:24px;}
+  .panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  .panel-header-title{font-size:13px;font-weight:600;color:var(--text);}
+  .team-item{padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background var(--transition);}
+  .team-item:hover{background:var(--bg3);}
+  .team-item.active{background:linear-gradient(135deg,rgba(var(--g1-rgb),0.08),rgba(var(--g2-rgb),0.08));border-left:2px solid var(--g1);}
+  .team-item-name{font-size:13px;font-weight:600;color:var(--text);}
+  .team-item-sport{font-size:11px;color:var(--text3);margin-top:2px;}
+  .add-btn{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--g1),var(--g2));color:#000;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity var(--transition);}
+  .add-btn:hover{opacity:0.85;}
+  .section-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;}
+  .field input,.field textarea,.field select{width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color var(--transition);}
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--border-accent);}
+  .field textarea{resize:vertical;min-height:70px;}
+  .row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .btn-save{padding:9px 20px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--g1),var(--g2));border:none;color:#000;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:opacity var(--transition);}
+  .btn-save:hover{opacity:0.85;}
+  .btn-danger{padding:7px 14px;border-radius:var(--radius-sm);border:1px solid rgba(248,113,113,0.3);background:rgba(248,113,113,0.08);color:#f87171;font-size:12px;font-family:inherit;cursor:pointer;transition:all var(--transition);}
+  .btn-danger:hover{background:rgba(248,113,113,0.15);}
+  .games-section{margin-top:32px;}
+  .game-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;}
+  .game-info{flex:1;min-width:0;}
+  .game-title{font-size:13px;font-weight:600;color:var(--text);}
+  .game-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+  .score-pill{padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;background:var(--bg4);color:var(--text2);}
+  .status-badge{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;}
+  .s-upcoming{background:rgba(var(--g1-rgb),0.12);color:var(--g1);}
+  .s-completed{background:var(--bg4);color:var(--text2);}
+  .s-cancelled{background:rgba(248,113,113,0.1);color:#f87171;}
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;align-items:center;justify-content:center;}
+  .modal-backdrop.open{display:flex;}
+  .modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:460px;box-shadow:var(--shadow);}
+  .modal-title{font-size:15px;font-weight:600;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;}
+  .modal-close{width:28px;height:28px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:16px;line-height:1;}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;}
+  .btn-cancel{flex:1;padding:9px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-family:inherit;font-size:13px;cursor:pointer;}
+  .empty-state{padding:40px;text-align:center;color:var(--text3);font-size:13px;}
+</style>
+
+<div class="topbar">
+  <svg class="icon icon-20" style="color:var(--g1)"><use href="#ic-trophy"/></svg>
+  <span class="topbar-title">Sports Management</span>
+  <div class="topbar-right">
+    <button class="add-btn" onclick="openTeamModal()">
+      <svg class="icon icon-14"><use href="#ic-plus"/></svg> New Team
+    </button>
+    <div class="icon-btn" onclick="toggleTheme()"><svg class="icon icon-18"><use href="#ic-moon"/></svg></div>
+  </div>
+</div>
+
+<div class="split">
+  <div class="panel-left">
+    <div class="panel-header">
+      <div class="panel-header-title">Teams</div>
+    </div>
+    <div id="teamsList"><div class="empty-state">Loading…</div></div>
+    <div style="border-top:1px solid var(--border);flex-shrink:0;">
+      <div class="panel-header" style="cursor:pointer;" onclick="toggleRequests()">
+        <div class="panel-header-title">Join Requests <span id="reqBadge" style="display:none;padding:1px 7px;border-radius:20px;background:linear-gradient(135deg,var(--g1),var(--g2));color:#000;font-size:10px;font-weight:700;margin-left:6px;"></span></div>
+        <svg class="icon icon-14" id="reqChevron" style="color:var(--text3);transition:transform 0.2s;"><use href="#ic-chevright"/></svg>
+      </div>
+      <div id="requestsList" style="display:none;max-height:300px;overflow-y:auto;"></div>
+    </div>
+  </div>
+  <div class="panel-right" id="panelRight">
+    <div class="empty-state" style="margin-top:60px">Select a team to manage it</div>
+  </div>
+</div>
+
+<!-- Team modal -->
+<div class="modal-backdrop" id="teamModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="teamModalTitle">New Team</span>
+      <button class="modal-close" onclick="closeModal('teamModal')">✕</button>
+    </div>
+    <div class="row-2">
+      <div class="field"><label>Team Name</label><input id="tName" placeholder="e.g. Varsity Basketball"></div>
+      <div class="field"><label>Sport</label><input id="tSport" placeholder="e.g. Basketball"></div>
+    </div>
+    <div class="field"><label>Description</label><textarea id="tDesc" placeholder="Optional description…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('teamModal')">Cancel</button>
+      <button class="btn-save" onclick="submitTeam()">Save Team</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game modal -->
+<div class="modal-backdrop" id="gameModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="gameModalTitle">Add Game</span>
+      <button class="modal-close" onclick="closeModal('gameModal')">✕</button>
+    </div>
+    <div class="field"><label>Opponent</label><input id="gOpponent" placeholder="e.g. City High School"></div>
+    <div class="row-2">
+      <div class="field"><label>Date &amp; Time</label><input id="gDate" type="datetime-local"></div>
+      <div class="field"><label>Location</label><input id="gLocation" placeholder="e.g. Home Gym"></div>
+    </div>
+    <div class="field"><label>Status</label>
+      <select id="gStatus">
+        <option value="upcoming">Upcoming</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+    </div>
+    <div class="row-2" id="scoreFields">
+      <div class="field"><label>Our Score</label><input id="gHomeScore" type="number" min="0" placeholder="–"></div>
+      <div class="field"><label>Opponent Score</label><input id="gAwayScore" type="number" min="0" placeholder="–"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('gameModal')">Cancel</button>
+      <button class="btn-save" onclick="submitGame()">Save Game</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var _adminTeams = [];
+var _activeTeamId = null;
+var _editTeamId = null;
+var _editGameId = null;
+
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+}
+function fmtTime(iso) {
+  return new Date(iso).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function renderTeamsList() {
+  var el = document.getElementById('teamsList');
+  if (!_adminTeams.length) {
+    el.innerHTML = '<div class="empty-state">No teams yet.</div>';
+    return;
+  }
+  el.innerHTML = _adminTeams.map(function(t) {
+    return '<div class="team-item' + (t.id === _activeTeamId ? ' active' : '') + '" data-id="' + t.id + '" onclick="selectTeam(' + t.id + ')">' +
+      '<div class="team-item-name">' + esc(t.name) + '</div>' +
+      '<div class="team-item-sport">' + esc(t.sport) + ' · ' + t.member_count + ' member' + (t.member_count !== 1 ? 's' : '') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function selectTeam(id) {
+  _activeTeamId = id;
+  renderTeamsList();
+  var t = _adminTeams.find(function(t){ return t.id === id; });
+  if (t) renderTeamDetail(t);
+}
+
+function renderTeamDetail(t) {
+  var panel = document.getElementById('panelRight');
+  var games = t.games || [];
+  var upcoming = games.filter(function(g){ return g.status === 'upcoming'; });
+  var completed = games.filter(function(g){ return g.status === 'completed'; });
+  var cancelled = games.filter(function(g){ return g.status === 'cancelled'; });
+
+  function gameRows(arr) {
+    if (!arr.length) return '<div style="color:var(--text3);font-size:12px;padding:8px 0;">None</div>';
+    return arr.map(function(g) {
+      var score = (g.status === 'completed' && g.home_score !== null)
+        ? '<span class="score-pill">' + g.home_score + '–' + g.away_score + '</span>' : '';
+      var sClass = 's-' + g.status;
+      return '<div class="game-row">' +
+        '<div class="game-info">' +
+          '<div class="game-title">vs ' + esc(g.opponent) + '</div>' +
+          '<div class="game-sub">' + fmtDate(g.date) + ' · ' + fmtTime(g.date) + (g.location ? ' · ' + esc(g.location) : '') + '</div>' +
+        '</div>' +
+        score +
+        '<span class="status-badge ' + sClass + '">' + g.status + '</span>' +
+        '<button class="btn-danger" onclick="openEditGame(' + JSON.stringify(g).replace(/"/g,'&quot;') + ')">Edit</button>' +
+        '<button class="btn-danger" onclick="deleteGame(' + g.id + ')">Del</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  panel.innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">' +
+      '<div>' +
+        '<div style="font-size:18px;font-weight:700;">' + esc(t.name) + '</div>' +
+        '<div style="font-size:12px;color:var(--text3);margin-top:3px;">' + esc(t.sport) + ' · ' + t.member_count + ' members</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;">' +
+        '<button class="btn-save" onclick="openEditTeam(' + t.id + ')">Edit Team</button>' +
+        '<button class="btn-danger" onclick="deleteTeam(' + t.id + ')">Delete</button>' +
+      '</div>' +
+    '</div>' +
+
+    (t.description ? '<div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.55;">' + esc(t.description) + '</div>' : '') +
+
+    '<div class="games-section">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">' +
+        '<div class="section-title">Schedule</div>' +
+        '<button class="add-btn" onclick="openAddGame(' + t.id + ')">' +
+          '<svg class="icon icon-14"><use href="#ic-plus"/></svg> Add Game' +
+        '</button>' +
+      '</div>' +
+      '<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;">Upcoming</div>' +
+      gameRows(upcoming) +
+      '<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin:16px 0 8px;">Results</div>' +
+      gameRows(completed) +
+      (cancelled.length ? '<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin:16px 0 8px;">Cancelled</div>' + gameRows(cancelled) : '') +
+    '</div>';
+}
+
+function openTeamModal() {
+  _editTeamId = null;
+  document.getElementById('teamModalTitle').textContent = 'New Team';
+  document.getElementById('tName').value = '';
+  document.getElementById('tSport').value = '';
+  document.getElementById('tDesc').value = '';
+  document.getElementById('teamModal').classList.add('open');
+}
+
+function openEditTeam(id) {
+  var t = _adminTeams.find(function(t){ return t.id === id; });
+  if (!t) return;
+  _editTeamId = id;
+  document.getElementById('teamModalTitle').textContent = 'Edit Team';
+  document.getElementById('tName').value = t.name;
+  document.getElementById('tSport').value = t.sport;
+  document.getElementById('tDesc').value = t.description || '';
+  document.getElementById('teamModal').classList.add('open');
+}
+
+async function submitTeam() {
+  var name  = document.getElementById('tName').value.trim();
+  var sport = document.getElementById('tSport').value.trim();
+  var desc  = document.getElementById('tDesc').value.trim();
+  if (!name || !sport) { alert('Name and sport are required.'); return; }
+  var method = _editTeamId ? 'PUT' : 'POST';
+  var url    = _editTeamId ? '/api/admin/sports/teams/' + _editTeamId : '/api/admin/sports/teams';
+  var res = await fetch(url, {
+    method: method,
+    headers: {'Content-Type':'application/json'},
+    credentials: 'include',
+    body: JSON.stringify({name, sport, description: desc}),
+  });
+  if (!res.ok) { alert('Failed to save team.'); return; }
+  closeModal('teamModal');
+  await loadTeams();
+  if (_activeTeamId) selectTeam(_activeTeamId);
+}
+
+async function deleteTeam(id) {
+  var t = _adminTeams.find(function(t){ return t.id === id; });
+  if (!confirm('Delete team "' + (t ? t.name : '') + '" and all its games?')) return;
+  await fetch('/api/admin/sports/teams/' + id, {method:'DELETE', credentials:'include'});
+  _activeTeamId = null;
+  document.getElementById('panelRight').innerHTML = '<div class="empty-state" style="margin-top:60px">Select a team to manage it</div>';
+  await loadTeams();
+}
+
+function openAddGame(teamId) {
+  _editGameId = null;
+  document.getElementById('gameModalTitle').textContent = 'Add Game';
+  document.getElementById('gOpponent').value = '';
+  document.getElementById('gDate').value = '';
+  document.getElementById('gLocation').value = '';
+  document.getElementById('gStatus').value = 'upcoming';
+  document.getElementById('gHomeScore').value = '';
+  document.getElementById('gAwayScore').value = '';
+  document.getElementById('gameModal').dataset.teamId = teamId;
+  document.getElementById('gameModal').classList.add('open');
+}
+
+function openEditGame(g) {
+  _editGameId = g.id;
+  document.getElementById('gameModalTitle').textContent = 'Edit Game';
+  document.getElementById('gOpponent').value = g.opponent || '';
+  document.getElementById('gDate').value = g.date ? g.date.slice(0,16) : '';
+  document.getElementById('gLocation').value = g.location || '';
+  document.getElementById('gStatus').value = g.status || 'upcoming';
+  document.getElementById('gHomeScore').value = g.home_score !== null ? g.home_score : '';
+  document.getElementById('gAwayScore').value = g.away_score !== null ? g.away_score : '';
+  document.getElementById('gameModal').classList.add('open');
+}
+
+async function submitGame() {
+  var opponent  = document.getElementById('gOpponent').value.trim();
+  var dateVal   = document.getElementById('gDate').value;
+  var location  = document.getElementById('gLocation').value.trim();
+  var status    = document.getElementById('gStatus').value;
+  var homeScore = document.getElementById('gHomeScore').value;
+  var awayScore = document.getElementById('gAwayScore').value;
+  if (!opponent || !dateVal) { alert('Opponent and date are required.'); return; }
+
+  var body = {
+    opponent, location, status,
+    date: dateVal,
+    home_score: homeScore !== '' ? parseInt(homeScore) : null,
+    away_score: awayScore !== '' ? parseInt(awayScore) : null,
+  };
+
+  var url, method;
+  if (_editGameId) {
+    url    = '/api/admin/sports/games/' + _editGameId;
+    method = 'PUT';
+  } else {
+    body.team_id = parseInt(document.getElementById('gameModal').dataset.teamId);
+    url    = '/api/admin/sports/games';
+    method = 'POST';
+  }
+
+  var res = await fetch(url, {
+    method, headers: {'Content-Type':'application/json'}, credentials: 'include',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) { alert('Failed to save game.'); return; }
+  closeModal('gameModal');
+  await loadTeams();
+  if (_activeTeamId) selectTeam(_activeTeamId);
+}
+
+async function deleteGame(id) {
+  if (!confirm('Delete this game?')) return;
+  await fetch('/api/admin/sports/games/' + id, {method:'DELETE', credentials:'include'});
+  await loadTeams();
+  if (_activeTeamId) selectTeam(_activeTeamId);
+}
+
+async function loadTeams() {
+  var res = await fetch('/api/admin/sports/teams', {credentials:'include'}).catch(function(){return null;});
+  if (!res || !res.ok) return;
+  _adminTeams = await res.json();
+  renderTeamsList();
+}
+
+var _requestsOpen = false;
+
+function toggleRequests() {
+  _requestsOpen = !_requestsOpen;
+  document.getElementById('requestsList').style.display = _requestsOpen ? 'block' : 'none';
+  document.getElementById('reqChevron').style.transform = _requestsOpen ? 'rotate(90deg)' : '';
+  if (_requestsOpen) loadRequests();
+}
+
+async function loadRequests() {
+  var el = document.getElementById('requestsList');
+  el.innerHTML = '<div class="empty-state" style="padding:16px;font-size:12px;">Loading…</div>';
+  var res = await fetch('/api/admin/sports/join-requests', {credentials:'include'}).catch(function(){return null;});
+  if (!res || !res.ok) { el.innerHTML = '<div class="empty-state" style="padding:16px;font-size:12px;">Failed to load.</div>'; return; }
+  var reqs = await res.json();
+
+  var badge = document.getElementById('reqBadge');
+  if (reqs.length) { badge.style.display = ''; badge.textContent = reqs.length; }
+  else { badge.style.display = 'none'; }
+
+  if (!reqs.length) { el.innerHTML = '<div class="empty-state" style="padding:16px;font-size:12px;">No pending requests.</div>'; return; }
+
+  el.innerHTML = reqs.map(function(r) {
+    return '<div style="padding:10px 14px;border-bottom:1px solid var(--border);">' +
+      '<div style="font-size:12px;font-weight:600;color:var(--text);">' + esc(r.user_name) + '</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-top:2px;margin-bottom:8px;">wants to join <strong style="color:var(--text2);">' + esc(r.team_name) + '</strong></div>' +
+      '<div style="display:flex;gap:6px;">' +
+        '<button onclick="handleRequest(' + r.id + ',\'approve\')" style="flex:1;padding:5px 0;border-radius:var(--radius-sm);border:none;background:linear-gradient(135deg,var(--g1),var(--g2));color:#000;font-size:11px;font-weight:700;cursor:pointer;">Approve</button>' +
+        '<button onclick="handleRequest(' + r.id + ',\'deny\')" style="flex:1;padding:5px 0;border-radius:var(--radius-sm);border:1px solid rgba(248,113,113,0.3);background:rgba(248,113,113,0.08);color:#f87171;font-size:11px;font-weight:700;cursor:pointer;">Deny</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+async function handleRequest(reqId, action) {
+  var res = await fetch('/api/admin/sports/join-requests/' + reqId + '/' + action, {
+    method: 'POST', credentials: 'include',
+  });
+  if (!res.ok) { alert('Action failed.'); return; }
+  await loadRequests();
+  await loadTeams();
+  if (_activeTeamId) selectTeam(_activeTeamId);
+}
+
+async function boot() {
+  var me = await fetch('/api/auth/me', {credentials:'include'}).then(function(r){return r.json();}).catch(function(){return null;});
+  if (!me || me.role !== 'admin') { location.href = '/login'; return; }
+  await loadTeams();
+  // Load requests in background to show badge count
+  var res = await fetch('/api/admin/sports/join-requests', {credentials:'include'}).catch(function(){return null;});
+  if (res && res.ok) {
+    var reqs = await res.json();
+    if (reqs.length) {
+      var badge = document.getElementById('reqBadge');
+      badge.style.display = '';
+      badge.textContent = reqs.length;
+    }
+  }
+}
+
+window.openTeamModal   = openTeamModal;
+window.openEditTeam    = openEditTeam;
+window.submitTeam      = submitTeam;
+window.deleteTeam      = deleteTeam;
+window.openAddGame     = openAddGame;
+window.openEditGame    = openEditGame;
+window.submitGame      = submitGame;
+window.deleteGame      = deleteGame;
+window.closeModal      = closeModal;
+window.selectTeam      = selectTeam;
+window.toggleRequests  = toggleRequests;
+window.handleRequest   = handleRequest;
+
+boot();
+</script>

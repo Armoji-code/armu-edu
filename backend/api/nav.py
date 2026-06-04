@@ -18,6 +18,7 @@ _DEFAULTS = {
             {"label": "Leaderboard", "icon": "ic-leaderboard","path": "/leaderboard"},
             {"label": "Conduct",     "icon": "ic-flag",       "path": "/conduct"},
             {"label": "Activities",  "icon": "ic-activities", "path": "/activities"},
+            {"label": "Sports",      "icon": "ic-trophy",     "path": "/sports"},
             {"label": "Groups",      "icon": "ic-groups",     "path": "/groups"},
             {"label": "Library",     "icon": "ic-library",    "path": "/library"},
             {"label": "AI Tutor",    "icon": "ic-tutor",      "path": "/tutor"},
@@ -68,6 +69,7 @@ _DEFAULTS = {
             {"label": "Settings",    "icon": "ic-settings",   "path": "/admin/settings"},
             {"label": "Navigation",  "icon": "ic-menu",       "path": "/admin/nav"},
             {"label": "Terminal",    "icon": "ic-terminal",   "path": "/admin/terminal"},
+            {"label": "Sports",      "icon": "ic-trophy",     "path": "/admin/sports"},
         ]},
         {"label": "Personal", "items": [
             {"label": "Messages",    "icon": "ic-messages",   "path": "/messages"},
@@ -133,6 +135,6 @@ def list_icons(user):
         "ic-whiteboard", "ic-meeting", "ic-messages", "ic-settings",
         "ic-chart", "ic-menu", "ic-pen", "ic-logout", "ic-moon",
         "ic-sun", "ic-plus", "ic-trash", "ic-copy", "ic-download",
-        "ic-terminal",
+        "ic-terminal", "ic-trophy",
     ]
     return jsonify(icons)

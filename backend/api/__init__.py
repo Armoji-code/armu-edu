@@ -10,4 +10,4 @@ def err(msg, code=400):
 def ok(**extra):
     return jsonify({"ok": True, **extra})
 
-from api import auth, dashboard, homework, tests, schedule, grades, conduct, library, messages, ai, leaderboard, activities, groups, notifications, teacher, admin, librarian, meeting, nav, update, push
+from api import auth, dashboard, homework, tests, schedule, grades, conduct, library, messages, ai, leaderboard, activities, groups, notifications, teacher, admin, librarian, meeting, nav, update, push, sports
