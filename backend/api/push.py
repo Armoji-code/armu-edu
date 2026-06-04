@@ -41,9 +41,13 @@ def send_web_push(app, user_id, title, body, url='/'):
         with app.app_context():
             try:
                 from pywebpush import webpush, WebPushException
-                private_key, _ = _ensure_vapid_keys()
-                if not private_key:
+                from py_vapid import Vapid
+                private_pem, _ = _ensure_vapid_keys()
+                if not private_pem:
                     return
+                vapid = Vapid.from_pem(
+                    private_pem.encode() if isinstance(private_pem, str) else private_pem
+                )
                 subs = PushSubscription.query.filter_by(user_id=user_id).all()
                 stale = []
                 for sub in subs:
@@ -54,7 +58,7 @@ def send_web_push(app, user_id, title, body, url='/'):
                                 'keys': {'p256dh': sub.p256dh, 'auth': sub.auth},
                             },
                             data=json.dumps({'title': title, 'body': body, 'url': url}),
-                            vapid_private_key=private_key,
+                            vapid_private_key=vapid,
                             vapid_claims={'sub': 'mailto:armu@armu.school'},
                             ttl=86400,
                         )
