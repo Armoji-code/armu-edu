@@ -9,4 +9,4 @@ psutil>=5.9
 APScheduler>=3.10
 gevent>=24.2.1
 gevent-websocket>=0.10.1
-pywebpush>=1.9
+pywebpush>=2.3
