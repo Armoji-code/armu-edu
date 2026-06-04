@@ -15,9 +15,10 @@ def _ensure_vapid_keys():
         return None, None
     settings = dict(school.settings or {})
     if not settings.get('vapid_private_key') or not settings.get('vapid_public_key'):
+        import base64
         from py_vapid import Vapid
         from cryptography.hazmat.primitives.serialization import (
-            Encoding, PrivateFormat, NoEncryption,
+            Encoding, PublicFormat, PrivateFormat, NoEncryption,
         )
         v = Vapid()
         v.generate_keys()
@@ -26,7 +27,8 @@ def _ensure_vapid_keys():
             format=PrivateFormat.PKCS8,
             encryption_algorithm=NoEncryption(),
         ).decode()
-        settings['vapid_public_key'] = v.public_key_urlsafe_base64
+        pub_bytes = v.public_key.public_bytes(Encoding.X962, PublicFormat.UncompressedPoint)
+        settings['vapid_public_key'] = base64.urlsafe_b64encode(pub_bytes).rstrip(b'=').decode()
         school.settings = settings
         flag_modified(school, 'settings')
         db.session.commit()
